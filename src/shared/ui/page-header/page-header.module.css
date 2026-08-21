@@ -1,8 +1,8 @@
-.introduction {
+.header {
   padding: 32px;
+  background: var(--ant-color-bg-container, #ffffff);
   border: 1px solid var(--ant-color-border-secondary, #e7eaf0);
   border-radius: var(--ant-border-radius-lg, 16px);
-  background: var(--ant-color-bg-container, #ffffff);
   box-shadow: 0 10px 30px rgb(15 23 42 / 4%);
 }
 
@@ -22,7 +22,7 @@
 }
 
 @media (max-width: 575px) {
-  .introduction {
+  .header {
     padding: 24px;
     border-radius: 12px;
   }
