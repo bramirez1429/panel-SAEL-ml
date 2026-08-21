@@ -1,0 +1,40 @@
+.statusCard {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: fit-content;
+  margin-top: 24px;
+  padding: 16px 20px;
+  background: var(--ant-color-bg-container, #ffffff);
+  border: 1px solid var(--ant-color-border-secondary, #e8ecf2);
+  border-radius: var(--ant-border-radius-lg, 10px);
+  box-shadow: var(--ant-box-shadow-tertiary, 0 1px 3px rgb(0 0 0 / 5%));
+}
+
+.statusIndicator {
+  width: 10px;
+  height: 10px;
+  background: var(--ant-color-success, #52c41a);
+  border-radius: 50%;
+}
+
+.statusIndicatorUnavailable {
+  background: var(--ant-color-text-quaternary, #b8bec9);
+}
+
+.title,
+.description {
+  margin: 0;
+}
+
+.title {
+  color: var(--ant-color-text, #172033);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.description {
+  margin-top: 2px;
+  color: var(--ant-color-text-secondary, #526079);
+  font-size: 13px;
+}
