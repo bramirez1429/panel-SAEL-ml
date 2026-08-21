@@ -2,28 +2,112 @@ import { describe, expect, it, vi } from "vitest";
 
 import { AppError } from "@/shared/errors/app-error";
 
-import type { PublicationsPage } from "../domain/publication.model";
+import type {
+  Publication,
+  PublicationsPage,
+} from "../domain/publication.model";
 import type { PublicationsRepository } from "../domain/publications.repository";
-import { GetPublicationsQuery } from "./get-publications.query";
+import {
+  GetPublicationsQuery,
+  type GetPublicationsQueryInput,
+} from "./get-publications.query";
+
+const legacyPublication: Publication = {
+  id: "legacy-id",
+  title: "Publicación clásica",
+  channel: "MERCADO_LIBRE",
+  status: "active",
+  thumbnailUrl: null,
+  permalink: "https://example.com/MLA100",
+  price: { from: 1000, to: 1000, currency: "ARS" },
+  stock: 5,
+  group: {
+    key: "item:MLA100",
+    type: "LEGACY",
+    familyId: null,
+    itemId: "MLA100",
+    childrenCount: 0,
+  },
+};
+
+const familyPublication: Publication = {
+  ...legacyPublication,
+  id: "family-id",
+  title: "Familia real",
+  status: "paused",
+  group: {
+    key: "family:200",
+    type: "USER_PRODUCT",
+    familyId: "200",
+    itemId: null,
+    childrenCount: 3,
+  },
+};
 
 const publicationsPage: PublicationsPage = {
-  publications: [],
-  page: 1,
+  publications: [legacyPublication, familyPublication],
+  page: 2,
   pageSize: 20,
-  count: 0,
-  total: 0,
-  totalPages: 0,
+  count: 2,
+  total: 42,
+  totalPages: 3,
+};
+
+const defaultInput: GetPublicationsQueryInput = {
+  page: 2,
+  pageSize: 20,
+  search: "",
+  type: null,
+  status: null,
 };
 
 describe("GetPublicationsQuery", () => {
-  it("returns the domain page provided by its repository", async () => {
+  it("requests the selected backend page through the repository", async () => {
     const getPublications = vi
       .fn<PublicationsRepository["getPublications"]>()
       .mockResolvedValue(publicationsPage);
     const query = new GetPublicationsQuery({ getPublications });
 
-    await expect(query.execute()).resolves.toBe(publicationsPage);
-    expect(getPublications).toHaveBeenCalledOnce();
+    await expect(query.execute(defaultInput)).resolves.toBe(publicationsPage);
+    expect(getPublications).toHaveBeenCalledWith({ page: 2, pageSize: 20 });
+  });
+
+  it("applies case-insensitive search to the fetched page", async () => {
+    const getPublications = vi
+      .fn<PublicationsRepository["getPublications"]>()
+      .mockResolvedValue(publicationsPage);
+    const query = new GetPublicationsQuery({ getPublications });
+
+    const result = await query.execute({
+      ...defaultInput,
+      search: "  FAMILIA  ",
+    });
+
+    expect(result.publications).toEqual([familyPublication]);
+    expect(result.count).toBe(1);
+    expect(result.total).toBe(42);
+  });
+
+  it("combines type and status filters on the fetched page", async () => {
+    const getPublications = vi
+      .fn<PublicationsRepository["getPublications"]>()
+      .mockResolvedValue(publicationsPage);
+    const query = new GetPublicationsQuery({ getPublications });
+
+    const matching = await query.execute({
+      ...defaultInput,
+      type: "USER_PRODUCT",
+      status: "paused",
+    });
+    const notMatching = await query.execute({
+      ...defaultInput,
+      type: "LEGACY",
+      status: "paused",
+    });
+
+    expect(matching.publications).toEqual([familyPublication]);
+    expect(notMatching.publications).toEqual([]);
+    expect(notMatching.count).toBe(0);
   });
 
   it("propagates controlled repository errors without changing them", async () => {
@@ -36,6 +120,6 @@ describe("GetPublicationsQuery", () => {
       .mockRejectedValue(repositoryError);
     const query = new GetPublicationsQuery({ getPublications });
 
-    await expect(query.execute()).rejects.toBe(repositoryError);
+    await expect(query.execute(defaultInput)).rejects.toBe(repositoryError);
   });
 });

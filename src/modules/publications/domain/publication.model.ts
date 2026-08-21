@@ -20,6 +20,13 @@ export type Publication = Readonly<{
   channel: SalesChannel;
   status: string | null;
   thumbnailUrl: string | null;
+  permalink: string | null;
+  price: Readonly<{
+    from: number | null;
+    to: number | null;
+    currency: string | null;
+  }> | null;
+  stock: number;
   group: PublicationGroup;
 }>;
 

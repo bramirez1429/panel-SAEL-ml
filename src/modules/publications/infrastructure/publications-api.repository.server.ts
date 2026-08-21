@@ -4,11 +4,14 @@ import { ApiError } from "@/shared/api/api-error";
 import type { HttpGetClient } from "@/shared/api/http-client.server";
 
 import type { PublicationsPage } from "../domain/publication.model";
-import type { PublicationsRepository } from "../domain/publications.repository";
+import type {
+  PublicationsRepository,
+  PublicationsRequest,
+} from "../domain/publications.repository";
 import { mapPublicationsResponse } from "./publication.mapper";
 import { publicationsResponseSchema } from "./publications-response.schema";
 
-const PUBLICATIONS_ENDPOINT = "/mercadolibre/publicaciones?page=1&limit=20";
+const PUBLICATIONS_ENDPOINT = "/mercadolibre/publicaciones";
 
 /**
  * Implementación HTTP del contrato PublicationsRepository.
@@ -17,8 +20,16 @@ const PUBLICATIONS_ENDPOINT = "/mercadolibre/publicaciones?page=1&limit=20";
 export class PublicationsApiRepository implements PublicationsRepository {
   constructor(private readonly httpClient: HttpGetClient) {}
 
-  async getPublications(): Promise<PublicationsPage> {
-    const response = await this.httpClient.get(PUBLICATIONS_ENDPOINT);
+  async getPublications(
+    request: PublicationsRequest,
+  ): Promise<PublicationsPage> {
+    const query = new URLSearchParams({
+      page: String(request.page),
+      limit: String(request.pageSize),
+    });
+    const response = await this.httpClient.get(
+      `${PUBLICATIONS_ENDPOINT}?${query.toString()}`,
+    );
     const validation = publicationsResponseSchema.safeParse(response);
 
     if (!validation.success) {

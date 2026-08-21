@@ -14,11 +14,11 @@ describe("PublicationsApiRepository", () => {
     get.mockResolvedValue(createPublicationsResponse());
     const repository = new PublicationsApiRepository({ get });
 
-    await expect(repository.getPublications()).resolves.toEqual(
-      expect.objectContaining({ total: 1, count: 1 }),
-    );
+    await expect(
+      repository.getPublications({ page: 3, pageSize: 20 }),
+    ).resolves.toEqual(expect.objectContaining({ total: 1, count: 1 }));
     expect(get).toHaveBeenCalledWith(
-      "/mercadolibre/publicaciones?page=1&limit=20",
+      "/mercadolibre/publicaciones?page=3&limit=20",
     );
   });
 
@@ -28,7 +28,7 @@ describe("PublicationsApiRepository", () => {
     const repository = new PublicationsApiRepository({ get });
 
     try {
-      await repository.getPublications();
+      await repository.getPublications({ page: 1, pageSize: 20 });
       throw new Error("Expected repository.getPublications() to reject");
     } catch (error: unknown) {
       expect(error).toBeInstanceOf(ApiError);
@@ -51,6 +51,8 @@ describe("PublicationsApiRepository", () => {
     get.mockRejectedValue(transportError);
     const repository = new PublicationsApiRepository({ get });
 
-    await expect(repository.getPublications()).rejects.toBe(transportError);
+    await expect(
+      repository.getPublications({ page: 1, pageSize: 20 }),
+    ).rejects.toBe(transportError);
   });
 });

@@ -45,4 +45,22 @@ describe("publicationsResponseSchema", () => {
       false,
     );
   });
+
+  it("rejects negative stock", () => {
+    const response: unknown = createPublicationsResponse();
+    const invalidResponse = structuredClone(response) as {
+      publications: Array<{ stock_total: number }>;
+    };
+    const firstPublication = invalidResponse.publications[0];
+
+    if (!firstPublication) {
+      throw new Error("The fixture must contain a publication");
+    }
+
+    firstPublication.stock_total = -1;
+
+    expect(publicationsResponseSchema.safeParse(invalidResponse).success).toBe(
+      false,
+    );
+  });
 });

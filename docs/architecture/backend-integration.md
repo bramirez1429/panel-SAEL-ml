@@ -33,6 +33,10 @@ unknown
  ↓
 Zod
  ↓
+DTO válido
+ ↓
+Mapper
+ ↓
 modelo de dominio válido
 ```
 
@@ -43,3 +47,21 @@ No se aplican conversiones de tipo con `as`. Los problemas de configuración, co
 El backend vecino `panel-ml-api` define y prueba un endpoint real `GET /` que responde el texto exacto `Hello World!`. La integración valida ese contrato con Zod y lo utiliza únicamente para confirmar comunicación entre Next.js y NestJS.
 
 Este endpoint no representa todavía un health check ni readiness check de producción. Si el backend incorpora uno posteriormente, su ruta y su schema deberán sustituir este contrato con base en la implementación real, no por suposición.
+
+## Listado de publicaciones
+
+El frontend consume el endpoint real:
+
+```text
+GET /mercadolibre/publicaciones?page={page}&limit=20
+```
+
+NestJS soporta actualmente `page` y `limit`, pero no recibe `search`, `type` ni
+`status`. Por eso la página solicitada se obtiene desde el servidor y el caso de
+uso aplica esos tres filtros únicamente sobre sus 20 elementos. La URL sigue
+siendo la fuente de verdad, aunque hasta que el backend incorpore filtros el
+resultado filtrado no representa coincidencias de todo el catálogo.
+
+La respuesta de listado tampoco incluye vendidos ni el detalle de variaciones
+de publicaciones `LEGACY`. La tabla comunica esos valores como no disponibles;
+no los estima ni los reemplaza con datos ficticios.

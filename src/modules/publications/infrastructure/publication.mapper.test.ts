@@ -20,6 +20,13 @@ describe("mapPublicationsResponse", () => {
       expect.objectContaining({
         title: "Publicación clásica",
         channel: "MERCADO_LIBRE",
+        price: {
+          from: 1000,
+          to: 1000,
+          currency: "ARS",
+        },
+        stock: 5,
+        permalink: "https://example.com/MLA100",
         group: expect.objectContaining({
           type: "LEGACY",
           itemId: "MLA100",
@@ -38,5 +45,21 @@ describe("mapPublicationsResponse", () => {
       }),
     ]);
     expect(result.total).toBe(2);
+  });
+
+  it("preserves the absence of price data instead of inventing a value", () => {
+    const result = mapPublicationsResponse(
+      createPublicationsResponse([
+        {
+          ...legacyPublicationDto,
+          price_from: null,
+          price_to: null,
+        },
+      ]),
+    );
+
+    expect(result.publications[0]).toEqual(
+      expect.objectContaining({ price: null, stock: 5 }),
+    );
   });
 });

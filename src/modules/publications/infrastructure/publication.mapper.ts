@@ -18,12 +18,23 @@ const PUBLICATION_TYPE_BY_MODEL = {
  * los modelos SHARED y VARIANT_PRICING se convierten en tipos de la UI.
  */
 export function mapPublication(dto: PublicationDto): Publication {
+  const hasPrice = dto.price_from !== null || dto.price_to !== null;
+
   return {
     id: dto.id,
     title: dto.family_name ?? dto.title,
     channel: "MERCADO_LIBRE",
     status: dto.status,
     thumbnailUrl: dto.thumbnail,
+    permalink: dto.permalink,
+    price: hasPrice
+      ? {
+          from: dto.price_from,
+          to: dto.price_to,
+          currency: dto.currency_id,
+        }
+      : null,
+    stock: dto.stock_total,
     group: {
       key: dto.external_key,
       type: PUBLICATION_TYPE_BY_MODEL[dto.model],
