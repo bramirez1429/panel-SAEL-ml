@@ -1,0 +1,29 @@
+.introduction {
+  padding: 32px;
+  border: 1px solid var(--ant-color-border-secondary, #e7eaf0);
+  border-radius: var(--ant-border-radius-lg, 16px);
+  background: var(--ant-color-bg-container, #ffffff);
+  box-shadow: 0 10px 30px rgb(15 23 42 / 4%);
+}
+
+.title {
+  margin: 0;
+  color: var(--ant-color-text, #172033);
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+}
+
+.description {
+  margin: 10px 0 0;
+  color: var(--ant-color-text-secondary, #667085);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 575px) {
+  .introduction {
+    padding: 24px;
+    border-radius: 12px;
+  }
+}
