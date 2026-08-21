@@ -1,40 +1,32 @@
+import { createGetPublicationsQuery } from "@/modules/publications/publications.composition.server";
+import type { PublicationsPage } from "@/modules/publications/domain/publication.model";
+import { PublicationsView } from "@/modules/publications/presentation/publications-view";
+import { AppError } from "@/shared/errors/app-error";
 import { PageHeader } from "@/shared/ui/page-header/page-header";
 
-import styles from "./publicaciones.module.css";
+export const dynamic = "force-dynamic";
 
-export default function PublicationsPage() {
+async function loadPublications(): Promise<PublicationsPage | null> {
+  try {
+    return await createGetPublicationsQuery().execute();
+  } catch (error: unknown) {
+    if (error instanceof AppError) {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+export default async function PublicationsPage() {
+  const publicationsPage = await loadPublications();
+
   return (
-    <div className={styles.page}>
+    <>
       <PageHeader
-        title="Publicaciones"
         description="Gestiona las publicaciones de tus canales de venta."
       />
-
-      <div className={styles.placeholderGrid}>
-        <section
-          className={styles.placeholder}
-          aria-labelledby="publication-filters-placeholder"
-        >
-          <h2
-            className={styles.placeholderTitle}
-            id="publication-filters-placeholder"
-          >
-            Zona futura de filtros
-          </h2>
-        </section>
-
-        <section
-          className={`${styles.placeholder} ${styles.tablePlaceholder}`}
-          aria-labelledby="publications-table-placeholder"
-        >
-          <h2
-            className={styles.placeholderTitle}
-            id="publications-table-placeholder"
-          >
-            Zona futura de tabla
-          </h2>
-        </section>
-      </div>
-    </div>
+      <PublicationsView page={publicationsPage} />
+    </>
   );
 }

@@ -7,6 +7,7 @@ import {
   DashboardDesktopNavigation,
   DashboardMobileNavigation,
 } from "./dashboard-navigation.client";
+import { DashboardHeaderTitle } from "./dashboard-header-title.client";
 import styles from "./dashboard-shell.module.css";
 
 type DashboardShellProps = Readonly<{
@@ -19,7 +20,7 @@ function Brand() {
       <span className={styles.brandMark} aria-hidden="true">
         P
       </span>
-      <span>Panel</span>
+      <span className={styles.brandName}>Panel</span>
     </>
   );
 }
@@ -46,7 +47,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
         >
           <Brand />
         </Link>
-        <p className={styles.headerTitle}>Panel de gestión</p>
+        <DashboardHeaderTitle />
         <DashboardMobileNavigation />
       </header>
 

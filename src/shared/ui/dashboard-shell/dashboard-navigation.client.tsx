@@ -6,18 +6,15 @@ import type { MenuProps } from "antd";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import {
+  dashboardSections,
+  findDashboardSection,
+} from "./dashboard-sections";
 import styles from "./dashboard-shell.module.css";
 
-const navigationItems = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/publicaciones", label: "Publicaciones" },
-  { href: "/pedidos", label: "Pedidos" },
-  { href: "/integraciones", label: "Integraciones" },
-] as const;
-
-const menuItems: MenuProps["items"] = navigationItems.map(({ href, label }) => ({
+const menuItems: MenuProps["items"] = dashboardSections.map(({ href, title }) => ({
   key: href,
-  label: <Link href={href}>{label}</Link>,
+  label: <Link href={href}>{title}</Link>,
 }));
 
 type NavigationMenuProps = Readonly<{
@@ -26,9 +23,7 @@ type NavigationMenuProps = Readonly<{
 
 function NavigationMenu({ onNavigate }: NavigationMenuProps) {
   const pathname = usePathname();
-  const activeItem = navigationItems.find(
-    ({ href }) => pathname === href || pathname.startsWith(`${href}/`),
-  );
+  const activeSection = findDashboardSection(pathname);
 
   return (
     <Menu
@@ -36,7 +31,7 @@ function NavigationMenu({ onNavigate }: NavigationMenuProps) {
       items={menuItems}
       mode="inline"
       onClick={onNavigate}
-      selectedKeys={activeItem ? [activeItem.href] : []}
+      selectedKeys={activeSection ? [activeSection.href] : []}
     />
   );
 }

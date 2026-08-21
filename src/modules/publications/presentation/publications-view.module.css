@@ -1,20 +1,26 @@
-.header {
-  padding: 32px;
+.summary {
+  margin-top: 24px;
+  padding: 24px 32px;
   background: var(--ant-color-bg-container, #ffffff);
   border: 1px solid var(--ant-color-border-secondary, #e7eaf0);
   border-radius: var(--ant-border-radius-lg, 16px);
   box-shadow: 0 10px 30px rgb(15 23 42 / 4%);
 }
 
-.description {
+.summaryText,
+.errorText {
   margin: 0;
-  color: var(--ant-color-text-secondary, #667085);
+  color: var(--ant-color-text, #172033);
   font-size: 1rem;
   line-height: 1.6;
 }
 
+.errorText {
+  color: var(--ant-color-text-secondary, #667085);
+}
+
 @media (max-width: 575px) {
-  .header {
+  .summary {
     padding: 24px;
     border-radius: 12px;
   }

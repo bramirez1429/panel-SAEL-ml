@@ -24,7 +24,6 @@ export default async function DashboardPage() {
   return (
     <>
       <PageHeader
-        title="Dashboard"
         description="Resumen general del panel de gestión."
       />
       <BackendStatusView status={backendStatus} />
