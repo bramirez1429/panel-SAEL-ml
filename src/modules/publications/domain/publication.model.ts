@@ -4,8 +4,7 @@
  */
 export type PublicationType = "LEGACY" | "USER_PRODUCT";
 
-// El dominio reserva el canal futuro; la infraestructura actual sólo mapea Mercado Libre.
-export type PublicationChannel = "MERCADO_LIBRE" | "TIENDANUBE";
+export type SalesChannel = "MERCADO_LIBRE";
 
 export type PublicationGroup = Readonly<{
   key: string;
@@ -18,7 +17,7 @@ export type PublicationGroup = Readonly<{
 export type Publication = Readonly<{
   id: string;
   title: string;
-  channel: PublicationChannel;
+  channel: SalesChannel;
   status: string | null;
   thumbnailUrl: string | null;
   group: PublicationGroup;
