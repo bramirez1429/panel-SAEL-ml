@@ -66,7 +66,7 @@ describe("GetPublicationsQuery", () => {
     const getPublications = vi
       .fn<PublicationsRepository["getPublications"]>()
       .mockResolvedValue(publicationsPage);
-    const query = new GetPublicationsQuery({ getPublications });
+    const query = new GetPublicationsQuery(createRepository(getPublications));
 
     await expect(query.execute(defaultInput)).resolves.toBe(publicationsPage);
     expect(getPublications).toHaveBeenCalledWith({ page: 2, pageSize: 20 });
@@ -76,7 +76,7 @@ describe("GetPublicationsQuery", () => {
     const getPublications = vi
       .fn<PublicationsRepository["getPublications"]>()
       .mockResolvedValue(publicationsPage);
-    const query = new GetPublicationsQuery({ getPublications });
+    const query = new GetPublicationsQuery(createRepository(getPublications));
 
     const result = await query.execute({
       ...defaultInput,
@@ -92,7 +92,7 @@ describe("GetPublicationsQuery", () => {
     const getPublications = vi
       .fn<PublicationsRepository["getPublications"]>()
       .mockResolvedValue(publicationsPage);
-    const query = new GetPublicationsQuery({ getPublications });
+    const query = new GetPublicationsQuery(createRepository(getPublications));
 
     const matching = await query.execute({
       ...defaultInput,
@@ -118,8 +118,17 @@ describe("GetPublicationsQuery", () => {
     const getPublications = vi
       .fn<PublicationsRepository["getPublications"]>()
       .mockRejectedValue(repositoryError);
-    const query = new GetPublicationsQuery({ getPublications });
+    const query = new GetPublicationsQuery(createRepository(getPublications));
 
     await expect(query.execute(defaultInput)).rejects.toBe(repositoryError);
   });
 });
+
+function createRepository(
+  getPublications: PublicationsRepository["getPublications"],
+): PublicationsRepository {
+  return {
+    getPublications,
+    getById: vi.fn<PublicationsRepository["getById"]>(),
+  };
+}

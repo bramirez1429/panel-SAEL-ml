@@ -1,4 +1,7 @@
-import type { PublicationsPage } from "./publication.model";
+import type {
+  PublicationDetail,
+  PublicationsPage,
+} from "./publication.model";
 
 export type PublicationsRequest = Readonly<{
   page: number;
@@ -11,4 +14,5 @@ export type PublicationsRequest = Readonly<{
  */
 export interface PublicationsRepository {
   getPublications(request: PublicationsRequest): Promise<PublicationsPage>;
+  getById(id: string): Promise<PublicationDetail>;
 }

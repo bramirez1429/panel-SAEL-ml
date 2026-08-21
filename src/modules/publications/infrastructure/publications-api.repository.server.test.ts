@@ -5,6 +5,7 @@ vi.mock("server-only", () => ({}));
 import { ApiError } from "@/shared/api/api-error";
 import type { HttpGetClient } from "@/shared/api/http-client.server";
 
+import { familyPublicationDetailResponse } from "./publication-detail-response.fixture";
 import { PublicationsApiRepository } from "./publications-api.repository.server";
 import { createPublicationsResponse } from "./publications-response.fixture";
 
@@ -54,5 +55,48 @@ describe("PublicationsApiRepository", () => {
     await expect(
       repository.getPublications({ page: 1, pageSize: 20 }),
     ).rejects.toBe(transportError);
+  });
+
+  it("requests the verified detail endpoint using the internal UUID", async () => {
+    const get = vi.fn<HttpGetClient["get"]>();
+    get.mockResolvedValue(familyPublicationDetailResponse);
+    const repository = new PublicationsApiRepository({ get });
+
+    await expect(
+      repository.getById("22222222-2222-4222-8222-222222222222"),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        id: "22222222-2222-4222-8222-222222222222",
+        sold: 7,
+      }),
+    );
+    expect(get).toHaveBeenCalledWith(
+      "/mercadolibre/publicaciones/detalle/22222222-2222-4222-8222-222222222222",
+    );
+  });
+
+  it("preserves the HTTP 404 so presentation can render not-found", async () => {
+    const notFoundError = new ApiError(
+      "El backend respondió con HTTP 404.",
+      "API_HTTP_ERROR",
+      { status: 404 },
+    );
+    const get = vi.fn<HttpGetClient["get"]>();
+    get.mockRejectedValue(notFoundError);
+    const repository = new PublicationsApiRepository({ get });
+
+    await expect(
+      repository.getById("11111111-1111-4111-8111-111111111111"),
+    ).rejects.toBe(notFoundError);
+  });
+
+  it("translates an invalid detail payload into a controlled API error", async () => {
+    const get = vi.fn<HttpGetClient["get"]>();
+    get.mockResolvedValue({ product: { id: "invalid" } });
+    const repository = new PublicationsApiRepository({ get });
+
+    await expect(
+      repository.getById("11111111-1111-4111-8111-111111111111"),
+    ).rejects.toMatchObject({ code: "API_INVALID_RESPONSE" });
   });
 });

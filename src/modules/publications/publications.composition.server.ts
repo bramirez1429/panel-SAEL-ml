@@ -3,6 +3,7 @@ import "server-only";
 import { getApiConfig } from "@/shared/api/api-config";
 import { HttpClient } from "@/shared/api/http-client.server";
 
+import { GetPublicationByIdQuery } from "./application/get-publication-by-id.query";
 import { GetPublicationsQuery } from "./application/get-publications.query";
 import { PublicationsApiRepository } from "./infrastructure/publications-api.repository.server";
 
@@ -15,4 +16,11 @@ export function createGetPublicationsQuery(): GetPublicationsQuery {
   const repository = new PublicationsApiRepository(httpClient);
 
   return new GetPublicationsQuery(repository);
+}
+
+export function createGetPublicationByIdQuery(): GetPublicationByIdQuery {
+  const httpClient = new HttpClient(getApiConfig());
+  const repository = new PublicationsApiRepository(httpClient);
+
+  return new GetPublicationByIdQuery(repository);
 }

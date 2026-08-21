@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import type { PublicationsPage } from "../domain/publication.model";
@@ -26,6 +26,30 @@ const page: PublicationsPage = {
   totalPages: 3,
 };
 
+const pageWithPublication: PublicationsPage = {
+  ...page,
+  publications: [
+    {
+      id: "publication/id",
+      title: "Publicación real",
+      channel: "MERCADO_LIBRE",
+      status: "active",
+      thumbnailUrl: null,
+      permalink: "https://example.com/external",
+      price: null,
+      stock: 0,
+      group: {
+        key: "item:MLA1",
+        type: "LEGACY",
+        familyId: null,
+        itemId: "MLA1",
+        childrenCount: 0,
+      },
+    },
+  ],
+  count: 1,
+};
+
 describe("PublicationsTable", () => {
   afterEach(() => {
     cleanup();
@@ -49,6 +73,15 @@ describe("PublicationsTable", () => {
 
     expect(navigation.push).toHaveBeenCalledWith(
       "/publicaciones?page=2&search=campera&type=LEGACY&status=active",
+    );
+  });
+
+  it("links each action to the internal publication detail", () => {
+    render(<PublicationsTable page={pageWithPublication} />);
+
+    expect(screen.getByRole("link", { name: "Ver detalle" })).toHaveAttribute(
+      "href",
+      "/publicaciones/publication%2Fid",
     );
   });
 });

@@ -30,6 +30,39 @@ export type Publication = Readonly<{
   group: PublicationGroup;
 }>;
 
+export type PublicationAttribute = Readonly<{
+  id: string;
+  value: string | null;
+}>;
+
+export type PublicationVariant = Readonly<{
+  id: string;
+  itemId: string | null;
+  userProductId: string | null;
+  label: string | null;
+  title: string | null;
+  thumbnailUrl: string | null;
+  status: string | null;
+  price: Readonly<{
+    amount: number;
+    currency: string | null;
+  }> | null;
+  stock: number;
+  sold: number;
+  attributes: readonly PublicationAttribute[];
+  permalink: string | null;
+}>;
+
+/**
+ * Detalle propio del frontend. Conserva sólo datos reales del backend y
+ * representa como null los vendidos que el parent no informa.
+ */
+export type PublicationDetail = Publication &
+  Readonly<{
+    sold: number | null;
+    variants: readonly PublicationVariant[];
+  }>;
+
 export type PublicationsPage = Readonly<{
   publications: readonly Publication[];
   page: number;

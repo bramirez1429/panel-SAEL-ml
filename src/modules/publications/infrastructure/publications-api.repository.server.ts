@@ -3,11 +3,16 @@ import "server-only";
 import { ApiError } from "@/shared/api/api-error";
 import type { HttpGetClient } from "@/shared/api/http-client.server";
 
-import type { PublicationsPage } from "../domain/publication.model";
+import type {
+  PublicationDetail,
+  PublicationsPage,
+} from "../domain/publication.model";
 import type {
   PublicationsRepository,
   PublicationsRequest,
 } from "../domain/publications.repository";
+import { mapPublicationDetail } from "./publication-detail.mapper";
+import { publicationDetailResponseSchema } from "./publication-detail-response.schema";
 import { mapPublicationsResponse } from "./publication.mapper";
 import { publicationsResponseSchema } from "./publications-response.schema";
 
@@ -41,5 +46,22 @@ export class PublicationsApiRepository implements PublicationsRepository {
     }
 
     return mapPublicationsResponse(validation.data);
+  }
+
+  async getById(id: string): Promise<PublicationDetail> {
+    const response = await this.httpClient.get(
+      `${PUBLICATIONS_ENDPOINT}/detalle/${encodeURIComponent(id)}`,
+    );
+    const validation = publicationDetailResponseSchema.safeParse(response);
+
+    if (!validation.success) {
+      throw new ApiError(
+        "El backend devolvió un detalle de publicación con un formato inválido.",
+        "API_INVALID_RESPONSE",
+        { cause: validation.error },
+      );
+    }
+
+    return mapPublicationDetail(validation.data);
   }
 }

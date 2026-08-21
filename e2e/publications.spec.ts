@@ -63,3 +63,41 @@ test("shows real publications and keeps pagination in the URL", async ({
     };
   }).toEqual({ page: "1", search: productName });
 });
+
+test("opens a real publication detail from the table", async ({ page }) => {
+  test.skip(
+    !process.env.BACKEND_API_URL,
+    "Requiere un backend NestJS real y sincronizado.",
+  );
+
+  await page.goto("/publicaciones?page=1&search=&type=&status=");
+
+  const firstDetailLink = page
+    .locator("tbody tr.ant-table-row")
+    .first()
+    .getByRole("link", { name: "Ver detalle" });
+
+  await expect(firstDetailLink).toBeVisible();
+  await firstDetailLink.click();
+
+  await expect(page).toHaveURL(/\/publicaciones\/[^/?]+$/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Publicaciones" }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2 })).toBeVisible();
+  await expect(page.getByText("Canal", { exact: true })).toBeVisible();
+  await expect(page.getByText("Stock", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Vendidos", { exact: true }).first()).toBeVisible();
+  await expect(
+    page.getByText(/^Familia → hijos y variantes$|^Variaciones Legacy$/),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "← Volver a Publicaciones" }),
+  ).toBeVisible();
+
+  await page
+    .getByRole("link", { name: "← Volver a Publicaciones" })
+    .click();
+  await expect(page).toHaveURL(/\/publicaciones$/);
+  await expect(page.getByRole("table")).toBeVisible();
+});

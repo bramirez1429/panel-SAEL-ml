@@ -95,6 +95,21 @@
   border-top: 1px solid var(--ant-color-border-secondary, #e7eaf0);
 }
 
+.detailLink {
+  color: var(--ant-color-link, #1677ff);
+  text-decoration: none;
+}
+
+.detailLink:hover {
+  color: var(--ant-color-link-hover, #69b1ff);
+}
+
+.detailLink:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid var(--ant-color-primary-border, #91caff);
+  outline-offset: 3px;
+}
+
 @media (max-width: 900px) {
   .filters {
     grid-template-columns: repeat(2, minmax(0, 1fr));

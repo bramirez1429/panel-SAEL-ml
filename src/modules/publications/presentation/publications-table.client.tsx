@@ -1,8 +1,9 @@
 "use client";
 
 import { useTransition, type ReactNode } from "react";
-import { Button, Pagination, Table, Tag } from "antd";
+import { Pagination, Table, Tag } from "antd";
 import type { TableColumnsType } from "antd";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import type {
@@ -92,20 +93,15 @@ const columns: TableColumnsType<Publication> = [
   {
     title: "Acciones",
     key: "actions",
-    render: (_, publication) =>
-      publication.permalink ? (
-        <Button
-          href={publication.permalink}
-          rel="noreferrer"
-          target="_blank"
-          type="link"
-        >
-          Ver
-        </Button>
-      ) : (
-        missingValue
-      ),
-    width: 100,
+    render: (_, publication) => (
+      <Link
+        className={styles.detailLink}
+        href={`/publicaciones/${encodeURIComponent(publication.id)}`}
+      >
+        Ver detalle
+      </Link>
+    ),
+    width: 130,
   },
 ];
 

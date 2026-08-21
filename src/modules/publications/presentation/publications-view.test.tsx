@@ -94,9 +94,9 @@ describe("PublicationsView", () => {
     expect(screen.getByText("Publicación real")).toBeInTheDocument();
     expect(screen.getByText("Familia")).toBeInTheDocument();
     expect(screen.getByText("ARS 1.000")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Ver" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Ver detalle" })).toHaveAttribute(
       "href",
-      publication.permalink,
+      "/publicaciones/publication-id",
     );
   });
 });
