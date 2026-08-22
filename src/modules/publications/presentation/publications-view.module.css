@@ -89,6 +89,23 @@
   box-shadow: 0 10px 30px rgb(15 23 42 / 4%);
 }
 
+.tableCard :global(.ant-table-thead > tr > th) {
+  color: var(--ant-color-text-secondary, #667085);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.tableCard :global(.ant-table-tbody > tr > td) {
+  vertical-align: middle;
+}
+
+.productTitle {
+  color: var(--ant-color-text, #172033);
+  font-weight: 600;
+}
+
 .pagination {
   justify-content: flex-end;
   padding: 20px 24px;
@@ -139,5 +156,9 @@
   .pagination {
     justify-content: center;
     padding: 16px;
+  }
+
+  .pagination :global(.ant-pagination-total-text) {
+    display: none;
   }
 }

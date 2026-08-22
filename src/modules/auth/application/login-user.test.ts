@@ -31,6 +31,7 @@ describe("LoginUser", () => {
     const useCase = new LoginUser({
       getCurrentUser: vi.fn<AuthRepository["getCurrentUser"]>(),
       login,
+      logout: vi.fn<AuthRepository["logout"]>(),
     });
 
     await expect(useCase.execute(credentials)).resolves.toBe(session);
@@ -49,6 +50,7 @@ describe("LoginUser", () => {
     const useCase = new LoginUser({
       getCurrentUser: vi.fn<AuthRepository["getCurrentUser"]>(),
       login,
+      logout: vi.fn<AuthRepository["logout"]>(),
     });
 
     await expect(useCase.execute(credentials)).rejects.toBe(
@@ -67,6 +69,7 @@ describe("LoginUser", () => {
     const useCase = new LoginUser({
       getCurrentUser: vi.fn<AuthRepository["getCurrentUser"]>(),
       login,
+      logout: vi.fn<AuthRepository["logout"]>(),
     });
 
     await expect(useCase.execute(credentials)).rejects.toBe(timeoutError);

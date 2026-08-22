@@ -44,7 +44,13 @@ export function DashboardDesktopNavigation() {
   );
 }
 
-export function DashboardMobileNavigation() {
+type DashboardMobileNavigationProps = Readonly<{
+  logoutAction: () => Promise<void>;
+}>;
+
+export function DashboardMobileNavigation({
+  logoutAction,
+}: DashboardMobileNavigationProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const closeNavigation = () => setIsOpen(false);
@@ -75,6 +81,11 @@ export function DashboardMobileNavigation() {
         <nav aria-label="Navegación principal móvil">
           <NavigationMenu onNavigate={closeNavigation} />
         </nav>
+        <form action={logoutAction} className={styles.mobileLogout}>
+          <Button block danger htmlType="submit">
+            Cerrar sesión
+          </Button>
+        </form>
       </Drawer>
     </div>
   );

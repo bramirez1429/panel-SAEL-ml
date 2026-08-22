@@ -80,6 +80,32 @@ describe("HttpClient", () => {
     );
   });
 
+  it("performs an authenticated POST without exposing the token in its body", async () => {
+    const fetchImplementation = vi.fn<typeof fetch>();
+    fetchImplementation.mockResolvedValue(new Response(null, { status: 204 }));
+    const client = new HttpClient(apiConfig, fetchImplementation);
+
+    await expect(
+      client.post("/auth/logout", undefined, {
+        bearerToken: "signed-access-token",
+      }),
+    ).resolves.toBe("");
+
+    const requestInit = fetchImplementation.mock.calls[0]?.[1];
+    const headers = new Headers(requestInit?.headers);
+
+    expect(fetchImplementation).toHaveBeenCalledWith(
+      new URL("https://api.example.com/auth/logout"),
+      expect.objectContaining({
+        body: undefined,
+        cache: "no-store",
+        method: "POST",
+      }),
+    );
+    expect(headers.get("Authorization")).toBe("Bearer signed-access-token");
+    expect(headers.get("Content-Type")).toBeNull();
+  });
+
   it("translates non-successful HTTP responses", async () => {
     const fetchImplementation = vi.fn<typeof fetch>();
     fetchImplementation.mockResolvedValue(

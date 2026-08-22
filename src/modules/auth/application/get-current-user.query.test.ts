@@ -18,6 +18,7 @@ function createRepository(
   return {
     getCurrentUser,
     login: vi.fn<AuthRepository["login"]>(),
+    logout: vi.fn<AuthRepository["logout"]>(),
   };
 }
 

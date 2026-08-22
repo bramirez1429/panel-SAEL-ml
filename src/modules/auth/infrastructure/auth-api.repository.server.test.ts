@@ -145,4 +145,35 @@ describe("AuthApiRepository", () => {
       repository.getCurrentUser("signed-access-token"),
     ).rejects.toMatchObject({ code: "API_INVALID_RESPONSE" });
   });
+
+  it("logs out through the verified endpoint using only the access token", async () => {
+    const post = vi.fn<HttpPostClient["post"]>().mockResolvedValue("");
+    const repository = new AuthApiRepository({
+      get: vi.fn<HttpGetClient["get"]>(),
+      post,
+    });
+
+    await expect(repository.logout("signed-access-token")).resolves.toBeUndefined();
+    expect(post).toHaveBeenCalledWith("/auth/logout", undefined, {
+      bearerToken: "signed-access-token",
+    });
+  });
+
+  it("preserves logout transport errors", async () => {
+    const unreachableError = new ApiError(
+      "No se pudo conectar con el backend.",
+      "API_UNREACHABLE",
+    );
+    const post = vi
+      .fn<HttpPostClient["post"]>()
+      .mockRejectedValue(unreachableError);
+    const repository = new AuthApiRepository({
+      get: vi.fn<HttpGetClient["get"]>(),
+      post,
+    });
+
+    await expect(repository.logout("signed-access-token")).rejects.toBe(
+      unreachableError,
+    );
+  });
 });

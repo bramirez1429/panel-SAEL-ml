@@ -5,6 +5,8 @@ import { HttpClient } from "@/shared/api/http-client.server";
 
 import { GetCurrentUserQuery } from "./application/get-current-user.query";
 import { LoginUser } from "./application/login-user";
+import { LogoutUser } from "./application/logout-user";
+import type { AuthRepository } from "./domain/auth.repository";
 import { AuthApiRepository } from "./infrastructure/auth-api.repository.server";
 
 /**
@@ -12,15 +14,19 @@ import { AuthApiRepository } from "./infrastructure/auth-api.repository.server";
  * introducir un contenedor de dependencias ni exponer configuración al cliente.
  */
 export function createLoginUser(): LoginUser {
-  const httpClient = new HttpClient(getApiConfig());
-  const repository = new AuthApiRepository(httpClient);
-
-  return new LoginUser(repository);
+  return new LoginUser(createAuthRepository());
 }
 
 export function createGetCurrentUserQuery(): GetCurrentUserQuery {
-  const httpClient = new HttpClient(getApiConfig());
-  const repository = new AuthApiRepository(httpClient);
+  return new GetCurrentUserQuery(createAuthRepository());
+}
 
-  return new GetCurrentUserQuery(repository);
+export function createLogoutUser(): LogoutUser {
+  return new LogoutUser(createAuthRepository());
+}
+
+function createAuthRepository(): AuthRepository {
+  const httpClient = new HttpClient(getApiConfig());
+
+  return new AuthApiRepository(httpClient);
 }

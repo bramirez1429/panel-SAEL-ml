@@ -33,6 +33,10 @@ const columns: TableColumnsType<Publication> = [
     title: "Producto",
     dataIndex: "title",
     key: "product",
+    ellipsis: true,
+    render: (title: Publication["title"]) => (
+      <span className={styles.productTitle}>{title}</span>
+    ),
     width: 260,
   },
   {
@@ -124,7 +128,12 @@ export function PublicationsTable({
   };
 
   return (
-    <div className={styles.tableCard} aria-busy={loading || isPending}>
+    <div
+      className={styles.tableCard}
+      aria-busy={loading || isPending}
+      aria-label="Tabla de publicaciones"
+      role="region"
+    >
       <Table<Publication>
         columns={columns}
         dataSource={[...page.publications]}
@@ -133,6 +142,7 @@ export function PublicationsTable({
         pagination={false}
         rowKey="id"
         scroll={{ x: 1170 }}
+        size="middle"
       />
 
       {!loading && page.total > 0 ? (
@@ -141,7 +151,11 @@ export function PublicationsTable({
           current={page.page}
           onChange={changePage}
           pageSize={page.pageSize}
+          responsive
           showSizeChanger={false}
+          showTotal={(total, [first, last]) =>
+            `${first}–${last} de ${total}`
+          }
           total={page.total}
         />
       ) : null}

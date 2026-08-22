@@ -55,3 +55,12 @@ esta etapa.
 
 OAuth de Mercado Libre es una autorización independiente de la autenticación
 del panel y no se implementa aquí.
+
+## Cierre de sesión
+
+El dashboard envía un formulario a una Server Action. Next lee el access token
+HttpOnly y el caso de uso `LogoutUser` solicita `POST /auth/logout` con Bearer;
+el navegador nunca recibe el token. Al finalizar, Next invalida siempre las dos
+cookies y redirige a `/login`, incluso si el access token ya venció o NestJS no
+está disponible. El cierre local inmediato tiene prioridad y el access token de
+corta duración limita la ventana residual si la revocación remota falla.

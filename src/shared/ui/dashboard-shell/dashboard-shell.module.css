@@ -65,6 +65,41 @@
   padding-top: 8px;
 }
 
+.desktopLogout {
+  padding: 16px 8px 0;
+  border-top: 1px solid var(--ant-color-border-secondary, #e8ecf2);
+}
+
+.logoutButton {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 12px;
+  color: var(--ant-color-error, #dc2626);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--ant-color-error-border, #ffccc7);
+  border-radius: var(--ant-border-radius, 8px);
+}
+
+.logoutButton:hover {
+  color: var(--ant-color-error-hover, #ff4d4f);
+  background: var(--ant-color-error-bg, #fff2f0);
+  border-color: var(--ant-color-error-hover, #ff4d4f);
+}
+
+.logoutButton:focus-visible {
+  outline: 3px solid var(--ant-color-error-border, #ffccc7);
+  outline-offset: 2px;
+}
+
+.mobileLogout {
+  padding-top: 24px;
+  margin-top: 24px;
+  border-top: 1px solid var(--ant-color-border-secondary, #e8ecf2);
+}
+
 .navigationMenu {
   background: transparent !important;
   border-inline-end: 0 !important;

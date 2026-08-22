@@ -19,6 +19,7 @@ import { safeUserSchema } from "./safe-user.schema";
 
 const LOGIN_ENDPOINT = "/auth/login";
 const CURRENT_USER_ENDPOINT = "/auth/me";
+const LOGOUT_ENDPOINT = "/auth/logout";
 
 type AuthHttpClient = HttpGetClient & HttpPostClient;
 
@@ -59,5 +60,11 @@ export class AuthApiRepository implements AuthRepository {
     }
 
     return mapSafeUser(validation.data);
+  }
+
+  async logout(accessToken: string): Promise<void> {
+    await this.httpClient.post(LOGOUT_ENDPOINT, undefined, {
+      bearerToken: accessToken,
+    });
   }
 }

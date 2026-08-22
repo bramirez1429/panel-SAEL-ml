@@ -5,9 +5,11 @@ import { ApiError } from "./api-error";
 
 export type HttpGetClient = Pick<HttpClient, "get">;
 export type HttpPostClient = Pick<HttpClient, "post">;
-export type HttpGetOptions = Readonly<{
+export type HttpRequestOptions = Readonly<{
   bearerToken?: string;
 }>;
+export type HttpGetOptions = HttpRequestOptions;
+export type HttpPostOptions = HttpRequestOptions;
 
 // This boundary stays server-only so backend configuration never reaches browser bundles.
 // Centralizing fetch also gives every repository the same timeout and error semantics.
@@ -29,14 +31,23 @@ export class HttpClient {
     });
   }
 
-  async post(path: string, body: unknown): Promise<unknown> {
+  async post(
+    path: string,
+    body?: unknown,
+    options: HttpPostOptions = {},
+  ): Promise<unknown> {
+    const hasBody = body !== undefined;
+
     return this.request(path, {
       method: "POST",
       headers: {
         Accept: "application/json, text/plain;q=0.9",
-        "Content-Type": "application/json",
+        ...(hasBody ? { "Content-Type": "application/json" } : {}),
+        ...(options.bearerToken
+          ? { Authorization: `Bearer ${options.bearerToken}` }
+          : {}),
       },
-      body: JSON.stringify(body),
+      body: hasBody ? JSON.stringify(body) : undefined,
     });
   }
 

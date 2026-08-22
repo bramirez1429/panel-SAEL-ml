@@ -16,6 +16,7 @@ import {
 import {
   createSession,
   deleteSession,
+  getAccessToken,
   getRefreshToken,
   getSessionTokens,
   hasStoredSession,
@@ -102,6 +103,16 @@ describe("auth session", () => {
     await expect(getSessionTokens()).resolves.toBeNull();
     await expect(hasStoredSession()).resolves.toBe(false);
     await expect(getRefreshToken()).resolves.toBe("refresh-token");
+  });
+
+  it("reads the access token independently for authenticated server requests", async () => {
+    cookiesMock.mockResolvedValue(
+      createCookieStore({
+        [AUTH_COOKIE_NAMES.accessToken]: "access-token",
+      }),
+    );
+
+    await expect(getAccessToken()).resolves.toBe("access-token");
   });
 
   it("returns both stored tokens and reports the session", async () => {

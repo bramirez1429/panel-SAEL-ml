@@ -12,6 +12,7 @@ import styles from "./dashboard-shell.module.css";
 
 type DashboardShellProps = Readonly<{
   children: ReactNode;
+  logoutAction: () => Promise<void>;
 }>;
 
 function Brand() {
@@ -25,7 +26,7 @@ function Brand() {
   );
 }
 
-export function DashboardShell({ children }: DashboardShellProps) {
+export function DashboardShell({ children, logoutAction }: DashboardShellProps) {
   return (
     <div className={styles.shell}>
       <aside className={styles.sidebar}>
@@ -37,6 +38,11 @@ export function DashboardShell({ children }: DashboardShellProps) {
           <Brand />
         </Link>
         <DashboardDesktopNavigation />
+        <form action={logoutAction} className={styles.desktopLogout}>
+          <button className={styles.logoutButton} type="submit">
+            Cerrar sesión
+          </button>
+        </form>
       </aside>
 
       <header className={styles.header}>
@@ -48,7 +54,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
           <Brand />
         </Link>
         <DashboardHeaderTitle />
-        <DashboardMobileNavigation />
+        <DashboardMobileNavigation logoutAction={logoutAction} />
       </header>
 
       <div className={styles.content}>

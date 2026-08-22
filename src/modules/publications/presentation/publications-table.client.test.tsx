@@ -36,8 +36,12 @@ const pageWithPublication: PublicationsPage = {
       status: "active",
       thumbnailUrl: null,
       permalink: "https://example.com/external",
-      price: null,
-      stock: 0,
+      price: {
+        from: 1000,
+        to: 1250,
+        currency: "ARS",
+      },
+      stock: 4,
       group: {
         key: "item:MLA1",
         type: "LEGACY",
@@ -83,5 +87,18 @@ describe("PublicationsTable", () => {
       "href",
       "/publicaciones/publication%2Fid",
     );
+  });
+
+  it("renders the real publication fields in the stable Ant Design table", () => {
+    render(<PublicationsTable page={pageWithPublication} />);
+
+    expect(
+      screen.getByRole("region", { name: "Tabla de publicaciones" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Publicación real")).toBeInTheDocument();
+    expect(screen.getByText("Mercado Libre")).toBeInTheDocument();
+    expect(screen.getByText("Legacy")).toBeInTheDocument();
+    expect(screen.getByText("ARS 1.000 – ARS 1.250")).toBeInTheDocument();
+    expect(screen.getByText("1–20 de 42")).toBeInTheDocument();
   });
 });

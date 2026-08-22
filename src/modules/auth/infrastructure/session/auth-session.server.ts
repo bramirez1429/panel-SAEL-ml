@@ -47,6 +47,13 @@ export async function getSessionTokens(): Promise<StoredAuthTokens | null> {
   return { accessToken, refreshToken };
 }
 
+export async function getAccessToken(): Promise<string | null> {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get(AUTH_COOKIE_NAMES.accessToken)?.value;
+
+  return isNonEmptyToken(accessToken) ? accessToken : null;
+}
+
 /** Permite que la futura rotacion sobreviva al vencimiento del access token. */
 export async function getRefreshToken(): Promise<string | null> {
   const cookieStore = await cookies();

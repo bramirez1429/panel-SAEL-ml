@@ -7,4 +7,5 @@ import type { AuthSession, LoginCredentials, User } from "./auth.model";
 export interface AuthRepository {
   login(credentials: LoginCredentials): Promise<AuthSession>;
   getCurrentUser(accessToken: string): Promise<User>;
+  logout(accessToken: string): Promise<void>;
 }
