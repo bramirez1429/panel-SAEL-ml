@@ -7,7 +7,7 @@ import {
 import { publicationDetailResponseSchema } from "./publication-detail-response.schema";
 
 describe("publicationDetailResponseSchema", () => {
-  it("accepts the real SHARED response with its embedded variations", () => {
+  it("accepts the active SHARED response", () => {
     expect(
       publicationDetailResponseSchema.safeParse(
         legacyPublicationDetailResponse,
@@ -15,7 +15,7 @@ describe("publicationDetailResponseSchema", () => {
     ).toBe(true);
   });
 
-  it("accepts the real VARIANT_PRICING response with relational children", () => {
+  it("accepts the active VARIANT_PRICING response", () => {
     expect(
       publicationDetailResponseSchema.safeParse(
         familyPublicationDetailResponse,
@@ -23,29 +23,10 @@ describe("publicationDetailResponseSchema", () => {
     ).toBe(true);
   });
 
-  it("requires children for a VARIANT_PRICING product", () => {
-    const responseWithoutChildren = {
-      product: familyPublicationDetailResponse.product,
-    };
-
-    expect(
-      publicationDetailResponseSchema.safeParse(responseWithoutChildren)
-        .success,
-    ).toBe(false);
-  });
-
-  it("rejects invalid external quantities", () => {
+  it("rejects an invalid stock quantity", () => {
     const invalidResponse = {
       ...legacyPublicationDetailResponse,
-      product: {
-        ...legacyPublicationDetailResponse.product,
-        shared_variations: [
-          {
-            ...legacyPublicationDetailResponse.product.shared_variations[0],
-            soldQuantity: -1,
-          },
-        ],
-      },
+      stock: { available: -1, sold: 2 },
     };
 
     expect(publicationDetailResponseSchema.safeParse(invalidResponse).success).toBe(

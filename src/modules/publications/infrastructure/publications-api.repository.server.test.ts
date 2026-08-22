@@ -10,16 +10,16 @@ import { PublicationsApiRepository } from "./publications-api.repository.server"
 import { createPublicationsResponse } from "./publications-response.fixture";
 
 describe("PublicationsApiRepository", () => {
-  it("requests the verified NestJS endpoint and maps its response", async () => {
+  it("requests the active grouped NestJS endpoint with its cursor", async () => {
     const get = vi.fn<HttpGetClient["get"]>();
     get.mockResolvedValue(createPublicationsResponse());
     const repository = new PublicationsApiRepository({ get });
 
     await expect(
-      repository.getPublications({ page: 3, pageSize: 20 }),
-    ).resolves.toEqual(expect.objectContaining({ total: 1, count: 1 }));
+      repository.getPublications({ pageSize: 20, cursor: "cursor-2" }),
+    ).resolves.toEqual(expect.objectContaining({ productsCount: 1, count: 1 }));
     expect(get).toHaveBeenCalledWith(
-      "/mercadolibre/publicaciones?page=3&limit=20",
+      "/mercadolibre/direct/publicaciones/agrupadas?limit=20&cursor=cursor-2",
     );
   });
 
@@ -29,7 +29,7 @@ describe("PublicationsApiRepository", () => {
     const repository = new PublicationsApiRepository({ get });
 
     try {
-      await repository.getPublications({ page: 1, pageSize: 20 });
+      await repository.getPublications({ pageSize: 20, cursor: null });
       throw new Error("Expected repository.getPublications() to reject");
     } catch (error: unknown) {
       expect(error).toBeInstanceOf(ApiError);
@@ -53,7 +53,7 @@ describe("PublicationsApiRepository", () => {
     const repository = new PublicationsApiRepository({ get });
 
     await expect(
-      repository.getPublications({ page: 1, pageSize: 20 }),
+      repository.getPublications({ pageSize: 20, cursor: null }),
     ).rejects.toBe(transportError);
   });
 
@@ -63,15 +63,15 @@ describe("PublicationsApiRepository", () => {
     const repository = new PublicationsApiRepository({ get });
 
     await expect(
-      repository.getById("22222222-2222-4222-8222-222222222222"),
+      repository.getById("MLA200"),
     ).resolves.toEqual(
       expect.objectContaining({
-        id: "22222222-2222-4222-8222-222222222222",
+        id: "MLA200",
         sold: 7,
       }),
     );
     expect(get).toHaveBeenCalledWith(
-      "/mercadolibre/publicaciones/detalle/22222222-2222-4222-8222-222222222222",
+      "/mercadolibre/direct/publicaciones/MLA200",
     );
   });
 

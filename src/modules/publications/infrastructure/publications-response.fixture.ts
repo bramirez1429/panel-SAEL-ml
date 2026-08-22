@@ -1,54 +1,74 @@
 import type {
-  PublicationDto,
+  GroupedPublicationDto,
   PublicationsResponseDto,
 } from "./publications-response.schema";
 
 export const legacyPublicationDto = {
-  id: "11111111-1111-4111-8111-111111111111",
-  seller_id: 123,
-  external_key: "item:MLA100",
+  key: "item:MLA100",
   model: "SHARED",
-  family_id: null,
-  parent_item_id: "MLA100",
-  family_name: null,
+  itemId: "MLA100",
   title: "Publicación clásica",
-  thumbnail: "https://example.com/legacy.jpg",
+  price: 1000,
+  stock: 5,
+  sold: 2,
   status: "active",
-  category_id: "MLA1",
-  currency_id: "ARS",
-  price_from: 1000,
-  price_to: 1000,
-  stock_total: 5,
-  children_count: 0,
-  permalink: "https://example.com/MLA100",
-  source_updated_at: "2026-08-20T10:00:00.000Z",
-  last_synced_at: "2026-08-20T10:01:00.000Z",
-  updated_at: "2026-08-20T10:01:00.000Z",
-} as const satisfies PublicationDto;
+  thumbnail: "https://example.com/legacy.jpg",
+  variations: [],
+} as const satisfies GroupedPublicationDto;
 
 export const userProductPublicationDto = {
-  ...legacyPublicationDto,
-  id: "22222222-2222-4222-8222-222222222222",
-  external_key: "family:200",
+  key: "family:200",
   model: "VARIANT_PRICING",
-  family_id: "200",
-  parent_item_id: null,
-  family_name: "Familia real",
-  title: "Título de respaldo",
-  children_count: 3,
-} as const satisfies PublicationDto;
+  familyId: "200",
+  familyName: "Familia real",
+  variantsCount: 2,
+  itemsCount: 2,
+  variants: [
+    {
+      userProductId: "MLAU200",
+      items: [
+        {
+          itemId: "MLA200",
+          title: "Variante azul",
+          price: 1500,
+          stock: 2,
+          sold: 7,
+          status: "active",
+          inventoryId: null,
+          thumbnail: "https://example.com/MLA200.jpg",
+          pictures: [],
+          attributes: [{ id: "COLOR", value_name: "Azul" }],
+        },
+      ],
+    },
+    {
+      userProductId: "MLAU201",
+      items: [
+        {
+          itemId: "MLA201",
+          title: "Variante roja",
+          price: 1700,
+          stock: 1,
+          sold: 3,
+          status: "active",
+          inventoryId: null,
+          thumbnail: null,
+          pictures: [],
+          attributes: [{ id: "COLOR", value_name: "Rojo" }],
+        },
+      ],
+    },
+  ],
+} as const satisfies GroupedPublicationDto;
 
 export function createPublicationsResponse(
-  publications: readonly PublicationDto[] = [legacyPublicationDto],
+  products: readonly GroupedPublicationDto[] = [legacyPublicationDto],
 ): PublicationsResponseDto {
   return {
-    paging: {
-      page: 1,
-      limit: 20,
-      total: publications.length,
-      totalPages: publications.length === 0 ? 0 : 1,
-    },
-    count: publications.length,
-    publications: [...publications],
+    done: true,
+    nextCursor: null,
+    rawItemsCount: products.length,
+    productsCount: products.length,
+    products: [...products],
   };
 }

@@ -27,6 +27,7 @@ export type Publication = Readonly<{
     currency: string | null;
   }> | null;
   stock: number;
+  sold: number | null;
   group: PublicationGroup;
 }>;
 
@@ -59,7 +60,6 @@ export type PublicationVariant = Readonly<{
  */
 export type PublicationDetail = Publication &
   Readonly<{
-    sold: number | null;
     variants: readonly PublicationVariant[];
   }>;
 
@@ -67,7 +67,9 @@ export type PublicationsPage = Readonly<{
   publications: readonly Publication[];
   page: number;
   pageSize: number;
+  cursor: string | null;
+  nextCursor: string | null;
+  done: boolean;
   count: number;
-  total: number;
-  totalPages: number;
+  productsCount: number;
 }>;

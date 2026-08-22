@@ -6,14 +6,15 @@ import type { PublicationsPage } from "../domain/publication.model";
 import { PublicationsTable } from "./publications-table.client";
 
 const navigation = vi.hoisted(() => ({
+  back: vi.fn(),
   push: vi.fn(),
   searchParams: new URLSearchParams(
-    "page=1&search=campera&type=LEGACY&status=active",
+    "page=1&cursor=&search=campera&type=LEGACY&status=active",
   ),
 }));
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: navigation.push }),
+  useRouter: () => ({ back: navigation.back, push: navigation.push }),
   useSearchParams: () => navigation.searchParams,
 }));
 
@@ -21,9 +22,11 @@ const page: PublicationsPage = {
   publications: [],
   page: 1,
   pageSize: 20,
+  cursor: null,
+  nextCursor: "cursor-2",
+  done: false,
   count: 0,
-  total: 42,
-  totalPages: 3,
+  productsCount: 20,
 };
 
 const pageWithPublication: PublicationsPage = {
@@ -35,13 +38,10 @@ const pageWithPublication: PublicationsPage = {
       channel: "MERCADO_LIBRE",
       status: "active",
       thumbnailUrl: null,
-      permalink: "https://example.com/external",
-      price: {
-        from: 1000,
-        to: 1250,
-        currency: "ARS",
-      },
+      permalink: null,
+      price: { from: 1000, to: 1250, currency: null },
       stock: 4,
+      sold: 3,
       group: {
         key: "item:MLA1",
         type: "LEGACY",
@@ -57,26 +57,18 @@ const pageWithPublication: PublicationsPage = {
 describe("PublicationsTable", () => {
   afterEach(() => {
     cleanup();
+    navigation.back.mockReset();
     navigation.push.mockReset();
   });
 
-  it("updates only the page while preserving URL filters", async () => {
+  it("uses the backend cursor for the next page while preserving filters", async () => {
     const user = userEvent.setup();
-    const { container } = render(<PublicationsTable page={page} />);
-    const nextPageButton = container.querySelector<HTMLButtonElement>(
-      ".ant-pagination-next button",
-    );
+    render(<PublicationsTable page={pageWithPublication} />);
 
-    expect(nextPageButton).not.toBeNull();
-
-    if (!nextPageButton) {
-      throw new Error("Pagination must render a next-page button");
-    }
-
-    await user.click(nextPageButton);
+    await user.click(screen.getByRole("button", { name: "Siguiente" }));
 
     expect(navigation.push).toHaveBeenCalledWith(
-      "/publicaciones?page=2&search=campera&type=LEGACY&status=active",
+      "/publicaciones?page=2&cursor=cursor-2&search=campera&type=LEGACY&status=active",
     );
   });
 
@@ -89,16 +81,14 @@ describe("PublicationsTable", () => {
     );
   });
 
-  it("renders the real publication fields in the stable Ant Design table", () => {
+  it("renders real grouped publication fields in the Ant Design table", () => {
     render(<PublicationsTable page={pageWithPublication} />);
 
-    expect(
-      screen.getByRole("region", { name: "Tabla de publicaciones" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Tabla de publicaciones" })).toBeInTheDocument();
     expect(screen.getByText("Publicación real")).toBeInTheDocument();
     expect(screen.getByText("Mercado Libre")).toBeInTheDocument();
     expect(screen.getByText("Legacy")).toBeInTheDocument();
-    expect(screen.getByText("ARS 1.000 – ARS 1.250")).toBeInTheDocument();
-    expect(screen.getByText("1–20 de 42")).toBeInTheDocument();
+    expect(screen.getByText("1.000 — 1.250")).toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
   });
 });

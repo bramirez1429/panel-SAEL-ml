@@ -2,7 +2,6 @@ import { createGetPublicationsQuery } from "@/modules/publications/publications.
 import type { PublicationsPage } from "@/modules/publications/domain/publication.model";
 import { PublicationsView } from "@/modules/publications/presentation/publications-view";
 import {
-  buildPublicationsUrl,
   parsePublicationsSearchParams,
   PUBLICATIONS_PAGE_SIZE,
   type PublicationSearchParamsInput,
@@ -10,7 +9,6 @@ import {
 } from "@/modules/publications/presentation/publications-search-params";
 import { AppError } from "@/shared/errors/app-error";
 import { PageHeader } from "@/shared/ui/page-header/page-header";
-import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -29,16 +27,11 @@ async function loadPublications(
     const page = await createGetPublicationsQuery().execute({
       page: filters.page,
       pageSize: PUBLICATIONS_PAGE_SIZE,
+      cursor: filters.cursor,
       search: filters.search,
       type: filters.type,
       status: filters.status || null,
     });
-    const lastPage = Math.max(page.totalPages, 1);
-
-    if (filters.page > lastPage) {
-      redirect(buildPublicationsUrl(filters, { page: lastPage }));
-    }
-
     return {
       state: page.publications.length === 0 ? "empty" : "success",
       page,

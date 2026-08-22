@@ -7,65 +7,34 @@ import {
 import { mapPublicationDetail } from "./publication-detail.mapper";
 
 describe("mapPublicationDetail", () => {
-  it("maps a SHARED publication and its real embedded variations", () => {
+  it("maps the active SHARED response without inventing variations", () => {
     const detail = mapPublicationDetail(legacyPublicationDetailResponse);
 
     expect(detail).toEqual(
       expect.objectContaining({
-        id: legacyPublicationDetailResponse.product.id,
+        id: "MLA100",
         title: "Publicación clásica",
         channel: "MERCADO_LIBRE",
-        sold: 4,
+        sold: 2,
         group: expect.objectContaining({ type: "LEGACY" }),
       }),
     );
-    expect(detail.variants).toEqual([
-      expect.objectContaining({
-        id: "1001",
-        label: "Azul",
-        stock: 3,
-        sold: 4,
-        attributes: [{ id: "COLOR", value: "Azul" }],
-      }),
-    ]);
+    expect(detail.variants).toEqual([]);
   });
 
-  it("maps a USER_PRODUCT family and its relational children", () => {
+  it("maps the active VARIANT_PRICING response", () => {
     const detail = mapPublicationDetail(familyPublicationDetailResponse);
 
     expect(detail).toEqual(
       expect.objectContaining({
+        id: "MLA200",
         title: "Familia real",
         sold: 7,
-        group: expect.objectContaining({ type: "USER_PRODUCT" }),
+        group: expect.objectContaining({
+          type: "USER_PRODUCT",
+          familyId: "200",
+        }),
       }),
     );
-    expect(detail.variants).toEqual([
-      expect.objectContaining({
-        itemId: "MLA200",
-        userProductId: "MLAU200",
-        label: "Azul / 42",
-        price: { amount: 1500, currency: "ARS" },
-        stock: 2,
-        sold: 7,
-        attributes: [
-          { id: "COLOR", value: "Azul" },
-          { id: "SIZE", value: "42" },
-        ],
-      }),
-    ]);
-  });
-
-  it("does not invent sold units when a SHARED publication has no variations", () => {
-    const detail = mapPublicationDetail({
-      ...legacyPublicationDetailResponse,
-      product: {
-        ...legacyPublicationDetailResponse.product,
-        shared_variations: [],
-      },
-    });
-
-    expect(detail.sold).toBeNull();
-    expect(detail.variants).toEqual([]);
   });
 });

@@ -1,59 +1,93 @@
+import type { Publication, PublicationsPage } from "../domain/publication.model";
 import type {
-  Publication,
-  PublicationsPage,
-  PublicationType,
-} from "../domain/publication.model";
-import type {
-  PublicationDto,
+  GroupedPublicationDto,
   PublicationsResponseDto,
 } from "./publications-response.schema";
 
-const PUBLICATION_TYPE_BY_MODEL = {
-  SHARED: "LEGACY",
-  VARIANT_PRICING: "USER_PRODUCT",
-} as const satisfies Record<PublicationDto["model"], PublicationType>;
+type SharedProductDto = Extract<GroupedPublicationDto, { model: "SHARED" }>;
+type FamilySummaryDto = Extract<
+  GroupedPublicationDto,
+  { model: "VARIANT_PRICING" }
+>;
 
-/**
- * Traduce el DTO validado al lenguaje del dominio. Es el único lugar donde
- * los modelos SHARED y VARIANT_PRICING se convierten en tipos de la UI.
- */
-export function mapPublication(dto: PublicationDto): Publication {
-  const hasPrice = dto.price_from !== null || dto.price_to !== null;
-
+function mapSharedProduct(dto: SharedProductDto): Publication {
   return {
-    id: dto.id,
-    title: dto.family_name ?? dto.title,
+    id: dto.itemId,
+    title: dto.title ?? dto.itemId,
     channel: "MERCADO_LIBRE",
     status: dto.status,
     thumbnailUrl: dto.thumbnail,
-    permalink: dto.permalink,
-    price: hasPrice
-      ? {
-          from: dto.price_from,
-          to: dto.price_to,
-          currency: dto.currency_id,
-        }
-      : null,
-    stock: dto.stock_total,
+    permalink: null,
+    price:
+      dto.price === null
+        ? null
+        : { from: dto.price, to: dto.price, currency: null },
+    stock: dto.stock,
+    sold: dto.sold,
     group: {
-      key: dto.external_key,
-      type: PUBLICATION_TYPE_BY_MODEL[dto.model],
-      familyId: dto.family_id,
-      itemId: dto.parent_item_id,
-      childrenCount: dto.children_count,
+      key: dto.key,
+      type: "LEGACY",
+      familyId: null,
+      itemId: dto.itemId,
+      childrenCount: 0,
     },
   };
 }
 
+function mapFamilySummary(dto: FamilySummaryDto): Publication {
+  const items = dto.variants.flatMap((variant) => variant.items);
+  const prices = items.flatMap((item) =>
+    item.price === null ? [] : [item.price],
+  );
+  const firstItem = items[0];
+
+  return {
+    id: firstItem?.itemId ?? dto.familyId,
+    title: dto.familyName ?? firstItem?.title ?? dto.familyId,
+    channel: "MERCADO_LIBRE",
+    status: null,
+    thumbnailUrl: firstItem?.thumbnail ?? null,
+    permalink: null,
+    price:
+      prices.length === 0
+        ? null
+        : {
+            from: Math.min(...prices),
+            to: Math.max(...prices),
+            currency: null,
+          },
+    stock: items.reduce((total, item) => total + item.stock, 0),
+    sold: items.reduce((total, item) => total + item.sold, 0),
+    group: {
+      key: dto.key,
+      type: "USER_PRODUCT",
+      familyId: dto.familyId,
+      itemId: null,
+      childrenCount: dto.variantsCount,
+    },
+  };
+}
+
+/** Convierte el DTO agrupado real al modelo propio de la UI. */
+export function mapPublication(dto: GroupedPublicationDto): Publication {
+  return dto.model === "SHARED"
+    ? mapSharedProduct(dto)
+    : mapFamilySummary(dto);
+}
+
 export function mapPublicationsResponse(
   dto: PublicationsResponseDto,
+  pageSize = 20,
+  cursor: string | null = null,
 ): PublicationsPage {
   return {
-    publications: dto.publications.map(mapPublication),
-    page: dto.paging.page,
-    pageSize: dto.paging.limit,
-    count: dto.count,
-    total: dto.paging.total,
-    totalPages: dto.paging.totalPages,
+    publications: dto.products.map(mapPublication),
+    page: 1,
+    pageSize,
+    cursor,
+    nextCursor: dto.nextCursor,
+    done: dto.done,
+    count: dto.products.length,
+    productsCount: dto.productsCount,
   };
 }

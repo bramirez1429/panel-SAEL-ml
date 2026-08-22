@@ -21,6 +21,7 @@ const legacyPublication: Publication = {
   permalink: "https://example.com/MLA100",
   price: { from: 1000, to: 1000, currency: "ARS" },
   stock: 5,
+  sold: 2,
   group: {
     key: "item:MLA100",
     type: "LEGACY",
@@ -48,14 +49,17 @@ const publicationsPage: PublicationsPage = {
   publications: [legacyPublication, familyPublication],
   page: 2,
   pageSize: 20,
+  cursor: "cursor-2",
+  nextCursor: "cursor-3",
+  done: false,
   count: 2,
-  total: 42,
-  totalPages: 3,
+  productsCount: 2,
 };
 
 const defaultInput: GetPublicationsQueryInput = {
   page: 2,
   pageSize: 20,
+  cursor: "cursor-2",
   search: "",
   type: null,
   status: null,
@@ -68,8 +72,11 @@ describe("GetPublicationsQuery", () => {
       .mockResolvedValue(publicationsPage);
     const query = new GetPublicationsQuery(createRepository(getPublications));
 
-    await expect(query.execute(defaultInput)).resolves.toBe(publicationsPage);
-    expect(getPublications).toHaveBeenCalledWith({ page: 2, pageSize: 20 });
+    await expect(query.execute(defaultInput)).resolves.toEqual(publicationsPage);
+    expect(getPublications).toHaveBeenCalledWith({
+      pageSize: 20,
+      cursor: "cursor-2",
+    });
   });
 
   it("applies case-insensitive search to the fetched page", async () => {
@@ -85,7 +92,7 @@ describe("GetPublicationsQuery", () => {
 
     expect(result.publications).toEqual([familyPublication]);
     expect(result.count).toBe(1);
-    expect(result.total).toBe(42);
+    expect(result.productsCount).toBe(2);
   });
 
   it("combines type and status filters on the fetched page", async () => {

@@ -36,6 +36,7 @@ export function PublicationsFilters({ filters }: PublicationsFiltersProps) {
 
     navigate({
       page: 1,
+      cursor: null,
       search: String(formData.get("search") ?? "").trim(),
       status: String(formData.get("status") ?? "").trim(),
     });
@@ -67,7 +68,7 @@ export function PublicationsFilters({ filters }: PublicationsFiltersProps) {
           aria-label="Filtrar por tipo"
           allowClear
           onChange={(type: PublicationsUrlState["type"]) =>
-            navigate({ page: 1, type: type ?? null })
+            navigate({ page: 1, cursor: null, type: type ?? null })
           }
           options={[
             { label: "Familia", value: "USER_PRODUCT" },

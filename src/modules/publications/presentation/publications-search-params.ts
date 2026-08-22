@@ -8,6 +8,7 @@ export type PublicationSearchParamsInput = Readonly<
 
 export type PublicationsUrlState = Readonly<{
   page: number;
+  cursor: string | null;
   search: string;
   type: PublicationType | null;
   status: string;
@@ -25,10 +26,12 @@ export function parsePublicationsSearchParams(
   const pageValue = getFirstValue(searchParams.page);
   const parsedPage = Number(pageValue);
   const typeValue = getFirstValue(searchParams.type);
+  const cursor = getFirstValue(searchParams.cursor).trim();
+  const page = Number.isSafeInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
 
   return {
-    page:
-      Number.isSafeInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1,
+    page: cursor ? page : 1,
+    cursor: cursor || null,
     search: getFirstValue(searchParams.search).trim(),
     type: isPublicationType(typeValue) ? typeValue : null,
     status: getFirstValue(searchParams.status).trim(),
@@ -42,6 +45,7 @@ export function buildPublicationsUrl(
   const next = { ...current, ...patch };
   const searchParams = new URLSearchParams({
     page: String(next.page),
+    cursor: next.cursor ?? "",
     search: next.search,
     type: next.type ?? "",
     status: next.status,

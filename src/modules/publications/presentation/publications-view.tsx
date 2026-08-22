@@ -49,7 +49,7 @@ export function PublicationsView(props: PublicationsViewProps) {
             aria-label="Resumen de publicaciones"
           >
             <p className={styles.summaryText}>
-              Publicaciones encontradas: <strong>{props.page.total}</strong>
+              Publicaciones en esta página: <strong>{props.page.count}</strong>
             </p>
             {hasFilters ? (
               <p className={styles.filteredCount}>
@@ -76,7 +76,9 @@ const emptyPage: PublicationsPage = {
   publications: [],
   page: 1,
   pageSize: PUBLICATIONS_PAGE_SIZE,
+  cursor: null,
+  nextCursor: null,
+  done: true,
   count: 0,
-  total: 0,
-  totalPages: 0,
+  productsCount: 0,
 };

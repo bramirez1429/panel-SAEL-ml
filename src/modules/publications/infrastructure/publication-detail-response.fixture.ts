@@ -1,60 +1,31 @@
-import type {
-  FamilyPublicationDetailResponseDto,
-  SharedPublicationDetailResponseDto,
-} from "./publication-detail-response.schema";
-import {
-  legacyPublicationDto,
-  userProductPublicationDto,
-} from "./publications-response.fixture";
+import type { PublicationDetailResponseDto } from "./publication-detail-response.schema";
 
-export const legacyPublicationDetailResponse: SharedPublicationDetailResponseDto = {
-  product: {
-    ...legacyPublicationDto,
-    model: "SHARED",
-    shared_variations: [
-      {
-        id: "1001",
-        label: "Azul",
-        availableQuantity: 3,
-        soldQuantity: 4,
-        attributes: [{ id: "COLOR", valueName: "Azul" }],
-      },
-    ],
-    created_at: "2026-08-19T10:01:00.000Z",
+export const legacyPublicationDetailResponse = {
+  model: "SHARED",
+  itemId: "MLA100",
+  title: "Publicación clásica",
+  familyId: null,
+  familyName: null,
+  status: "active",
+  stock: { available: 5, sold: 2 },
+  price: {
+    current: 1000,
+    regular: 1000,
+    standard: 1000,
+    currency: "ARS",
   },
-};
+  thumbnail: "https://example.com/legacy.jpg",
+  permalink: "https://example.com/MLA100",
+  attributes: [],
+  variations: [],
+} as const satisfies PublicationDetailResponseDto;
 
-export const familyPublicationDetailResponse: FamilyPublicationDetailResponseDto = {
-  product: {
-    ...userProductPublicationDto,
-    model: "VARIANT_PRICING",
-    shared_variations: [],
-    created_at: "2026-08-19T10:01:00.000Z",
-  },
-  children: [
-    {
-      id: "33333333-3333-4333-8333-333333333333",
-      product_id: userProductPublicationDto.id,
-      item_id: "MLA200",
-      user_product_id: "MLAU200",
-      variant_label: "Azul / 42",
-      title: "Variante azul",
-      thumbnail: "https://example.com/MLA200.jpg",
-      status: "active",
-      currency_id: "ARS",
-      listing_type_id: "gold_special",
-      price: 1500,
-      available_quantity: 2,
-      sold_quantity: 7,
-      attributes: [
-        { id: "COLOR", valueName: "Azul" },
-        { id: "SIZE", valueName: "42" },
-      ],
-      permalink: "https://example.com/MLA200",
-      source_updated_at: "2026-08-20T10:00:00.000Z",
-      last_synced_at: "2026-08-20T10:01:00.000Z",
-      created_at: "2026-08-19T10:01:00.000Z",
-      updated_at: "2026-08-20T10:01:00.000Z",
-    },
-  ],
-};
+export const familyPublicationDetailResponse = {
+  ...legacyPublicationDetailResponse,
+  model: "VARIANT_PRICING",
+  itemId: "MLA200",
+  title: "Familia real",
+  familyId: "200",
+  familyName: "Familia real",
+  stock: { available: 3, sold: 7 },
+} as const satisfies PublicationDetailResponseDto;

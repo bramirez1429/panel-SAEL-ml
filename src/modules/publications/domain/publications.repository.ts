@@ -4,8 +4,8 @@ import type {
 } from "./publication.model";
 
 export type PublicationsRequest = Readonly<{
-  page: number;
   pageSize: number;
+  cursor: string | null;
 }>;
 
 /**

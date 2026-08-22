@@ -107,6 +107,7 @@
 }
 
 .pagination {
+  display: flex;
   justify-content: flex-end;
   padding: 20px 24px;
   border-top: 1px solid var(--ant-color-border-secondary, #e7eaf0);
@@ -158,7 +159,4 @@
     padding: 16px;
   }
 
-  .pagination :global(.ant-pagination-total-text) {
-    display: none;
-  }
 }

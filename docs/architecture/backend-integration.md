@@ -16,52 +16,50 @@ Shared HTTP Client
 NestJS
 ```
 
-El punto de composición crea explícitamente el cliente HTTP, la implementación del repositorio y el query. `application` sólo conoce el contrato definido por `domain`; la implementación concreta queda en `infrastructure`.
+El punto de composición crea explícitamente el cliente HTTP, la implementación
+del repositorio y el query. `application` sólo conoce el contrato definido por
+`domain`; la implementación concreta queda en `infrastructure`.
 
-Los componentes React no ejecutan `fetch` ni conocen dominios, headers o reglas de transporte. Esto evita exponer configuración privada al navegador, mantiene la UI desacoplada y permite probar los casos de uso con repositorios simulados.
+Los componentes React no ejecutan `fetch` ni conocen dominios, headers o reglas
+de transporte. Esto mantiene la UI desacoplada y evita exponer configuración
+privada al navegador.
 
 ## Límite HTTP
 
-El cliente compartido usa `fetch` nativo y está marcado como `server-only`. `BACKEND_API_URL` aporta la URL base y `BACKEND_API_TIMEOUT_MS` permite ajustar el timeout sin modificar código.
+El cliente compartido usa `fetch` nativo y está marcado como `server-only`.
+`BACKEND_API_URL` aporta la URL base y `BACKEND_API_TIMEOUT_MS` permite ajustar
+el timeout sin modificar código.
 
-El límite de infraestructura procesa cada respuesta así:
-
-```text
-HTTP
- ↓
-unknown
- ↓
-Zod
- ↓
-DTO válido
- ↓
-Mapper
- ↓
-modelo de dominio válido
-```
-
-No se aplican conversiones de tipo con `as`. Los problemas de configuración, conectividad, timeout, respuestas HTTP no exitosas y cuerpos inválidos se traducen a errores controlados derivados de `AppError`.
-
-## Endpoint de conectividad
-
-El backend vecino `panel-ml-api` define y prueba un endpoint real `GET /` que responde el texto exacto `Hello World!`. La integración valida ese contrato con Zod y lo utiliza únicamente para confirmar comunicación entre Next.js y NestJS.
-
-Este endpoint no representa todavía un health check ni readiness check de producción. Si el backend incorpora uno posteriormente, su ruta y su schema deberán sustituir este contrato con base en la implementación real, no por suposición.
-
-## Listado de publicaciones
-
-El frontend consume el endpoint real:
+Cada respuesta externa se procesa así:
 
 ```text
-GET /mercadolibre/publicaciones?page={page}&limit=20
+HTTP → unknown → Zod → DTO válido → Mapper → modelo de dominio
 ```
 
-NestJS soporta actualmente `page` y `limit`, pero no recibe `search`, `type` ni
-`status`. Por eso la página solicitada se obtiene desde el servidor y el caso de
-uso aplica esos tres filtros únicamente sobre sus 20 elementos. La URL sigue
-siendo la fuente de verdad, aunque hasta que el backend incorpore filtros el
-resultado filtrado no representa coincidencias de todo el catálogo.
+Los problemas de configuración, conectividad, timeout, respuestas HTTP no
+exitosas y cuerpos inválidos se traducen a errores controlados derivados de
+`AppError`.
 
-La respuesta de listado tampoco incluye vendidos ni el detalle de variaciones
-de publicaciones `LEGACY`. La tabla comunica esos valores como no disponibles;
-no los estima ni los reemplaza con datos ficticios.
+## Listado agrupado de publicaciones
+
+El frontend consume el endpoint activo:
+
+```text
+GET /mercadolibre/direct/publicaciones/agrupadas?limit=20&cursor={cursor}
+```
+
+La respuesta real contiene `done`, `nextCursor`, `rawItemsCount`,
+`productsCount` y `products`. Cada producto es `SHARED` o una familia
+`VARIANT_PRICING`; el schema y mapper del módulo validan ambas formas antes de
+entregarlas al dominio.
+
+La API no devuelve un total ni páginas numéricas. La URL conserva `cursor` y la
+interfaz avanza mediante el `nextCursor` real. Los filtros `search`, `type` y
+`status` siguen aplicándose únicamente sobre el lote recibido porque el
+endpoint activo no los acepta.
+
+El detalle usa el endpoint activo relacionado:
+
+```text
+GET /mercadolibre/direct/publicaciones/:itemId
+```

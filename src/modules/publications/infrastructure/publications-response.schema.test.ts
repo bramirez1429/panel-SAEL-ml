@@ -10,12 +10,12 @@ describe("publicationsResponseSchema", () => {
     ).toBe(true);
   });
 
-  it("rejects unsupported transport models", () => {
+  it("rejects unsupported grouped models", () => {
     const response: unknown = createPublicationsResponse();
     const invalidResponse = structuredClone(response) as {
-      publications: Array<{ model: string }>;
+      products: Array<{ model: string }>;
     };
-    const firstPublication = invalidResponse.publications[0];
+    const firstPublication = invalidResponse.products[0];
 
     if (!firstPublication) {
       throw new Error("The fixture must contain a publication");
@@ -28,36 +28,30 @@ describe("publicationsResponseSchema", () => {
     );
   });
 
-  it("rejects invalid persistence timestamps", () => {
+  it("rejects a response without the real cursor fields", () => {
     const response: unknown = createPublicationsResponse();
     const invalidResponse = structuredClone(response) as {
-      publications: Array<{ updated_at: string }>;
+      nextCursor?: string | null;
     };
-    const firstPublication = invalidResponse.publications[0];
-
-    if (!firstPublication) {
-      throw new Error("The fixture must contain a publication");
-    }
-
-    firstPublication.updated_at = "not-a-timestamp";
+    delete invalidResponse.nextCursor;
 
     expect(publicationsResponseSchema.safeParse(invalidResponse).success).toBe(
       false,
     );
   });
 
-  it("rejects negative stock", () => {
+  it("rejects negative grouped product stock", () => {
     const response: unknown = createPublicationsResponse();
     const invalidResponse = structuredClone(response) as {
-      publications: Array<{ stock_total: number }>;
+      products: Array<{ stock: number }>;
     };
-    const firstPublication = invalidResponse.publications[0];
+    const firstPublication = invalidResponse.products[0];
 
     if (!firstPublication) {
       throw new Error("The fixture must contain a publication");
     }
 
-    firstPublication.stock_total = -1;
+    firstPublication.stock = -1;
 
     expect(publicationsResponseSchema.safeParse(invalidResponse).success).toBe(
       false,

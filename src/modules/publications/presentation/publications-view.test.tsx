@@ -16,6 +16,7 @@ vi.mock("next/navigation", () => ({
 
 const filters = {
   page: 1,
+  cursor: null,
   search: "",
   type: null,
   status: "",
@@ -30,6 +31,7 @@ const publication: Publication = {
   permalink: "https://example.com/publication",
   price: { from: 1000, to: 1000, currency: "ARS" },
   stock: 5,
+  sold: 2,
   group: {
     key: "family:1",
     type: "USER_PRODUCT",
@@ -43,9 +45,11 @@ const page: PublicationsPage = {
   publications: [publication],
   page: 1,
   pageSize: 20,
+  cursor: null,
+  nextCursor: null,
+  done: true,
   count: 1,
-  total: 1,
-  totalPages: 1,
+  productsCount: 1,
 };
 
 describe("PublicationsView", () => {
@@ -75,7 +79,7 @@ describe("PublicationsView", () => {
     render(
       <PublicationsView
         filters={filters}
-        page={{ ...page, publications: [], count: 0, total: 0, totalPages: 0 }}
+        page={{ ...page, publications: [], count: 0, productsCount: 0 }}
         state="empty"
       />,
     );

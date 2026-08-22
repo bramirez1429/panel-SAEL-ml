@@ -30,6 +30,7 @@ describe("PublicationsFilters", () => {
       <PublicationsFilters
         filters={{
           page: 2,
+          cursor: "cursor-2",
           search: "anterior",
           type: null,
           status: "paused",
@@ -50,7 +51,7 @@ describe("PublicationsFilters", () => {
 
     await waitFor(() => {
       expect(navigation.push).toHaveBeenCalledWith(
-        "/publicaciones?page=1&search=campera+azul&type=&status=active",
+        "/publicaciones?page=1&cursor=&search=campera+azul&type=&status=active",
       );
     });
   });
@@ -62,6 +63,7 @@ describe("PublicationsFilters", () => {
       <PublicationsFilters
         filters={{
           page: 2,
+          cursor: "cursor-2",
           search: "anterior",
           type: null,
           status: "paused",
@@ -76,7 +78,7 @@ describe("PublicationsFilters", () => {
 
     await waitFor(() => {
       expect(navigation.push).toHaveBeenCalledWith(
-        "/publicaciones?page=1&search=anterior&type=USER_PRODUCT&status=paused",
+        "/publicaciones?page=1&cursor=&search=anterior&type=USER_PRODUCT&status=paused",
       );
     });
   });

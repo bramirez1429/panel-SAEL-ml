@@ -8,7 +8,7 @@ import {
 } from "./publications-response.fixture";
 
 describe("mapPublicationsResponse", () => {
-  it("maps backend models to frontend publication types", () => {
+  it("maps shared products and grouped families to domain publications", () => {
     const result = mapPublicationsResponse(
       createPublicationsResponse([
         legacyPublicationDto,
@@ -18,48 +18,37 @@ describe("mapPublicationsResponse", () => {
 
     expect(result.publications).toEqual([
       expect.objectContaining({
+        id: "MLA100",
         title: "Publicación clásica",
         channel: "MERCADO_LIBRE",
-        price: {
-          from: 1000,
-          to: 1000,
-          currency: "ARS",
-        },
-        stock: 5,
-        permalink: "https://example.com/MLA100",
-        group: expect.objectContaining({
-          type: "LEGACY",
-          itemId: "MLA100",
-          familyId: null,
-        }),
+        sold: 2,
+        price: { from: 1000, to: 1000, currency: null },
+        group: expect.objectContaining({ type: "LEGACY" }),
       }),
       expect.objectContaining({
+        id: "MLA200",
         title: "Familia real",
-        channel: "MERCADO_LIBRE",
+        stock: 3,
+        sold: 10,
+        price: { from: 1500, to: 1700, currency: null },
         group: expect.objectContaining({
           type: "USER_PRODUCT",
-          itemId: null,
           familyId: "200",
-          childrenCount: 3,
+          childrenCount: 2,
         }),
       }),
     ]);
-    expect(result.total).toBe(2);
+    expect(result.productsCount).toBe(2);
+    expect(result.done).toBe(true);
   });
 
-  it("preserves the absence of price data instead of inventing a value", () => {
+  it("preserves the absence of price data", () => {
     const result = mapPublicationsResponse(
-      createPublicationsResponse([
-        {
-          ...legacyPublicationDto,
-          price_from: null,
-          price_to: null,
-        },
-      ]),
+      createPublicationsResponse([{ ...legacyPublicationDto, price: null }]),
     );
 
     expect(result.publications[0]).toEqual(
-      expect.objectContaining({ price: null, stock: 5 }),
+      expect.objectContaining({ price: null, stock: 5, sold: 2 }),
     );
   });
 });

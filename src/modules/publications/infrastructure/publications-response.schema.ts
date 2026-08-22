@@ -1,44 +1,83 @@
 import { z } from "zod";
 
-/**
- * Contrato de entrada del endpoint NestJS. Todo dato externo se valida aquí
- * como unknown antes de alcanzar el mapper y el dominio.
- */
-export const publicationDtoSchema = z.object({
-  id: z.string().uuid(),
-  seller_id: z.number().int().nonnegative(),
-  external_key: z.string().min(1),
-  model: z.enum(["SHARED", "VARIANT_PRICING"]),
-  family_id: z.string().nullable(),
-  parent_item_id: z.string().nullable(),
-  family_name: z.string().nullable(),
-  title: z.string(),
-  thumbnail: z.string().nullable(),
-  status: z.string().nullable(),
-  category_id: z.string().nullable(),
-  currency_id: z.string().nullable(),
-  price_from: z.number().nullable(),
-  price_to: z.number().nullable(),
-  stock_total: z.number().nonnegative(),
-  children_count: z.number().int().nonnegative(),
-  permalink: z.string().nullable(),
-  source_updated_at: z.iso.datetime({ offset: true }).nullable(),
-  last_synced_at: z.iso.datetime({ offset: true }),
-  updated_at: z.iso.datetime({ offset: true }),
+/** DTO real de GET /mercadolibre/direct/publicaciones/agrupadas. */
+const familyAttributeDtoSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().optional(),
+  value_name: z.string().nullable().optional(),
+  values: z
+    .array(
+      z.object({
+        id: z.string().nullable().optional(),
+        name: z.string().nullable().optional(),
+      }),
+    )
+    .optional(),
 });
+
+const familyPictureDtoSchema = z.object({
+  id: z.string().min(1),
+  url: z.string().optional(),
+  secure_url: z.string().optional(),
+});
+
+const familyItemSummaryDtoSchema = z.object({
+  itemId: z.string().min(1),
+  title: z.string().nullable(),
+  price: z.number().nullable(),
+  stock: z.number().nonnegative(),
+  sold: z.number().nonnegative(),
+  status: z.string().nullable(),
+  inventoryId: z.string().nullable(),
+  thumbnail: z.string().nullable(),
+  pictures: z.array(familyPictureDtoSchema),
+  attributes: z.array(familyAttributeDtoSchema),
+});
+
+const familyVariantSummaryDtoSchema = z.object({
+  userProductId: z.string().min(1),
+  items: z.array(familyItemSummaryDtoSchema),
+});
+
+const sharedProductDtoSchema = z.object({
+  key: z.string().min(1),
+  model: z.literal("SHARED"),
+  itemId: z.string().min(1),
+  title: z.string().nullable(),
+  price: z.number().nullable(),
+  stock: z.number().nonnegative(),
+  sold: z.number().nonnegative(),
+  status: z.string().nullable(),
+  thumbnail: z.string().nullable(),
+  variations: z.array(z.unknown()),
+});
+
+const familySummaryDtoSchema = z.object({
+  key: z.string().min(1),
+  model: z.literal("VARIANT_PRICING"),
+  familyId: z.string().min(1),
+  familyName: z.string().nullable(),
+  variantsCount: z.number().int().nonnegative(),
+  itemsCount: z.number().int().nonnegative(),
+  variants: z.array(familyVariantSummaryDtoSchema),
+});
+
+export const groupedPublicationDtoSchema = z.union([
+  sharedProductDtoSchema,
+  familySummaryDtoSchema,
+]);
 
 export const publicationsResponseSchema = z.object({
-  paging: z.object({
-    page: z.number().int().positive(),
-    limit: z.number().int().positive(),
-    total: z.number().int().nonnegative(),
-    totalPages: z.number().int().nonnegative(),
-  }),
-  count: z.number().int().nonnegative(),
-  publications: z.array(publicationDtoSchema),
+  done: z.boolean(),
+  nextCursor: z.string().nullable(),
+  rawItemsCount: z.number().int().nonnegative(),
+  productsCount: z.number().int().nonnegative(),
+  products: z.array(groupedPublicationDtoSchema),
 });
 
-export type PublicationDto = z.infer<typeof publicationDtoSchema>;
+export type GroupedPublicationDto = z.infer<
+  typeof groupedPublicationDtoSchema
+>;
 export type PublicationsResponseDto = z.infer<
   typeof publicationsResponseSchema
 >;

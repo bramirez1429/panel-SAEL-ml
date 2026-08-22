@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition, type ReactNode } from "react";
-import { Pagination, Table, Tag } from "antd";
+import { Button, Space, Table, Tag } from "antd";
 import type { TableColumnsType } from "antd";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -82,9 +82,11 @@ const columns: TableColumnsType<Publication> = [
   },
   {
     title: "Vendidos",
+    dataIndex: "sold",
     key: "sold",
     align: "right",
-    render: () => missingValue,
+    render: (sold: Publication["sold"]) =>
+      sold === null ? missingValue : sold,
     width: 100,
   },
   {
@@ -117,15 +119,22 @@ export function PublicationsTable({
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
-  const changePage = (nextPage: number) => {
+  const goToNextPage = () => {
     const current = parsePublicationsSearchParams(
       Object.fromEntries(searchParams.entries()),
     );
 
     startTransition(() => {
-      router.push(buildPublicationsUrl(current, { page: nextPage }));
+      router.push(
+        buildPublicationsUrl(current, {
+          page: current.page + 1,
+          cursor: page.nextCursor,
+        }),
+      );
     });
   };
+
+  const hasNextPage = !page.done && page.nextCursor !== null;
 
   return (
     <div
@@ -145,19 +154,26 @@ export function PublicationsTable({
         size="middle"
       />
 
-      {!loading && page.total > 0 ? (
-        <Pagination
-          className={styles.pagination}
-          current={page.page}
-          onChange={changePage}
-          pageSize={page.pageSize}
-          responsive
-          showSizeChanger={false}
-          showTotal={(total, [first, last]) =>
-            `${first}–${last} de ${total}`
-          }
-          total={page.total}
-        />
+      {!loading && page.count > 0 ? (
+        <div className={styles.pagination} aria-label="Paginación por cursor">
+          <Space>
+            <Button
+              disabled={page.page <= 1 || isPending}
+              onClick={() => router.back()}
+            >
+              Anterior
+            </Button>
+            <span>Página {page.page}</span>
+            <Button
+              disabled={!hasNextPage || isPending}
+              loading={isPending}
+              onClick={goToNextPage}
+              type="primary"
+            >
+              Siguiente
+            </Button>
+          </Space>
+        </div>
       ) : null}
     </div>
   );
@@ -166,21 +182,22 @@ export function PublicationsTable({
 function formatPrice(publication: Publication): ReactNode {
   const from = publication.price?.from ?? null;
   const to = publication.price?.to ?? null;
-  const currency = publication.price?.currency;
+  const currency = publication.price?.currency ?? "";
 
   if (from === null && to === null) {
     return missingValue;
   }
 
-  const prefix = currency ? `${currency} ` : "";
   const format = (value: number) =>
     new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 }).format(value);
+  const formatWithCurrency = (value: number) =>
+    currency ? `${currency} ${format(value)}` : format(value);
 
   if (from !== null && to !== null && from !== to) {
-    return `${prefix}${format(from)} – ${prefix}${format(to)}`;
+    return `${formatWithCurrency(from)} — ${formatWithCurrency(to)}`;
   }
 
   const amount = from ?? to;
 
-  return amount === null ? missingValue : `${prefix}${format(amount)}`;
+  return amount === null ? missingValue : formatWithCurrency(amount);
 }

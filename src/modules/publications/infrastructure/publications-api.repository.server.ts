@@ -16,7 +16,8 @@ import { publicationDetailResponseSchema } from "./publication-detail-response.s
 import { mapPublicationsResponse } from "./publication.mapper";
 import { publicationsResponseSchema } from "./publications-response.schema";
 
-const PUBLICATIONS_ENDPOINT = "/mercadolibre/publicaciones";
+const PUBLICATIONS_ENDPOINT =
+  "/mercadolibre/direct/publicaciones/agrupadas";
 
 /**
  * Implementación HTTP del contrato PublicationsRepository.
@@ -28,10 +29,10 @@ export class PublicationsApiRepository implements PublicationsRepository {
   async getPublications(
     request: PublicationsRequest,
   ): Promise<PublicationsPage> {
-    const query = new URLSearchParams({
-      page: String(request.page),
-      limit: String(request.pageSize),
-    });
+    const query = new URLSearchParams({ limit: String(request.pageSize) });
+    if (request.cursor) {
+      query.set("cursor", request.cursor);
+    }
     const response = await this.httpClient.get(
       `${PUBLICATIONS_ENDPOINT}?${query.toString()}`,
     );
@@ -45,12 +46,16 @@ export class PublicationsApiRepository implements PublicationsRepository {
       );
     }
 
-    return mapPublicationsResponse(validation.data);
+    return mapPublicationsResponse(
+      validation.data,
+      request.pageSize,
+      request.cursor,
+    );
   }
 
   async getById(id: string): Promise<PublicationDetail> {
     const response = await this.httpClient.get(
-      `${PUBLICATIONS_ENDPOINT}/detalle/${encodeURIComponent(id)}`,
+      `/mercadolibre/direct/publicaciones/${encodeURIComponent(id)}`,
     );
     const validation = publicationDetailResponseSchema.safeParse(response);
 
