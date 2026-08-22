@@ -1,6 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const baseURL = "http://127.0.0.1:3000";
+// Next.js usa localhost como origen de desarrollo; mantenerlo evita bloquear
+// los chunks cliente por una diferencia de origen durante las pruebas E2E.
+const baseURL = "http://localhost:3000";
 
 export default defineConfig({
   testDir: "./e2e",

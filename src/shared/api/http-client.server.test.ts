@@ -32,6 +32,54 @@ describe("HttpClient", () => {
     );
   });
 
+  it("performs a server-side POST with a JSON body", async () => {
+    const fetchImplementation = vi.fn<typeof fetch>();
+    fetchImplementation.mockResolvedValue(
+      Response.json({ accessToken: "access", refreshToken: "refresh" }),
+    );
+    const client = new HttpClient(apiConfig, fetchImplementation);
+    const credentials = {
+      email: "user@example.com",
+      password: "a-secure-password",
+    };
+
+    await expect(client.post("/auth/login", credentials)).resolves.toEqual({
+      accessToken: "access",
+      refreshToken: "refresh",
+    });
+    expect(fetchImplementation).toHaveBeenCalledWith(
+      new URL("https://api.example.com/auth/login"),
+      expect.objectContaining({
+        body: JSON.stringify(credentials),
+        cache: "no-store",
+        headers: expect.objectContaining({
+          Accept: expect.stringContaining("application/json"),
+          "Content-Type": "application/json",
+        }),
+        method: "POST",
+        signal: expect.any(AbortSignal),
+      }),
+    );
+  });
+
+  it("adds an explicit bearer token only for authenticated GET requests", async () => {
+    const fetchImplementation = vi.fn<typeof fetch>();
+    fetchImplementation.mockResolvedValue(Response.json({ id: "user-id" }));
+    const client = new HttpClient(apiConfig, fetchImplementation);
+
+    await client.get("/auth/me", { bearerToken: "signed-access-token" });
+
+    expect(fetchImplementation).toHaveBeenCalledWith(
+      new URL("https://api.example.com/auth/me"),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer signed-access-token",
+        }),
+        method: "GET",
+      }),
+    );
+  });
+
   it("translates non-successful HTTP responses", async () => {
     const fetchImplementation = vi.fn<typeof fetch>();
     fetchImplementation.mockResolvedValue(

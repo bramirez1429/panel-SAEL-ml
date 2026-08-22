@@ -4,6 +4,10 @@ import { getApiConfig, type ApiConfig } from "./api-config";
 import { ApiError } from "./api-error";
 
 export type HttpGetClient = Pick<HttpClient, "get">;
+export type HttpPostClient = Pick<HttpClient, "post">;
+export type HttpGetOptions = Readonly<{
+  bearerToken?: string;
+}>;
 
 // This boundary stays server-only so backend configuration never reaches browser bundles.
 // Centralizing fetch also gives every repository the same timeout and error semantics.
@@ -13,16 +17,36 @@ export class HttpClient {
     private readonly fetchImplementation: typeof fetch = globalThis.fetch,
   ) {}
 
-  async get(path: string): Promise<unknown> {
+  async get(path: string, options: HttpGetOptions = {}): Promise<unknown> {
+    return this.request(path, {
+      method: "GET",
+      headers: {
+        Accept: "application/json, text/plain;q=0.9",
+        ...(options.bearerToken
+          ? { Authorization: `Bearer ${options.bearerToken}` }
+          : {}),
+      },
+    });
+  }
+
+  async post(path: string, body: unknown): Promise<unknown> {
+    return this.request(path, {
+      method: "POST",
+      headers: {
+        Accept: "application/json, text/plain;q=0.9",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+  }
+
+  private async request(path: string, init: RequestInit): Promise<unknown> {
     try {
       const response = await this.fetchImplementation(
         resolveApiUrl(this.config.baseUrl, path),
         {
-          method: "GET",
+          ...init,
           cache: "no-store",
-          headers: {
-            Accept: "application/json, text/plain;q=0.9",
-          },
           signal: AbortSignal.timeout(this.config.timeoutMs),
         },
       );

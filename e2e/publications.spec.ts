@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("keeps publication filters in the shareable URL", async ({ page }) => {
   await page.goto("/publicaciones?page=1&search=&type=&status=");
+  await page.waitForLoadState("networkidle");
 
   await page.getByRole("textbox", { name: "Buscar" }).fill("campera azul");
   await page.getByRole("textbox", { name: "Estado" }).fill("active");
