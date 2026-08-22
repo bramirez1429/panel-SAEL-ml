@@ -7,9 +7,14 @@ export type HttpGetClient = Pick<HttpClient, "get">;
 export type HttpPostClient = Pick<HttpClient, "post">;
 export type HttpRequestOptions = Readonly<{
   bearerToken?: string;
+  cookieHeader?: string;
 }>;
 export type HttpGetOptions = HttpRequestOptions;
 export type HttpPostOptions = HttpRequestOptions;
+export type HttpResponse = Readonly<{
+  body: unknown;
+  headers: Headers;
+}>;
 
 // This boundary stays server-only so backend configuration never reaches browser bundles.
 // Centralizing fetch also gives every repository the same timeout and error semantics.
@@ -20,6 +25,14 @@ export class HttpClient {
   ) {}
 
   async get(path: string, options: HttpGetOptions = {}): Promise<unknown> {
+    const response = await this.getResponse(path, options);
+    return response.body;
+  }
+
+  async getResponse(
+    path: string,
+    options: HttpGetOptions = {},
+  ): Promise<HttpResponse> {
     return this.request(path, {
       method: "GET",
       headers: {
@@ -27,6 +40,7 @@ export class HttpClient {
         ...(options.bearerToken
           ? { Authorization: `Bearer ${options.bearerToken}` }
           : {}),
+        ...(options.cookieHeader ? { Cookie: options.cookieHeader } : {}),
       },
     });
   }
@@ -36,6 +50,15 @@ export class HttpClient {
     body?: unknown,
     options: HttpPostOptions = {},
   ): Promise<unknown> {
+    const response = await this.postResponse(path, body, options);
+    return response.body;
+  }
+
+  async postResponse(
+    path: string,
+    body?: unknown,
+    options: HttpPostOptions = {},
+  ): Promise<HttpResponse> {
     const hasBody = body !== undefined;
 
     return this.request(path, {
@@ -46,12 +69,13 @@ export class HttpClient {
         ...(options.bearerToken
           ? { Authorization: `Bearer ${options.bearerToken}` }
           : {}),
+        ...(options.cookieHeader ? { Cookie: options.cookieHeader } : {}),
       },
       body: hasBody ? JSON.stringify(body) : undefined,
     });
   }
 
-  private async request(path: string, init: RequestInit): Promise<unknown> {
+  private async request(path: string, init: RequestInit): Promise<HttpResponse> {
     try {
       const response = await this.fetchImplementation(
         resolveApiUrl(this.config.baseUrl, path),
@@ -70,7 +94,10 @@ export class HttpClient {
         );
       }
 
-      return await readResponseBody(response);
+      return {
+        body: await readResponseBody(response),
+        headers: response.headers,
+      };
     } catch (error: unknown) {
       if (error instanceof ApiError) {
         throw error;

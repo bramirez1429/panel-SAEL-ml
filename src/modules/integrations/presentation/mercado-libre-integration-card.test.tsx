@@ -9,11 +9,8 @@ describe("MercadoLibreIntegrationCard", () => {
 
     expect(screen.getByText("No conectado")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Conectar Mercado Libre" }),
-    ).toBeDisabled();
-    expect(
-      screen.queryByRole("link", { name: "Conectar Mercado Libre" }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("link", { name: "Conectar Mercado Libre" }),
+    ).toHaveAttribute("href", "/api/integrations/mercado-libre/connect");
   });
 
   it("muestra la confirmación prevista para una conexión verificada", () => {

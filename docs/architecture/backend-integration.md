@@ -63,3 +63,16 @@ El detalle usa el endpoint activo relacionado:
 ```text
 GET /mercadolibre/direct/publicaciones/:itemId
 ```
+
+## Requests privados y OAuth
+
+Los repositories privados usan un adaptador HTTP server-only que lee el access
+JWT desde la cookie HttpOnly y agrega `Authorization: Bearer` sin entregar el
+token a componentes cliente.
+
+Mercado Libre se inicia mediante `/api/integrations/mercado-libre/connect`.
+El Route Handler conserva la cookie HttpOnly de correlación emitida por Nest y
+proxyfica `/mercadolibre/callback` para que state y cookie lleguen juntos al
+backend. `ML_REDIRECT_URI` debe apuntar al origen público de Next, por ejemplo
+`https://panel.example.com/mercadolibre/callback`; la validación de state del
+backend no se reemplaza ni se debilita.

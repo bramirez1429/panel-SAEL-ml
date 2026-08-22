@@ -40,11 +40,7 @@ export function MercadoLibreIntegrationCard({
               habilitará cuando el backend pueda asociarla de forma segura con
               la sesión actual.
             </p>
-            <Button
-              type="primary"
-              disabled
-              title="Pendiente de una integración asociada al usuario autenticado"
-            >
+            <Button type="primary" href="/api/integrations/mercado-libre/connect">
               Conectar Mercado Libre
             </Button>
           </div>

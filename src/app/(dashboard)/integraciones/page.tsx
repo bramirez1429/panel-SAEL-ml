@@ -1,19 +1,25 @@
+import { createMercadoLibreApiRepository } from "@/modules/integrations/integrations.composition.server";
 import { MercadoLibreIntegrationCard } from "@/modules/integrations/presentation/mercado-libre-integration-card";
 import { PageHeader } from "@/shared/ui/page-header/page-header";
 
-/**
- * El OAuth actual del backend guarda una conexión global, sin vincularla al usuario
- * autenticado. Hasta contar con ese contrato, la UI no infiere una conexión propia.
- */
-const currentUserMercadoLibreStatus = "not-connected" as const;
+export const dynamic = "force-dynamic";
 
-export default function IntegrationsPage() {
+export default async function IntegrationsPage() {
+  let status: "connected" | "not-connected" = "not-connected";
+  try {
+    status = (await createMercadoLibreApiRepository().hasConnection())
+      ? "connected"
+      : "not-connected";
+  } catch {
+    status = "not-connected";
+  }
+
   return (
     <>
       <PageHeader
         description="Administra las conexiones con tus canales de venta."
       />
-      <MercadoLibreIntegrationCard status={currentUserMercadoLibreStatus} />
+      <MercadoLibreIntegrationCard status={status} />
     </>
   );
 }
