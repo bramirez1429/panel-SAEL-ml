@@ -21,6 +21,7 @@ export const familyDetailResponse = {
       thumbnail: "https://example.com/blue.jpg",
       attributes: [{ id: "COLOR", value_name: "Azul" }],
       permalink: "https://example.com/MLA201",
+      sku: { sellerCustomField: "SKU-FAMILY", inventoryId: "INV-1" },
     },
     {
       itemId: "MLA202",

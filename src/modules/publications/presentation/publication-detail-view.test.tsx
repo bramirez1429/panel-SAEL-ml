@@ -59,11 +59,8 @@ describe("PublicationDetailView", () => {
     expect(screen.getByText("ARS 1.000 – ARS 1.500")).toBeInTheDocument();
     expect(screen.getAllByText("200").length).toBeGreaterThan(0);
     expect(screen.getByText("UP-200")).toBeInTheDocument();
-    expect(screen.getByText("MLA100")).toBeInTheDocument();
     expect(screen.getByText("Azul")).toBeInTheDocument();
-    expect(
-      screen.getAllByRole("link", { name: "Ver en Mercado Libre" }),
-    ).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: /expand row/i })).toHaveLength(1);
   });
 
   it("keeps missing legacy relations and sold values explicit", () => {

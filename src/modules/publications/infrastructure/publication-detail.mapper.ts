@@ -67,7 +67,9 @@ function mapFamilyVariant(
           },
     stock: variant.stock.available,
     sold: variant.stock.sold,
-    sku: readAttributeValue(variant.attributes, "SELLER_SKU"),
+    sku:
+      variant.sku?.sellerCustomField?.trim() ||
+      readAttributeValue(variant.attributes, "SELLER_SKU"),
     attributes: variant.attributes.map((attribute) => ({
       id: attribute.id,
       value: attribute.value_name ?? null,

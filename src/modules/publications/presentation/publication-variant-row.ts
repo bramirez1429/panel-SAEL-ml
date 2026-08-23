@@ -22,6 +22,13 @@ export type PublicationVariantTableRow = Readonly<{
   permalink: string | null;
 }>;
 
+export type PublicationVariationTableRow = Readonly<{
+  key: string;
+  userProductId: string;
+  representative: PublicationVariantTableRow;
+  offers: readonly PublicationVariantTableRow[];
+}>;
+
 /** Convierte el dominio a filas planas y deja los targets de edición explícitos. */
 export function createPublicationVariantRows(
   publication: PublicationDetail,
@@ -51,6 +58,49 @@ export function createPublicationVariantRows(
       permalink: publication.permalink,
     },
   ];
+}
+
+/** Agrupa ofertas MLA sin perder sus precios ni identificadores individuales. */
+export function groupFamilyRows(
+  rows: readonly PublicationVariantTableRow[],
+): readonly PublicationVariationTableRow[] {
+  const groups = new Map<string, PublicationVariantTableRow[]>();
+  for (const row of rows) {
+    const key = row.userProductId ?? row.publicationId;
+    const group = groups.get(key) ?? [];
+    group.push(row);
+    groups.set(key, group);
+  }
+  return [...groups.entries()]
+    .map(([userProductId, offers]) => ({
+      key: userProductId,
+      userProductId,
+      representative: offers[0]!,
+      offers: [...offers].sort(compareRows),
+    }))
+    .sort((left, right) => compareRows(left.representative, right.representative));
+}
+
+export function compareRows(
+  left: PublicationVariantTableRow,
+  right: PublicationVariantTableRow,
+): number {
+  const color = (left.color ?? "").localeCompare(right.color ?? "", "es", { sensitivity: "base" });
+  if (color !== 0) return color;
+  return compareSizes(left.size, right.size);
+}
+
+export function compareSizes(left: string | null, right: string | null): number {
+  const numericLeft = left !== null && /^\d+(?:[.,]\d+)?$/.test(left.trim()) ? Number(left.replace(",", ".")) : null;
+  const numericRight = right !== null && /^\d+(?:[.,]\d+)?$/.test(right.trim()) ? Number(right.replace(",", ".")) : null;
+  if (numericLeft !== null && numericRight !== null) return numericLeft - numericRight;
+  const order = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"];
+  const leftIndex = order.indexOf(left?.trim().toUpperCase() ?? "");
+  const rightIndex = order.indexOf(right?.trim().toUpperCase() ?? "");
+  if (leftIndex >= 0 && rightIndex >= 0) return leftIndex - rightIndex;
+  if (leftIndex >= 0) return -1;
+  if (rightIndex >= 0) return 1;
+  return (left ?? "").localeCompare(right ?? "", "es", { numeric: true, sensitivity: "base" });
 }
 
 function toVariantPrice(

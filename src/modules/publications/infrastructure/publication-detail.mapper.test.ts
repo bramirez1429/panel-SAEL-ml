@@ -48,5 +48,6 @@ describe("mapPublicationDetail", () => {
     expect(detail.variants[0]?.attributes).toEqual([
       { id: "COLOR", value: "Azul" },
     ]);
+    expect(detail.variants[0]?.sku).toBe("SKU-FAMILY");
   });
 });

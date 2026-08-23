@@ -50,6 +50,10 @@ const familyVariantDtoSchema = z.object({
   thumbnail: z.string().nullable(),
   attributes: z.array(attributeDtoSchema),
   permalink: z.string().nullable(),
+  sku: z.object({
+    sellerCustomField: z.string().nullable(),
+    inventoryId: z.string().nullable(),
+  }).optional(),
 });
 
 /** DTO real de GET /mercadolibre/direct/familias/:familyId. */
