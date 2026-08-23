@@ -5,6 +5,7 @@ import {
   createUpdatePublicationCommand,
 } from "@/modules/publications/publications.composition.server";
 import type { UpdatePublicationInput } from "@/modules/publications/application/update-publication.command";
+import { createGetPublicationByIdQuery } from "@/modules/publications/publications.composition.server";
 
 export type UpdatePublicationActionResult =
   | Readonly<{ ok: true }>
@@ -14,7 +15,12 @@ export async function updatePublicationAction(
   input: UpdatePublicationInput,
 ): Promise<UpdatePublicationActionResult> {
   try {
-    await createUpdatePublicationCommand().execute(input);
+    const changed = await createUpdatePublicationCommand().execute(input);
+    // Confirmamos la escritura leyendo de nuevo el detalle y, para familias,
+    // también su colección completa antes de informar éxito al cliente.
+    if (changed) {
+      await createGetPublicationByIdQuery().execute(input.publicationId);
+    }
     return { ok: true };
   } catch (error: unknown) {
     if (error instanceof AppError) {

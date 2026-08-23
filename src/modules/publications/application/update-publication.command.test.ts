@@ -18,6 +18,7 @@ describe("UpdatePublicationCommand", () => {
   it("envía sólo los campos modificados", async () => {
     const repo = repository();
     await new UpdatePublicationCommand(repo).execute({
+      publicationId: "MLA-1",
       target,
       current,
       draft: { price: 12, stock: 2, sku: "OLD" },
@@ -29,7 +30,7 @@ describe("UpdatePublicationCommand", () => {
 
   it("no llama al backend si no hay cambios", async () => {
     const repo = repository();
-    await expect(new UpdatePublicationCommand(repo).execute({ target, current, draft: current })).resolves.toBe(false);
+    await expect(new UpdatePublicationCommand(repo).execute({ publicationId: "MLA-1", target, current, draft: current })).resolves.toBe(false);
     expect(repo.updatePrice).not.toHaveBeenCalled();
   });
 
@@ -39,6 +40,6 @@ describe("UpdatePublicationCommand", () => {
     { price: 10, stock: 1.5, sku: "OLD" },
     { price: 10, stock: 2, sku: "   " },
   ])("rechaza datos inválidos: %o", async (draft) => {
-    await expect(new UpdatePublicationCommand(repository()).execute({ target, current, draft })).rejects.toThrow();
+    await expect(new UpdatePublicationCommand(repository()).execute({ publicationId: "MLA-1", target, current, draft })).rejects.toThrow();
   });
 });

@@ -10,6 +10,7 @@ import {
 import type { PublicationEditSnapshot } from "./publication-edit.validation";
 
 export type UpdatePublicationInput = Readonly<{
+  publicationId: string;
   target: PublicationEditTarget;
   current: PublicationEditSnapshot;
   draft: PublicationEditDraft;

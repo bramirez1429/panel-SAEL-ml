@@ -69,6 +69,7 @@ function EditablePublicationVariantsTable({ rows, updateAction }: PublicationVar
     setSaving(true);
     try {
       const result = await updateAction({
+        publicationId: editingRow.publicationId,
         target: toEditTarget(editingRow),
         current: { sku: editingRow.sku, price: editingRow.price?.amount ?? null, stock: editingRow.stock },
         draft: parsed.data,
