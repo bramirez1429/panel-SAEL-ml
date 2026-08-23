@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { PublicationDetail } from "../domain/publication.model";
 import { createPublicationVariantRows, getAttributeValue, groupFamilyRows, compareSizes, compareRows } from "./publication-variant-row";
+import { toEditTarget } from "./publication-variants-table.client";
 
 const base: PublicationDetail = {
   id: "MLA100",
@@ -58,5 +59,11 @@ describe("publication variant rows", () => {
     expect(compareSizes("38", "40")).toBeLessThan(0);
     expect(compareSizes("M", "XL")).toBeLessThan(0);
     expect(compareRows({ ...createPublicationVariantRows(base)[0]!, size: "42" }, { ...createPublicationVariantRows(base)[0]!, size: "38" })).toBeGreaterThan(0);
+  });
+
+  it("determina el target por publicationType, no por familyId", () => {
+    const row = { ...createPublicationVariantRows(base)[0]!, publicationType: "USER_PRODUCT" as const, familyId: null };
+    expect(() => toEditTarget(row)).toThrow("familyId");
+    expect(toEditTarget({ ...row, publicationType: "LEGACY", variationId: 12 })).toMatchObject({ type: "legacy", variationId: 12 });
   });
 });

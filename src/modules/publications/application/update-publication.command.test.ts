@@ -49,4 +49,27 @@ describe("UpdatePublicationCommand", () => {
     vi.mocked(repo.updateStock).mockRejectedValue(new Error("variationId inválido"));
     await expect(new UpdatePublicationCommand(repo).execute({ publicationId: "MLA-1", target, current, draft: { price: 10, stock: 4, sku: "OLD" } })).rejects.toThrow("No se pudo actualizar stock: variationId inválido");
   });
+
+  it.each([
+    ["stock", { price: 10, stock: 5, sku: "OLD" }],
+    ["sku", { price: 10, stock: 2, sku: "NEW" }],
+    ["price", { price: 11, stock: 2, sku: "OLD" }],
+    ["stock + sku", { price: 10, stock: 5, sku: "NEW" }],
+    ["price + stock", { price: 11, stock: 5, sku: "OLD" }],
+    ["price + sku", { price: 11, stock: 2, sku: "NEW" }],
+    ["price + stock + sku", { price: 11, stock: 5, sku: "NEW" }],
+  ])("envía sólo la combinación modificada: %s", async (_label, draft) => {
+    const repo = repository();
+    await new UpdatePublicationCommand(repo).execute({ publicationId: "MLA-1", target, current, draft });
+    expect(repo.updatePrice).toHaveBeenCalledTimes(draft.price === current.price ? 0 : 1);
+    expect(repo.updateStock).toHaveBeenCalledTimes(draft.stock === current.stock ? 0 : 1);
+    expect(repo.updateSku).toHaveBeenCalledTimes(draft.sku === current.sku ? 0 : 1);
+  });
+
+  it("permite stock-only cuando el SKU actual es null", async () => {
+    const repo = repository();
+    await new UpdatePublicationCommand(repo).execute({ publicationId: "MLA-1", target, current: { price: 10, stock: 2, sku: null }, draft: { price: 10, stock: 5, sku: "" } });
+    expect(repo.updateStock).toHaveBeenCalledWith(target, 5);
+    expect(repo.updateSku).not.toHaveBeenCalled();
+  });
 });

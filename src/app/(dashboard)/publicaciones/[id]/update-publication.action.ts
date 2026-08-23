@@ -9,9 +9,10 @@ import { changedPublicationFields } from "@/modules/publications/application/pub
 import type { PublicationDetail } from "@/modules/publications/domain/publication.model";
 import type { PublicationEditTarget, PublicationEditStatus } from "@/modules/publications/domain/publication-edit.repository";
 import { createGetPublicationByIdQuery } from "@/modules/publications/publications.composition.server";
+import { revalidatePath } from "next/cache";
 
 export type UpdatePublicationActionResult =
-  | Readonly<{ ok: true; confirmed: Readonly<{ sku?: string | null; price?: number | null; stock?: number | null }> }>
+  | Readonly<{ ok: true; confirmed: Readonly<{ sku?: string | null; price?: number | null; stock?: number | null; status?: PublicationEditStatus }> }>
   | Readonly<{ ok: false; message: string }>;
 export type UpdatePublicationStatusAction = (input: Readonly<{ publicationId: string; target: PublicationEditTarget; status: PublicationEditStatus }>) => Promise<Readonly<{ ok: true; confirmed: PublicationEditStatus } | { ok: false; message: string }>>;
 
@@ -49,11 +50,21 @@ export async function updatePublicationStatusAction(
 ): Promise<Readonly<{ ok: true; confirmed: PublicationEditStatus } | { ok: false; message: string }>> {
   try {
     await createUpdatePublicationCommand().updateStatus(input.target, input.status);
-    const detail = await createGetPublicationByIdQuery().execute(input.publicationId);
-    const variant = input.target.type === "family"
-      ? detail.variants.find((item) => item.itemId === input.target.itemId)
-      : null;
-    return { ok: true, confirmed: variant?.status === "active" || detail.status === "active" ? "active" : "paused" };
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const detail = await createGetPublicationByIdQuery().execute(input.publicationId);
+      const variant = input.target.type === "family"
+        ? detail.variants.find((item) => item.itemId === input.target.itemId)
+        : null;
+      const actual = variant?.status ?? detail.status;
+      if (actual === "active" || actual === "paused") {
+        if (actual === input.status) {
+          revalidatePath(`/publicaciones/${input.publicationId}`);
+          return { ok: true, confirmed: actual };
+        }
+      }
+      if (attempt < 2) await wait(40);
+    }
+    return { ok: false, message: `El backend todavía no confirmó el estado ${input.status}.` };
   } catch (error: unknown) {
     return { ok: false, message: error instanceof AppError ? error.message : "No se pudo actualizar el estado." };
   }

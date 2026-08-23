@@ -5,7 +5,7 @@ import type {
 } from "../domain/publication-edit.repository";
 import {
   changedPublicationFields,
-  publicationEditDraftSchema,
+  validatePublicationEditChanges,
   type PublicationEditDraft,
 } from "./publication-edit.validation";
 import type { PublicationEditSnapshot } from "./publication-edit.validation";
@@ -24,8 +24,10 @@ export class UpdatePublicationCommand {
 
   async execute(input: UpdatePublicationInput): Promise<boolean> {
     const current = input.current;
-    const draft = publicationEditDraftSchema.parse(input.draft);
+    const draft = input.draft;
     const changes = changedPublicationFields(current, draft);
+    const validation = validatePublicationEditChanges(changes);
+    if (!validation.success) throw new AppError(validation.message, "PUBLICATION_UPDATE_ERROR");
 
     if (changes.price !== undefined && changes.price !== null) {
       await runOperation("precio", () => this.repository.updatePrice(input.target, changes.price!));

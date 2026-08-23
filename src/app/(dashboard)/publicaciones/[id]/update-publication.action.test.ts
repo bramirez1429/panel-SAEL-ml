@@ -2,13 +2,14 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
-const mocks = vi.hoisted(() => ({ update: vi.fn(), refresh: vi.fn() }));
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+const mocks = vi.hoisted(() => ({ update: vi.fn(), updateStatus: vi.fn(), refresh: vi.fn() }));
 vi.mock("@/modules/publications/publications.composition.server", () => ({
-  createUpdatePublicationCommand: () => ({ execute: mocks.update }),
+  createUpdatePublicationCommand: () => ({ execute: mocks.update, updateStatus: mocks.updateStatus }),
   createGetPublicationByIdQuery: () => ({ execute: mocks.refresh }),
 }));
 
-import { updatePublicationAction } from "./update-publication.action";
+import { updatePublicationAction, updatePublicationStatusAction } from "./update-publication.action";
 
 const input = {
   publicationId: "MLA-1",
@@ -51,6 +52,15 @@ describe("updatePublicationAction", () => {
     const fresh = { ...stale, price: { from: 11, to: 11, currency: null }, stock: 3, variants: [{ ...stale.variants[0], price: { amount: 11, currency: null }, stock: 3, sku: "NEW" }] };
     mocks.refresh.mockReset().mockResolvedValueOnce(stale).mockResolvedValueOnce(fresh);
     await expect(updatePublicationAction(input)).resolves.toMatchObject({ ok: true, confirmed: { sku: "NEW", price: 11, stock: 3 } });
+    expect(mocks.refresh).toHaveBeenCalledTimes(2);
+  });
+
+  it("reintenta el estado hasta confirmar paused", async () => {
+    mocks.updateStatus.mockResolvedValue(undefined);
+    const stale = { id: "MLA-1", title: "Test", channel: "MERCADO_LIBRE", status: "active", thumbnailUrl: null, permalink: null, price: null, stock: 1, sold: 0, attributes: [], group: { key: "item:MLA-1", type: "LEGACY", familyId: null, userProductId: null, itemId: "MLA-1", childrenCount: 0 }, variants: [] };
+    const paused = { ...stale, status: "paused" };
+    mocks.refresh.mockReset().mockResolvedValueOnce(stale).mockResolvedValueOnce(paused);
+    await expect(updatePublicationStatusAction({ publicationId: "MLA-1", target: { type: "legacy", itemId: "MLA-1", variationId: null }, status: "paused" })).resolves.toEqual({ ok: true, confirmed: "paused" });
     expect(mocks.refresh).toHaveBeenCalledTimes(2);
   });
 });

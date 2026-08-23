@@ -8,6 +8,7 @@ export type PublicationVariantTableRow = Readonly<{
   key: string;
   imageUrl: string | null;
   publicationId: string;
+  publicationType: "USER_PRODUCT" | "LEGACY";
   userProductId: string | null;
   sku: string | null;
   itemId: string | null;
@@ -44,6 +45,7 @@ export function createPublicationVariantRows(
       key: publication.id,
       imageUrl: publication.thumbnailUrl,
       publicationId: publication.id,
+      publicationType: publication.group.type,
       userProductId: publication.group.userProductId,
       sku: getAttributeValue(publication.attributes, "SELLER_SKU"),
       itemId: publication.id,
@@ -123,6 +125,7 @@ function mapVariantRow(
     key: variant.id,
     imageUrl: variant.thumbnailUrl,
     publicationId: variant.itemId ?? publication.id,
+    publicationType: publication.group.type,
     userProductId: variant.userProductId,
     sku: variant.sku,
     itemId: variant.itemId ?? publication.id,
