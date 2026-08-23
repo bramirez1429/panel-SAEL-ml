@@ -27,5 +27,6 @@ export const familyPublicationDetailResponse = {
   title: "Familia real",
   familyId: "200",
   familyName: "Familia real",
+  userProductId: "UP-200",
   stock: { available: 3, sold: 7 },
 } as const satisfies PublicationDetailResponseDto;

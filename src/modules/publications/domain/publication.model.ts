@@ -10,6 +10,7 @@ export type PublicationGroup = Readonly<{
   key: string;
   type: PublicationType;
   familyId: string | null;
+  userProductId: string | null;
   itemId: string | null;
   childrenCount: number;
 }>;
@@ -28,6 +29,7 @@ export type Publication = Readonly<{
   }> | null;
   stock: number;
   sold: number | null;
+  attributes: readonly PublicationAttribute[];
   group: PublicationGroup;
 }>;
 
@@ -48,8 +50,8 @@ export type PublicationVariant = Readonly<{
     amount: number;
     currency: string | null;
   }> | null;
-  stock: number;
-  sold: number;
+  stock: number | null;
+  sold: number | null;
   attributes: readonly PublicationAttribute[];
   permalink: string | null;
 }>;

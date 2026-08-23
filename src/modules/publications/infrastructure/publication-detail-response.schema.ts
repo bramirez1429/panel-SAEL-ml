@@ -14,6 +14,7 @@ export const publicationDetailResponseSchema = z.object({
   title: z.string().nullable(),
   familyId: z.string().nullable(),
   familyName: z.string().nullable(),
+  userProductId: z.string().nullable().optional(),
   status: z.string().nullable(),
   stock: z.object({
     available: z.number().int().nonnegative(),

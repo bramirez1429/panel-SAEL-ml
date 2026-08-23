@@ -15,6 +15,7 @@ import type {
   SalesChannel,
 } from "../domain/publication.model";
 import { BackToPublicationsLink } from "./publication-back-link";
+import { PublicationStatus } from "./publication-status";
 import styles from "./publication-detail-view.module.css";
 
 export type PublicationDetailViewProps = Readonly<{
@@ -64,9 +65,9 @@ export function PublicationDetailView({
           <div className={styles.productHeading}>
             <Space size="small" wrap>
               <Tag color={isFamily ? "blue" : undefined}>
-                {isFamily ? "Familia" : "Legacy"}
+                {isFamily ? "Familia" : "Anterior"}
               </Tag>
-              {renderStatus(publication.status)}
+              <PublicationStatus status={publication.status} />
             </Space>
             <h2>{publication.title}</h2>
           </div>
@@ -82,12 +83,14 @@ export function PublicationDetailView({
       </Card>
 
       <Card
-        extra={<Tag>{publication.variants.length}</Tag>}
+        extra={isFamily ? <Tag>{publication.group.childrenCount}</Tag> : null}
         title={
-          isFamily ? "Familia → hijos y variantes" : "Variaciones Legacy"
+          isFamily ? "Familia" : "Variaciones Anterior"
         }
       >
-        {publication.variants.length > 0 ? (
+        {isFamily ? (
+          <FamilyDetails publication={publication} />
+        ) : publication.variants.length > 0 ? (
           <div className={styles.variants}>
             {publication.variants.map((variant) => (
               <VariantCard key={variant.id} variant={variant} />
@@ -95,12 +98,51 @@ export function PublicationDetailView({
           </div>
         ) : (
           <p className={styles.emptyRelation}>
-            El backend no informó {isFamily ? "ítems hijos" : "variaciones"}
-            {" para esta publicación."}
+            El backend no informó variaciones para esta publicación.
           </p>
         )}
       </Card>
     </div>
+  );
+}
+
+function FamilyDetails({ publication }: { publication: PublicationDetail }) {
+  return (
+    <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
+      <Descriptions
+        column={{ xs: 1, sm: 2 }}
+        items={[
+          {
+            key: "familyId",
+            label: "ID de familia",
+            children: valueOrMissing(publication.group.familyId),
+          },
+          {
+            key: "userProductId",
+            label: "ID user product",
+            children: valueOrMissing(publication.group.userProductId),
+          },
+          {
+            key: "children",
+            label: "Variantes disponibles",
+            children: publication.group.childrenCount,
+          },
+        ]}
+        layout="vertical"
+        size="small"
+      />
+      {publication.variants.length > 0 ? (
+        <div className={styles.variants}>
+          {publication.variants.map((variant) => (
+            <VariantCard key={variant.id} variant={variant} />
+          ))}
+        </div>
+      ) : (
+        <p className={styles.emptyRelation}>
+          La respuesta real no incluyó publicaciones hijas para esta familia.
+        </p>
+      )}
+    </Space>
   );
 }
 
@@ -113,10 +155,22 @@ function VariantCard({ variant }: Readonly<{ variant: PublicationVariant }>) {
       label: "ID de producto",
       children: valueOrMissing(variant.userProductId),
     },
-    { key: "status", label: "Estado", children: renderStatus(variant.status) },
+    {
+      key: "status",
+      label: "Estado",
+      children: <PublicationStatus status={variant.status} />,
+    },
     { key: "price", label: "Precio", children: formatVariantPrice(variant) },
-    { key: "stock", label: "Stock", children: variant.stock },
-    { key: "sold", label: "Vendidos", children: variant.sold },
+    {
+      key: "stock",
+      label: "Stock",
+      children: variant.stock === null ? missingValue : variant.stock,
+    },
+    {
+      key: "sold",
+      label: "Vendidos",
+      children: variant.sold === null ? missingValue : variant.sold,
+    },
     {
       key: "attributes",
       label: "Atributos",
@@ -213,11 +267,34 @@ function createPublicationDetails(
       children: publication.group.key,
     },
     { key: "internalId", label: "ID interno", children: publication.id },
+    ...(publication.attributes.length > 0
+      ? [
+          {
+            key: "attributes",
+            label: "Atributos",
+            children: (
+              <Space size={[4, 8]} wrap>
+                {publication.attributes.map((attribute) => (
+                  <Tag key={attribute.id}>
+                    {attribute.id}: {attribute.value ?? "—"}
+                  </Tag>
+                ))}
+              </Space>
+            ),
+            span: 2,
+          },
+        ]
+      : []),
+    ...(publication.group.type === "LEGACY"
+      ? [
+          {
+            key: "legacyDescription",
+            label: "Descripción",
+            children: "Publicación del modelo anterior de Mercado Libre.",
+          },
+        ]
+      : []),
   ];
-}
-
-function renderStatus(status: string | null): ReactNode {
-  return status ? <Tag>{status}</Tag> : missingValue;
 }
 
 function valueOrMissing(value: string | null): ReactNode {

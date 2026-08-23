@@ -32,10 +32,12 @@ const publication: Publication = {
   price: { from: 1000, to: 1000, currency: "ARS" },
   stock: 5,
   sold: 2,
+  attributes: [],
   group: {
     key: "family:1",
     type: "USER_PRODUCT",
     familyId: "1",
+    userProductId: "UP-1",
     itemId: null,
     childrenCount: 3,
   },

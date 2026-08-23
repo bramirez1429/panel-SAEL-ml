@@ -15,6 +15,7 @@ import {
   buildPublicationsUrl,
   parsePublicationsSearchParams,
 } from "./publications-search-params";
+import { PublicationStatus } from "./publication-status";
 import styles from "./publications-view.module.css";
 
 type PublicationsTableProps = Readonly<{
@@ -50,9 +51,15 @@ const columns: TableColumnsType<Publication> = [
     key: "type",
     render: (_, publication) =>
       publication.group.type === "USER_PRODUCT" ? (
-        <Tag color="blue">Familia</Tag>
+        <Space orientation="vertical" size={0}>
+          <Tag color="blue">Familia</Tag>
+          <small>{publication.group.familyId ?? "—"}</small>
+          {publication.group.userProductId ? (
+            <small>{publication.group.userProductId}</small>
+          ) : null}
+        </Space>
       ) : (
-        <Tag>Legacy</Tag>
+        <Tag>Anterior</Tag>
       ),
     width: 100,
   },
@@ -93,7 +100,7 @@ const columns: TableColumnsType<Publication> = [
     title: "Estado",
     key: "status",
     render: (_, publication) =>
-      publication.status ? <Tag>{publication.status}</Tag> : missingValue,
+      <PublicationStatus status={publication.status} />,
     width: 120,
   },
   {

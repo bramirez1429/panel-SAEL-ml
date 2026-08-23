@@ -16,10 +16,12 @@ const publication: PublicationDetail = {
   price: { from: 1000, to: 1000, currency: "ARS" },
   stock: 5,
   sold: 2,
+  attributes: [],
   group: {
     key: "item:MLA100",
     type: "LEGACY",
     familyId: null,
+    userProductId: null,
     itemId: "MLA100",
     childrenCount: 0,
   },

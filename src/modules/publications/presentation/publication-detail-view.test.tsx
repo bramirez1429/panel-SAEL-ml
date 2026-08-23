@@ -18,10 +18,12 @@ const familyDetail: PublicationDetail = {
   price: { from: 1000, to: 1500, currency: "ARS" },
   stock: 7,
   sold: 3,
+  attributes: [],
   group: {
     key: "family:200",
     type: "USER_PRODUCT",
     familyId: "200",
+    userProductId: "UP-200",
     itemId: null,
     childrenCount: 1,
   },
@@ -52,9 +54,10 @@ describe("PublicationDetailView", () => {
     expect(
       screen.getByRole("heading", { level: 2, name: "Familia real" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Familia")).toBeInTheDocument();
+    expect(screen.getAllByText("Familia").length).toBeGreaterThan(0);
     expect(screen.getByText("ARS 1.000 – ARS 1.500")).toBeInTheDocument();
-    expect(screen.getByText("Familia → hijos y variantes")).toBeInTheDocument();
+    expect(screen.getAllByText("200").length).toBeGreaterThan(0);
+    expect(screen.getByText("UP-200")).toBeInTheDocument();
     expect(screen.getByText("Variante azul")).toBeInTheDocument();
     expect(screen.getByText("COLOR: Azul")).toBeInTheDocument();
     expect(
@@ -81,8 +84,8 @@ describe("PublicationDetailView", () => {
       />,
     );
 
-    expect(screen.getByText("Legacy")).toBeInTheDocument();
-    expect(screen.getByText("Variaciones Legacy")).toBeInTheDocument();
+    expect(screen.getByText("Anterior")).toBeInTheDocument();
+    expect(screen.getByText("Variaciones Anterior")).toBeInTheDocument();
     expect(
       screen.getByText(
         "El backend no informó variaciones para esta publicación.",

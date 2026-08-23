@@ -42,10 +42,12 @@ const pageWithPublication: PublicationsPage = {
       price: { from: 1000, to: 1250, currency: null },
       stock: 4,
       sold: 3,
+      attributes: [],
       group: {
         key: "item:MLA1",
         type: "LEGACY",
         familyId: null,
+        userProductId: null,
         itemId: "MLA1",
         childrenCount: 0,
       },
@@ -87,7 +89,7 @@ describe("PublicationsTable", () => {
     expect(screen.getByRole("region", { name: "Tabla de publicaciones" })).toBeInTheDocument();
     expect(screen.getByText("Publicación real")).toBeInTheDocument();
     expect(screen.getByText("Mercado Libre")).toBeInTheDocument();
-    expect(screen.getByText("Legacy")).toBeInTheDocument();
+    expect(screen.getAllByText("Anterior").length).toBeGreaterThan(0);
     expect(screen.getByText("1.000 — 1.250")).toBeInTheDocument();
     expect(screen.getByText("3")).toBeInTheDocument();
   });
