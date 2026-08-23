@@ -45,6 +45,43 @@ describe("PublicationDetailPage", () => {
     expect(mocks.notFound).toHaveBeenCalledOnce();
   });
 
+  it("accepts the listing return URL without changing the server flow", async () => {
+    mocks.execute.mockResolvedValue({
+      id: "MLA100",
+      title: "Publicación",
+      channel: "MERCADO_LIBRE",
+      status: "active",
+      thumbnailUrl: null,
+      permalink: null,
+      price: null,
+      stock: 1,
+      sold: 0,
+      attributes: [],
+      group: {
+        key: "item:MLA100",
+        type: "LEGACY",
+        familyId: null,
+        userProductId: null,
+        itemId: "MLA100",
+        childrenCount: 0,
+      },
+      variants: [],
+    });
+
+    const result = await PublicationDetailPage({
+      params: Promise.resolve({ id: "MLA100" }),
+      searchParams: Promise.resolve({
+        returnTo: "/publicaciones?page=2&cursor=cursor-2",
+      }),
+    });
+
+    render(result);
+    expect(screen.getByRole("link", { name: /Volver/ })).toHaveAttribute(
+      "href",
+      "/publicaciones?page=2&cursor=cursor-2",
+    );
+  });
+
   it.each([
     new ApiError("El identificador no es válido.", "API_HTTP_ERROR", {
       status: 400,

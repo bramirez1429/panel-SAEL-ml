@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
 
 type PublicationDetailPageProps = Readonly<{
   params: Promise<Readonly<{ id: string }>>;
+  searchParams?: Promise<Readonly<Record<string, string | string[] | undefined>>>;
 }>;
 
 type PublicationDetailLoadResult =
@@ -44,18 +45,29 @@ async function loadPublicationDetail(
 
 export default async function PublicationDetailPage({
   params,
+  searchParams,
 }: PublicationDetailPageProps) {
   const { id } = await params;
   const result = await loadPublicationDetail(id);
+  const detailSearchParams = searchParams ? await searchParams : {};
+  const returnTo = getReturnTo(detailSearchParams.returnTo);
 
   return (
     <>
       <PageHeader description="Consulta la información y las variantes de la publicación." />
       {result.state === "success" ? (
-        <PublicationDetailView publication={result.publication} />
+        <PublicationDetailView
+          publication={result.publication}
+          returnTo={returnTo}
+        />
       ) : (
         <PublicationDetailError message={result.message} />
       )}
     </>
   );
+}
+
+function getReturnTo(value: string | string[] | undefined): string | undefined {
+  const candidate = typeof value === "string" ? value : value?.[0];
+  return candidate?.startsWith("/publicaciones") ? candidate : undefined;
 }

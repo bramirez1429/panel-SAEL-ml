@@ -10,6 +10,7 @@ import styles from "./publication-detail-view.module.css";
 
 export type PublicationDetailViewProps = Readonly<{
   publication: PublicationDetail;
+  returnTo?: string;
 }>;
 
 const channelLabels: Record<SalesChannel, string> = {
@@ -18,14 +19,17 @@ const channelLabels: Record<SalesChannel, string> = {
 
 const missingValue = <span title="Dato no disponible">—</span>;
 
-export function PublicationDetailView({ publication }: PublicationDetailViewProps) {
+export function PublicationDetailView({
+  publication,
+  returnTo,
+}: PublicationDetailViewProps) {
   const isFamily = publication.group.type === "USER_PRODUCT";
   const rows = createPublicationVariantRows(publication);
 
   return (
     <div className={styles.view}>
       <Space size="middle" wrap>
-        <BackToPublicationsLink />
+        <BackToPublicationsLink returnTo={returnTo} />
         {publication.permalink ? (
           <Button href={publication.permalink} rel="noreferrer" target="_blank" type="primary">
             Ver en Mercado Libre

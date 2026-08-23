@@ -37,7 +37,7 @@ const pageWithPublication: PublicationsPage = {
       title: "Publicación real",
       channel: "MERCADO_LIBRE",
       status: "active",
-      thumbnailUrl: null,
+      thumbnailUrl: "https://example.com/thumb.jpg",
       permalink: null,
       price: { from: 1000, to: 1250, currency: null },
       stock: 4,
@@ -79,7 +79,7 @@ describe("PublicationsTable", () => {
 
     expect(screen.getByRole("link", { name: "Ver detalle" })).toHaveAttribute(
       "href",
-      "/publicaciones/publication%2Fid",
+      "/publicaciones/publication%2Fid?returnTo=%2Fpublicaciones%3Fpage%3D1%26cursor%3D%26search%3Dcampera%26type%3DLEGACY%26status%3Dactive",
     );
   });
 
@@ -92,5 +92,23 @@ describe("PublicationsTable", () => {
     expect(screen.getAllByText("Anterior").length).toBeGreaterThan(0);
     expect(screen.getByText("1.000 — 1.250")).toBeInTheDocument();
     expect(screen.getByText("3")).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: "Imagen de Publicación real" }),
+    ).toBeInTheDocument();
+  });
+
+  it("renders a clean placeholder when thumbnail is missing", () => {
+    render(
+      <PublicationsTable
+        page={{
+          ...pageWithPublication,
+          publications: [
+            { ...pageWithPublication.publications[0]!, thumbnailUrl: null },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByTitle("Imagen no disponible")).toBeInTheDocument();
   });
 });

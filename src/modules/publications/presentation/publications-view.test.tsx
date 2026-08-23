@@ -102,7 +102,7 @@ describe("PublicationsView", () => {
     expect(screen.getByText("ARS 1.000")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Ver detalle" })).toHaveAttribute(
       "href",
-      "/publicaciones/publication-id",
+      "/publicaciones/publication-id?returnTo=%2Fpublicaciones%3Fpage%3D1%26search%3D%26type%3D%26status%3D",
     );
   });
 });

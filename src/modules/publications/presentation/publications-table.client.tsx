@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition, type ReactNode } from "react";
-import { Button, Space, Table, Tag } from "antd";
+import { Button, Image, Space, Table, Tag } from "antd";
 import type { TableColumnsType } from "antd";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -29,7 +29,29 @@ const salesChannelLabels: Record<SalesChannel, string> = {
   MERCADO_LIBRE: "Mercado Libre",
 };
 
-const columns: TableColumnsType<Publication> = [
+function createColumns(
+  searchParams: URLSearchParams,
+): TableColumnsType<Publication> {
+  return [
+  {
+    title: "Imagen",
+    key: "thumbnail",
+    render: (_, publication) =>
+      publication.thumbnailUrl ? (
+        <Image
+          alt={`Imagen de ${publication.title}`}
+          height={48}
+          preview={false}
+          src={publication.thumbnailUrl}
+          width={48}
+        />
+      ) : (
+        <span className={styles.thumbnailPlaceholder} title="Imagen no disponible">
+          —
+        </span>
+      ),
+    width: 76,
+  },
   {
     title: "Producto",
     dataIndex: "title",
@@ -109,14 +131,15 @@ const columns: TableColumnsType<Publication> = [
     render: (_, publication) => (
       <Link
         className={styles.detailLink}
-        href={`/publicaciones/${encodeURIComponent(publication.id)}`}
+        href={createDetailHref(publication.id, searchParams)}
       >
         Ver detalle
       </Link>
     ),
     width: 130,
   },
-];
+  ];
+}
 
 export function PublicationsTable({
   page,
@@ -125,6 +148,7 @@ export function PublicationsTable({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  const columns = createColumns(searchParams);
 
   const goToNextPage = () => {
     const current = parsePublicationsSearchParams(
@@ -184,6 +208,15 @@ export function PublicationsTable({
       ) : null}
     </div>
   );
+}
+
+function createDetailHref(
+  publicationId: string,
+  searchParams: URLSearchParams,
+): string {
+  const query = searchParams.toString();
+  const returnTo = query ? `/publicaciones?${query}` : "/publicaciones";
+  return `/publicaciones/${encodeURIComponent(publicationId)}?returnTo=${encodeURIComponent(returnTo)}`;
 }
 
 function formatPrice(publication: Publication): ReactNode {
