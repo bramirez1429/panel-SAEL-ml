@@ -12,12 +12,16 @@ import type {
   PublicationsRequest,
 } from "../domain/publications.repository";
 import { mapPublicationDetail } from "./publication-detail.mapper";
-import { publicationDetailResponseSchema } from "./publication-detail-response.schema";
+import {
+  familyDetailResponseSchema,
+  publicationDetailResponseSchema,
+} from "./publication-detail-response.schema";
 import { mapPublicationsResponse } from "./publication.mapper";
 import { publicationsResponseSchema } from "./publications-response.schema";
 
 const PUBLICATIONS_ENDPOINT =
   "/mercadolibre/direct/publicaciones/agrupadas";
+const FAMILY_ENDPOINT = "/mercadolibre/direct/familias";
 
 /**
  * Implementación HTTP del contrato PublicationsRepository.
@@ -67,6 +71,23 @@ export class PublicationsApiRepository implements PublicationsRepository {
       );
     }
 
-    return mapPublicationDetail(validation.data);
+    if (validation.data.model !== "VARIANT_PRICING" || !validation.data.familyId) {
+      return mapPublicationDetail(validation.data);
+    }
+
+    const familyResponse = await this.httpClient.get(
+      `${FAMILY_ENDPOINT}/${encodeURIComponent(validation.data.familyId)}`,
+    );
+    const familyValidation = familyDetailResponseSchema.safeParse(familyResponse);
+
+    if (!familyValidation.success) {
+      throw new ApiError(
+        "El backend devolvió una familia con un formato inválido.",
+        "API_INVALID_RESPONSE",
+        { cause: familyValidation.error },
+      );
+    }
+
+    return mapPublicationDetail(validation.data, familyValidation.data);
   }
 }

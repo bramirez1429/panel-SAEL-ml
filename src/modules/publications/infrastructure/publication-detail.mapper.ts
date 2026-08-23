@@ -1,9 +1,13 @@
 import type { PublicationDetail } from "../domain/publication.model";
-import type { PublicationDetailResponseDto } from "./publication-detail-response.schema";
+import type {
+  FamilyDetailResponseDto,
+  PublicationDetailResponseDto,
+} from "./publication-detail-response.schema";
 
 /** Traduce el detalle real de NestJS al modelo de dominio del frontend. */
 export function mapPublicationDetail(
   dto: PublicationDetailResponseDto,
+  familyDto?: FamilyDetailResponseDto,
 ): PublicationDetail {
   const currentPrice = dto.price.current;
 
@@ -32,11 +36,42 @@ export function mapPublicationDetail(
       key: dto.familyId ? `family:${dto.familyId}` : `item:${dto.itemId}`,
       type: dto.model === "VARIANT_PRICING" ? "USER_PRODUCT" : "LEGACY",
       familyId: dto.familyId,
-      userProductId: dto.userProductId ?? null,
+      userProductId:
+        dto.userProductId ?? familyDto?.variants[0]?.userProductId ?? null,
       itemId: dto.itemId,
-      childrenCount: 0,
+      childrenCount: familyDto?.itemsCount ?? 0,
     },
-    variants: mapVariations(dto.variations),
+    variants: familyDto
+      ? familyDto.variants.map(mapFamilyVariant)
+      : mapVariations(dto.variations),
+  };
+}
+
+function mapFamilyVariant(
+  variant: FamilyDetailResponseDto["variants"][number],
+): PublicationDetail["variants"][number] {
+  return {
+    id: variant.itemId,
+    itemId: variant.itemId,
+    userProductId: variant.userProductId,
+    label: null,
+    title: variant.title,
+    thumbnailUrl: variant.thumbnail,
+    status: variant.status,
+    price:
+      variant.price.current === null
+        ? null
+        : {
+            amount: variant.price.current,
+            currency: variant.price.currency ?? null,
+          },
+    stock: variant.stock.available,
+    sold: variant.stock.sold,
+    attributes: variant.attributes.map((attribute) => ({
+      id: attribute.id,
+      value: attribute.value_name ?? null,
+    })),
+    permalink: variant.permalink,
   };
 }
 

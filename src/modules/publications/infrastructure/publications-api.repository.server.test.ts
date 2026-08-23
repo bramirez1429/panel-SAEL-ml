@@ -5,7 +5,10 @@ vi.mock("server-only", () => ({}));
 import { ApiError } from "@/shared/api/api-error";
 import type { HttpGetClient } from "@/shared/api/http-client.server";
 
-import { familyPublicationDetailResponse } from "./publication-detail-response.fixture";
+import {
+  familyDetailResponse,
+  familyPublicationDetailResponse,
+} from "./publication-detail-response.fixture";
 import { PublicationsApiRepository } from "./publications-api.repository.server";
 import { createPublicationsResponse } from "./publications-response.fixture";
 
@@ -59,7 +62,11 @@ describe("PublicationsApiRepository", () => {
 
   it("requests the verified detail endpoint using the internal UUID", async () => {
     const get = vi.fn<HttpGetClient["get"]>();
-    get.mockResolvedValue(familyPublicationDetailResponse);
+    get.mockImplementation(async (path) =>
+      path.includes("/familias/")
+        ? familyDetailResponse
+        : familyPublicationDetailResponse,
+    );
     const repository = new PublicationsApiRepository({ get });
 
     await expect(
@@ -68,11 +75,13 @@ describe("PublicationsApiRepository", () => {
       expect.objectContaining({
         id: "MLA200",
         sold: 7,
+        group: expect.objectContaining({ childrenCount: 2 }),
       }),
     );
     expect(get).toHaveBeenCalledWith(
       "/mercadolibre/direct/publicaciones/MLA200",
     );
+    expect(get).toHaveBeenCalledWith("/mercadolibre/direct/familias/200");
   });
 
   it("preserves the HTTP 404 so presentation can render not-found", async () => {

@@ -32,7 +32,39 @@ export const publicationDetailResponseSchema = z.object({
   variations: z.array(z.unknown()),
 });
 
+const familyVariantDtoSchema = z.object({
+  itemId: z.string().min(1),
+  userProductId: z.string().nullable(),
+  title: z.string().nullable(),
+  status: z.string().nullable(),
+  stock: z.object({
+    available: z.number().int().nonnegative(),
+    sold: z.number().int().nonnegative(),
+  }),
+  price: z.object({
+    current: z.number().nullable(),
+    regular: z.number().nullable().optional(),
+    standard: z.number().nullable().optional(),
+    currency: z.string().nullable().optional(),
+  }),
+  thumbnail: z.string().nullable(),
+  attributes: z.array(attributeDtoSchema),
+  permalink: z.string().nullable(),
+});
+
+/** DTO real de GET /mercadolibre/direct/familias/:familyId. */
+export const familyDetailResponseSchema = z.object({
+  model: z.literal("VARIANT_PRICING"),
+  familyId: z.string().min(1),
+  familyName: z.string().nullable(),
+  userProductsCount: z.number().int().nonnegative(),
+  itemsCount: z.number().int().nonnegative(),
+  userProductIds: z.array(z.string()),
+  variants: z.array(familyVariantDtoSchema),
+});
+
 export type PublicationDetailResponseDto = z.infer<
   typeof publicationDetailResponseSchema
 >;
 export type PublicationAttributeDto = z.infer<typeof attributeDtoSchema>;
+export type FamilyDetailResponseDto = z.infer<typeof familyDetailResponseSchema>;

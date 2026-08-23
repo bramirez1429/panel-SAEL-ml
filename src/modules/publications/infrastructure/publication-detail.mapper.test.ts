@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  familyDetailResponse,
   familyPublicationDetailResponse,
   legacyPublicationDetailResponse,
 } from "./publication-detail-response.fixture";
@@ -23,7 +24,10 @@ describe("mapPublicationDetail", () => {
   });
 
   it("maps the active VARIANT_PRICING response", () => {
-    const detail = mapPublicationDetail(familyPublicationDetailResponse);
+    const detail = mapPublicationDetail(
+      familyPublicationDetailResponse,
+      familyDetailResponse,
+    );
 
     expect(detail).toEqual(
       expect.objectContaining({
@@ -36,5 +40,13 @@ describe("mapPublicationDetail", () => {
         }),
       }),
     );
+    expect(detail.group.childrenCount).toBe(2);
+    expect(detail.variants.map((variant) => variant.itemId)).toEqual([
+      "MLA201",
+      "MLA202",
+    ]);
+    expect(detail.variants[0]?.attributes).toEqual([
+      { id: "COLOR", value: "Azul" },
+    ]);
   });
 });
