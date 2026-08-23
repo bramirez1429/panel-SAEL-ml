@@ -9,6 +9,10 @@ export type PublicationVariantTableRow = Readonly<{
   imageUrl: string | null;
   publicationId: string;
   userProductId: string | null;
+  sku: string | null;
+  itemId: string | null;
+  familyId: string | null;
+  variationId: number | null;
   status: string | null;
   price: PublicationVariant["price"];
   stock: number | null;
@@ -18,13 +22,13 @@ export type PublicationVariantTableRow = Readonly<{
   permalink: string | null;
 }>;
 
-/** Convierte modelos de dominio en filas planas, sin lógica de atributos en JSX. */
+/** Convierte el dominio a filas planas y deja los targets de edición explícitos. */
 export function createPublicationVariantRows(
   publication: PublicationDetail,
 ): readonly PublicationVariantTableRow[] {
   if (publication.variants.length > 0) {
     return publication.variants.map((variant) =>
-      mapVariantRow(variant, variant.itemId ?? variant.id),
+      mapVariantRow(variant, publication),
     );
   }
 
@@ -34,6 +38,10 @@ export function createPublicationVariantRows(
       imageUrl: publication.thumbnailUrl,
       publicationId: publication.id,
       userProductId: publication.group.userProductId,
+      sku: getAttributeValue(publication.attributes, "SELLER_SKU"),
+      itemId: publication.id,
+      familyId: null,
+      variationId: null,
       status: publication.status,
       price: toVariantPrice(publication),
       stock: publication.stock,
@@ -58,13 +66,18 @@ function toVariantPrice(
 
 function mapVariantRow(
   variant: PublicationVariant,
-  publicationId: string,
+  publication: PublicationDetail,
 ): PublicationVariantTableRow {
+  const isFamily = publication.group.type === "USER_PRODUCT";
   return {
     key: variant.id,
     imageUrl: variant.thumbnailUrl,
-    publicationId,
+    publicationId: variant.itemId ?? publication.id,
     userProductId: variant.userProductId,
+    sku: variant.sku,
+    itemId: variant.itemId ?? publication.id,
+    familyId: isFamily ? publication.group.familyId : null,
+    variationId: isFamily ? null : toVariationId(variant.id),
     status: variant.status,
     price: variant.price,
     stock: variant.stock,
@@ -75,9 +88,14 @@ function mapVariantRow(
   };
 }
 
+function toVariationId(value: string): number | null {
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : null;
+}
+
 export function getAttributeValue(
   attributes: readonly PublicationAttribute[],
-  attributeId: "COLOR" | "SIZE",
+  attributeId: "COLOR" | "SIZE" | "SELLER_SKU",
 ): string | null {
   const attribute = attributes.find(
     (item) => item.id.trim().toUpperCase() === attributeId,

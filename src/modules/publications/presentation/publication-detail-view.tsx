@@ -7,10 +7,12 @@ import { PublicationStatus } from "./publication-status";
 import { createPublicationVariantRows } from "./publication-variant-row";
 import { PublicationVariantsTable } from "./publication-variants-table.client";
 import styles from "./publication-detail-view.module.css";
+import type { PublicationUpdateAction } from "./publication-variants-table.client";
 
 export type PublicationDetailViewProps = Readonly<{
   publication: PublicationDetail;
   returnTo?: string;
+  updateAction?: PublicationUpdateAction;
 }>;
 
 const channelLabels: Record<SalesChannel, string> = {
@@ -22,6 +24,7 @@ const missingValue = <span title="Dato no disponible">—</span>;
 export function PublicationDetailView({
   publication,
   returnTo,
+  updateAction,
 }: PublicationDetailViewProps) {
   const isFamily = publication.group.type === "USER_PRODUCT";
   const rows = createPublicationVariantRows(publication);
@@ -69,7 +72,7 @@ export function PublicationDetailView({
 
       <Card title={isFamily ? "Familia" : "Variaciones Anterior"}>
         {isFamily ? <FamilySummary publication={publication} /> : null}
-        <PublicationVariantsTable rows={rows} />
+        <PublicationVariantsTable rows={rows} updateAction={updateAction} />
       </Card>
     </div>
   );

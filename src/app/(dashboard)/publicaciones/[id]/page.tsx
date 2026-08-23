@@ -8,6 +8,7 @@ import { ApiError } from "@/shared/api/api-error";
 import { AppError } from "@/shared/errors/app-error";
 import { PageHeader } from "@/shared/ui/page-header/page-header";
 import { notFound } from "next/navigation";
+import { updatePublicationAction } from "./update-publication.action";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +60,7 @@ export default async function PublicationDetailPage({
         <PublicationDetailView
           publication={result.publication}
           returnTo={returnTo}
+          updateAction={updatePublicationAction}
         />
       ) : (
         <PublicationDetailError message={result.message} />

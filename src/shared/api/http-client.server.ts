@@ -5,12 +5,14 @@ import { ApiError } from "./api-error";
 
 export type HttpGetClient = Pick<HttpClient, "get">;
 export type HttpPostClient = Pick<HttpClient, "post">;
+export type HttpPatchClient = Pick<HttpClient, "patch">;
 export type HttpRequestOptions = Readonly<{
   bearerToken?: string;
   cookieHeader?: string;
 }>;
 export type HttpGetOptions = HttpRequestOptions;
 export type HttpPostOptions = HttpRequestOptions;
+export type HttpPatchOptions = HttpRequestOptions;
 export type HttpResponse = Readonly<{
   body: unknown;
   headers: Headers;
@@ -69,6 +71,29 @@ export class HttpClient {
         ...(options.bearerToken
           ? { Authorization: `Bearer ${options.bearerToken}` }
           : {}),
+        ...(options.cookieHeader ? { Cookie: options.cookieHeader } : {}),
+      },
+      body: hasBody ? JSON.stringify(body) : undefined,
+    });
+  }
+
+  async patch(path: string, body?: unknown, options: HttpPatchOptions = {}): Promise<unknown> {
+    const response = await this.patchResponse(path, body, options);
+    return response.body;
+  }
+
+  async patchResponse(
+    path: string,
+    body?: unknown,
+    options: HttpPatchOptions = {},
+  ): Promise<HttpResponse> {
+    const hasBody = body !== undefined;
+    return this.request(path, {
+      method: "PATCH",
+      headers: {
+        Accept: "application/json, text/plain;q=0.9",
+        ...(hasBody ? { "Content-Type": "application/json" } : {}),
+        ...(options.bearerToken ? { Authorization: `Bearer ${options.bearerToken}` } : {}),
         ...(options.cookieHeader ? { Cookie: options.cookieHeader } : {}),
       },
       body: hasBody ? JSON.stringify(body) : undefined,

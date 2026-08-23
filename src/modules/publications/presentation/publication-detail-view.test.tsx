@@ -39,6 +39,7 @@ const familyDetail: PublicationDetail = {
       price: { amount: 1000, currency: "ARS" },
       stock: 7,
       sold: 3,
+      sku: null,
       attributes: [{ id: "COLOR", value: "Azul" }],
       permalink: "https://example.com/variant",
     },

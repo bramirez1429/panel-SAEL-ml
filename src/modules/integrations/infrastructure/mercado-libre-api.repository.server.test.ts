@@ -23,6 +23,8 @@ describe("MercadoLibreApiRepository", () => {
       getResponse,
       post: vi.fn(),
       postResponse: vi.fn(),
+      patch: vi.fn(),
+      patchResponse: vi.fn(),
     } satisfies AuthenticatedHttpClient);
 
     await expect(repository.getAuthorizationUrl()).resolves.toContain(

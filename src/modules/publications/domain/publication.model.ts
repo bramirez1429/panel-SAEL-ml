@@ -52,6 +52,7 @@ export type PublicationVariant = Readonly<{
   }> | null;
   stock: number | null;
   sold: number | null;
+  sku: string | null;
   attributes: readonly PublicationAttribute[];
   permalink: string | null;
 }>;

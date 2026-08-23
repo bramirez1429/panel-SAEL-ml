@@ -1,82 +1,48 @@
 // @vitest-environment node
-
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/modules/auth/infrastructure/session/auth-session.server", () => ({
-  getAccessToken: vi.fn(),
-}));
+vi.mock("@/modules/auth/infrastructure/session/auth-session.server", () => ({ getAccessToken: vi.fn() }));
 
 import { getAccessToken } from "@/modules/auth/infrastructure/session/auth-session.server";
-
 import { createAuthenticatedHttpClient } from "./authenticated-http-client.server";
 
+function dependencies() {
+  return { get: vi.fn(), getResponse: vi.fn(), post: vi.fn(), postResponse: vi.fn(), patch: vi.fn(), patchResponse: vi.fn() };
+}
+
 describe("createAuthenticatedHttpClient", () => {
-  it("lee la cookie server-side y agrega Bearer a requests privados", async () => {
+  it("agrega Bearer a requests privados", async () => {
     vi.mocked(getAccessToken).mockResolvedValue("access-jwt");
-    const get = vi.fn().mockResolvedValue({ ok: true });
-    const client = createAuthenticatedHttpClient({
-      get,
-      getResponse: vi.fn(),
-      post: vi.fn(),
-      postResponse: vi.fn(),
-    });
-
+    const deps = dependencies();
+    const client = createAuthenticatedHttpClient(deps);
     await client.get("/private");
-
-    expect(get).toHaveBeenCalledWith("/private", {
-      bearerToken: "access-jwt",
-    });
+    expect(deps.get).toHaveBeenCalledWith("/private", { bearerToken: "access-jwt" });
   });
 
-  it("autentica el endpoint privado agrupado de publicaciones", async () => {
-    vi.mocked(getAccessToken).mockResolvedValue("publication-access-jwt");
-    const get = vi.fn().mockResolvedValue({ products: [] });
-    const client = createAuthenticatedHttpClient({
-      get,
-      getResponse: vi.fn(),
-      post: vi.fn(),
-      postResponse: vi.fn(),
-    });
-
-    await client.get("/mercadolibre/direct/publicaciones/agrupadas?limit=20");
-
-    expect(get).toHaveBeenCalledWith(
-      "/mercadolibre/direct/publicaciones/agrupadas?limit=20",
-      { bearerToken: "publication-access-jwt" },
-    );
+  it("agrega Bearer también a mutaciones PATCH", async () => {
+    vi.mocked(getAccessToken).mockResolvedValue("edit-jwt");
+    const deps = dependencies();
+    const client = createAuthenticatedHttpClient(deps);
+    await client.patch("/private/edit", { price: 10 });
+    expect(deps.patch).toHaveBeenCalledWith("/private/edit", { price: 10 }, { bearerToken: "edit-jwt" });
   });
 
-  it("autentica el inicio OAuth de Mercado Libre", async () => {
-    vi.mocked(getAccessToken).mockResolvedValue("oauth-access-jwt");
-    const get = vi.fn().mockResolvedValue({ url: "https://ml.example/authorize" });
-    const client = createAuthenticatedHttpClient({
-      get,
-      getResponse: vi.fn(),
-      post: vi.fn(),
-      postResponse: vi.fn(),
-    });
-
-    await client.get("/mercadolibre/connect");
-
-    expect(get).toHaveBeenCalledWith("/mercadolibre/connect", {
-      bearerToken: "oauth-access-jwt",
-    });
-  });
-
-  it("rechaza requests privados cuando no existe sesión", async () => {
+  it("rechaza requests cuando no existe sesión", async () => {
     vi.mocked(getAccessToken).mockResolvedValue(null);
-    const get = vi.fn();
-    const client = createAuthenticatedHttpClient({
-      get,
-      getResponse: vi.fn(),
-      post: vi.fn(),
-      postResponse: vi.fn(),
-    });
+    const deps = dependencies();
+    const client = createAuthenticatedHttpClient(deps);
+    await expect(client.get("/private")).rejects.toMatchObject({ code: "AUTHENTICATION_REQUIRED" });
+    expect(deps.get).not.toHaveBeenCalled();
+  });
 
-    await expect(client.get("/private")).rejects.toMatchObject({
-      code: "AUTHENTICATION_REQUIRED",
-    });
-    expect(get).not.toHaveBeenCalled();
+  it("autentica publicaciones agrupadas y OAuth", async () => {
+    vi.mocked(getAccessToken).mockResolvedValue("private-jwt");
+    const deps = dependencies();
+    const client = createAuthenticatedHttpClient(deps);
+    await client.get("/mercadolibre/direct/publicaciones/agrupadas?limit=20");
+    await client.get("/mercadolibre/connect");
+    expect(deps.get).toHaveBeenNthCalledWith(1, "/mercadolibre/direct/publicaciones/agrupadas?limit=20", { bearerToken: "private-jwt" });
+    expect(deps.get).toHaveBeenNthCalledWith(2, "/mercadolibre/connect", { bearerToken: "private-jwt" });
   });
 });

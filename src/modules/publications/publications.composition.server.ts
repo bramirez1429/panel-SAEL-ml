@@ -7,6 +7,8 @@ import { HttpClient } from "@/shared/api/http-client.server";
 import { GetPublicationByIdQuery } from "./application/get-publication-by-id.query";
 import { GetPublicationsQuery } from "./application/get-publications.query";
 import { PublicationsApiRepository } from "./infrastructure/publications-api.repository.server";
+import { PublicationEditApiRepository } from "./infrastructure/publication-edit-api.repository.server";
+import { UpdatePublicationCommand } from "./application/update-publication.command";
 
 /**
  * Punto de composición server-only: conecta el caso de uso con infraestructura
@@ -28,4 +30,9 @@ export function createGetPublicationByIdQuery(): GetPublicationByIdQuery {
   const repository = new PublicationsApiRepository(httpClient);
 
   return new GetPublicationByIdQuery(repository);
+}
+
+export function createUpdatePublicationCommand(): UpdatePublicationCommand {
+  const httpClient = createAuthenticatedHttpClient(new HttpClient(getApiConfig()));
+  return new UpdatePublicationCommand(new PublicationEditApiRepository(httpClient));
 }

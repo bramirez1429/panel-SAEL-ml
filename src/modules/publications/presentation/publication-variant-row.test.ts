@@ -13,7 +13,7 @@ const base: PublicationDetail = {
   price: { from: 1000, to: 1000, currency: "ARS" },
   stock: 3,
   sold: 2,
-  attributes: [{ id: "COLOR", value: "Negro" }, { id: "SIZE", value: "M" }],
+  attributes: [{ id: "COLOR", value: "Negro" }, { id: "SIZE", value: "M" }, { id: "SELLER_SKU", value: "SKU-1" }],
   group: {
     key: "family:1",
     type: "USER_PRODUCT",
@@ -29,6 +29,7 @@ describe("publication variant rows", () => {
   it("maps only COLOR and SIZE attributes", () => {
     const rows = createPublicationVariantRows(base);
     expect(rows[0]).toMatchObject({ color: "Negro", size: "M" });
+    expect(rows[0]?.sku).toBe("SKU-1");
     expect(getAttributeValue([{ id: "SELLER_PACKAGE", value: "x" }], "COLOR")).toBeNull();
   });
 

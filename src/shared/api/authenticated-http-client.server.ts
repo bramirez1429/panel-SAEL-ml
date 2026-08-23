@@ -18,12 +18,14 @@ export type AuthenticatedHttpClient = Readonly<{
   getResponse(path: string): Promise<HttpResponse>;
   post(path: string, body?: unknown): Promise<unknown>;
   postResponse(path: string, body?: unknown): Promise<HttpResponse>;
+  patch(path: string, body?: unknown): Promise<unknown>;
+  patchResponse(path: string, body?: unknown): Promise<HttpResponse>;
 }>;
 
 export function createAuthenticatedHttpClient(
   httpClient: Pick<
     HttpClient,
-    "get" | "getResponse" | "post" | "postResponse"
+    "get" | "getResponse" | "post" | "postResponse" | "patch" | "patchResponse"
   >,
 ): AuthenticatedHttpClient {
   return {
@@ -31,6 +33,8 @@ export function createAuthenticatedHttpClient(
     getResponse: (path) => authenticatedGetResponse(httpClient, path),
     post: (path, body) => authenticatedPost(httpClient, path, body),
     postResponse: (path, body) => authenticatedPostResponse(httpClient, path, body),
+    patch: (path, body) => authenticatedPatch(httpClient, path, body),
+    patchResponse: (path, body) => authenticatedPatchResponse(httpClient, path, body),
   };
 }
 
@@ -66,6 +70,24 @@ async function authenticatedPostResponse(
 ): Promise<HttpResponse> {
   const token = await requireAccessToken();
   return httpClient.postResponse(path, body, { bearerToken: token });
+}
+
+async function authenticatedPatch(
+  httpClient: Pick<HttpClient, "patch">,
+  path: string,
+  body?: unknown,
+): Promise<unknown> {
+  const token = await requireAccessToken();
+  return httpClient.patch(path, body, { bearerToken: token });
+}
+
+async function authenticatedPatchResponse(
+  httpClient: Pick<HttpClient, "patchResponse">,
+  path: string,
+  body?: unknown,
+): Promise<HttpResponse> {
+  const token = await requireAccessToken();
+  return httpClient.patchResponse(path, body, { bearerToken: token });
 }
 
 async function requireAccessToken(): Promise<string> {

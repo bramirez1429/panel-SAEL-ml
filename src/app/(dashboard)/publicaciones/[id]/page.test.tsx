@@ -16,6 +16,7 @@ vi.mock("@/modules/publications/publications.composition.server", () => ({
 
 vi.mock("next/navigation", () => ({
   notFound: mocks.notFound,
+  useRouter: () => ({ refresh: vi.fn() }),
 }));
 
 import PublicationDetailPage from "./page";

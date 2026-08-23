@@ -67,6 +67,7 @@ function mapFamilyVariant(
           },
     stock: variant.stock.available,
     sold: variant.stock.sold,
+    sku: readAttributeValue(variant.attributes, "SELLER_SKU"),
     attributes: variant.attributes.map((attribute) => ({
       id: attribute.id,
       value: attribute.value_name ?? null,
@@ -81,14 +82,15 @@ function mapVariations(variations: readonly unknown[]): PublicationDetail["varia
 
     const id = readString(variation.id);
     if (!id) return [];
-    const attributes = isRecordArray(variation.attribute_combinations)
-      ? variation.attribute_combinations.flatMap((attribute) => {
+    const attributes = [
+      ...(isRecordArray(variation.attribute_combinations) ? variation.attribute_combinations : []),
+      ...(isRecordArray(variation.attributes) ? variation.attributes : []),
+    ].flatMap((attribute) => {
           const attributeId = readString(attribute.id);
           return attributeId
-            ? [{ id: attributeId, value: readString(attribute.value_name) }]
+            ? [{ id: attributeId, value: readAttributeText(attribute) }]
             : [];
-        })
-      : [];
+        });
     const price = readNumber(variation.price);
 
     return [
@@ -103,11 +105,29 @@ function mapVariations(variations: readonly unknown[]): PublicationDetail["varia
         price: price === null ? null : { amount: price, currency: null },
         stock: readNumber(variation.available_quantity),
         sold: readNumber(variation.sold_quantity),
+        sku: readAttributeValue(attributes, "SELLER_SKU"),
         attributes,
         permalink: null,
       },
     ];
   });
+}
+
+function readAttributeValue(
+  attributes: readonly Record<string, unknown>[],
+  id: string,
+): string | null {
+  const attribute = attributes.find((item) => readString(item.id)?.trim().toUpperCase() === id);
+  return readAttributeText(attribute);
+}
+
+function readAttributeText(attribute: Record<string, unknown> | undefined): string | null {
+  if (!attribute) return null;
+  for (const key of ["value_name", "valueName", "value", "name"]) {
+    const value = readString(attribute[key]);
+    if (value) return value.trim();
+  }
+  return null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
