@@ -33,4 +33,11 @@ describe("PublicationEditApiRepository", () => {
     expect(http.patch).toHaveBeenNthCalledWith(2, "/mercadolibre/direct/edicion/clasica/MLA1/stock", { quantity: 3, variationId: 44 });
     expect(http.patch).toHaveBeenNthCalledWith(3, "/mercadolibre/direct/edicion/clasica/MLA1/sku", { sku: "SKU", variationId: 44 });
   });
+
+  it("actualiza el estado del item correcto", async () => {
+    const http = client();
+    const repo = new PublicationEditApiRepository(http);
+    await repo.updateStatus({ type: "family", familyId: "F1", itemId: "MLA2" }, "paused");
+    expect(http.patch).toHaveBeenCalledWith("/mercadolibre/direct/edicion/nueva/F1/items/MLA2", { status: "paused" });
+  });
 });

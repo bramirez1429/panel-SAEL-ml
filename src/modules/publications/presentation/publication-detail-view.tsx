@@ -7,12 +7,13 @@ import { PublicationStatus } from "./publication-status";
 import { createPublicationVariantRows } from "./publication-variant-row";
 import { PublicationVariantsTable } from "./publication-variants-table.client";
 import styles from "./publication-detail-view.module.css";
-import type { PublicationUpdateAction } from "./publication-variants-table.client";
+import type { PublicationStatusAction, PublicationUpdateAction } from "./publication-variants-table.client";
 
 export type PublicationDetailViewProps = Readonly<{
   publication: PublicationDetail;
   returnTo?: string;
   updateAction?: PublicationUpdateAction;
+  statusAction?: PublicationStatusAction;
 }>;
 
 const channelLabels: Record<SalesChannel, string> = {
@@ -25,6 +26,7 @@ export function PublicationDetailView({
   publication,
   returnTo,
   updateAction,
+  statusAction,
 }: PublicationDetailViewProps) {
   const isFamily = publication.group.type === "USER_PRODUCT";
   const rows = createPublicationVariantRows(publication);
@@ -72,7 +74,7 @@ export function PublicationDetailView({
 
       <Card title={isFamily ? "Familia" : "Variaciones Anterior"}>
         {isFamily ? <FamilySummary publication={publication} /> : null}
-        <PublicationVariantsTable rows={rows} updateAction={updateAction} />
+        <PublicationVariantsTable rows={rows} updateAction={updateAction} statusAction={statusAction} />
       </Card>
     </div>
   );

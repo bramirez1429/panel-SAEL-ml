@@ -4,6 +4,7 @@ import type { AuthenticatedHttpClient } from "@/shared/api/authenticated-http-cl
 import type {
   PublicationEditRepository,
   PublicationEditTarget,
+  PublicationEditStatus,
 } from "../domain/publication-edit.repository";
 
 /** Único adaptador que conoce los endpoints reales de edición de NestJS. */
@@ -35,5 +36,12 @@ export class PublicationEditApiRepository implements PublicationEditRepository {
       ? { sku, variationId: target.variationId }
       : { sku };
     await this.httpClient.patch(path, body);
+  }
+
+  async updateStatus(target: PublicationEditTarget, status: PublicationEditStatus): Promise<void> {
+    const path = target.type === "family"
+      ? `/mercadolibre/direct/edicion/nueva/${encodeURIComponent(target.familyId)}/items/${encodeURIComponent(target.itemId)}`
+      : `/mercadolibre/direct/edicion/clasica/${encodeURIComponent(target.itemId)}`;
+    await this.httpClient.patch(path, { status });
   }
 }

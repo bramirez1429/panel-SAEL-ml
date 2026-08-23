@@ -112,10 +112,11 @@ export class HttpClient {
       );
 
       if (!response.ok) {
+        const responseBody = await readResponseBody(response);
         throw new ApiError(
-          `El backend respondió con HTTP ${response.status}.`,
+          extractHttpErrorMessage(response.status, responseBody),
           "API_HTTP_ERROR",
-          { status: response.status },
+          { status: response.status, responseBody },
         );
       }
 
@@ -143,6 +144,24 @@ export class HttpClient {
       );
     }
   }
+}
+
+function extractHttpErrorMessage(status: number, body: unknown): string {
+  if (typeof body === "string" && body.trim()) return body.trim();
+  if (isRecord(body)) {
+    const message = body.message;
+    if (typeof message === "string" && message.trim()) return message.trim();
+    if (Array.isArray(message)) {
+      const values = message.filter((item): item is string => typeof item === "string");
+      if (values.length > 0) return values.join("; ");
+    }
+    if (typeof body.error === "string" && body.error.trim()) return body.error.trim();
+  }
+  return `El backend respondió con HTTP ${status}.`;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
 function resolveApiUrl(baseUrl: string, path: string): URL {

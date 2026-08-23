@@ -12,6 +12,16 @@ const apiConfig = {
 } as const;
 
 describe("HttpClient", () => {
+  it("conserva el mensaje real de errores NestJS", async () => {
+    const fetchImplementation = vi.fn<typeof fetch>().mockResolvedValue(
+      Response.json({ message: ["variationId must be a number", "invalid"] }, { status: 400 }),
+    );
+    await expect(new HttpClient(apiConfig, fetchImplementation).patch("/legacy", { quantity: 1 })).rejects.toMatchObject({
+      message: "variationId must be a number; invalid",
+      status: 400,
+      responseBody: { message: ["variationId must be a number", "invalid"] },
+    });
+  });
   it("performs a server-side GET and returns text as unknown", async () => {
     const fetchImplementation = vi.fn<typeof fetch>();
     fetchImplementation.mockResolvedValue(

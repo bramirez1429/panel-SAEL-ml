@@ -11,6 +11,7 @@ function repository(): PublicationEditRepository {
     updatePrice: vi.fn(),
     updateStock: vi.fn(),
     updateSku: vi.fn(),
+    updateStatus: vi.fn(),
   };
 }
 
@@ -41,5 +42,11 @@ describe("UpdatePublicationCommand", () => {
     { price: 10, stock: 2, sku: "   " },
   ])("rechaza datos inválidos: %o", async (draft) => {
     await expect(new UpdatePublicationCommand(repository()).execute({ publicationId: "MLA-1", target, current, draft })).rejects.toThrow();
+  });
+
+  it("agrega contexto de operación y conserva el mensaje del backend", async () => {
+    const repo = repository();
+    vi.mocked(repo.updateStock).mockRejectedValue(new Error("variationId inválido"));
+    await expect(new UpdatePublicationCommand(repo).execute({ publicationId: "MLA-1", target, current, draft: { price: 10, stock: 4, sku: "OLD" } })).rejects.toThrow("No se pudo actualizar stock: variationId inválido");
   });
 });

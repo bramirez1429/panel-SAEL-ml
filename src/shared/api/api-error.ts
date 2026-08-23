@@ -10,10 +10,12 @@ export type ApiErrorCode =
 type ApiErrorOptions = ErrorOptions &
   Readonly<{
     status?: number;
+    responseBody?: unknown;
   }>;
 
 export class ApiError extends AppError<ApiErrorCode> {
   readonly status?: number;
+  readonly responseBody?: unknown;
 
   constructor(
     message: string,
@@ -24,5 +26,6 @@ export class ApiError extends AppError<ApiErrorCode> {
 
     this.name = "ApiError";
     this.status = options?.status;
+    this.responseBody = options?.responseBody;
   }
 }

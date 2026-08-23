@@ -1,6 +1,7 @@
 import type {
   PublicationEditRepository,
   PublicationEditTarget,
+  PublicationEditStatus,
 } from "../domain/publication-edit.repository";
 import {
   changedPublicationFields,
@@ -8,6 +9,7 @@ import {
   type PublicationEditDraft,
 } from "./publication-edit.validation";
 import type { PublicationEditSnapshot } from "./publication-edit.validation";
+import { AppError } from "@/shared/errors/app-error";
 
 export type UpdatePublicationInput = Readonly<{
   publicationId: string;
@@ -26,15 +28,28 @@ export class UpdatePublicationCommand {
     const changes = changedPublicationFields(current, draft);
 
     if (changes.price !== undefined && changes.price !== null) {
-      await this.repository.updatePrice(input.target, changes.price);
+      await runOperation("precio", () => this.repository.updatePrice(input.target, changes.price!));
     }
     if (changes.stock !== undefined && changes.stock !== null) {
-      await this.repository.updateStock(input.target, changes.stock);
+      await runOperation("stock", () => this.repository.updateStock(input.target, changes.stock!));
     }
     if (changes.sku !== undefined && changes.sku !== null) {
-      await this.repository.updateSku(input.target, changes.sku);
+      await runOperation("SKU", () => this.repository.updateSku(input.target, changes.sku!));
     }
 
     return Object.keys(changes).length > 0;
+  }
+
+  async updateStatus(target: PublicationEditTarget, status: PublicationEditStatus): Promise<void> {
+    await runOperation("estado", () => this.repository.updateStatus(target, status));
+  }
+}
+
+async function runOperation(label: string, operation: () => Promise<void>): Promise<void> {
+  try {
+    await operation();
+  } catch (error: unknown) {
+    const detail = error instanceof Error ? error.message : "Error desconocido del backend.";
+    throw new AppError(`No se pudo actualizar ${label}: ${detail}`, "PUBLICATION_UPDATE_ERROR", { cause: error });
   }
 }
