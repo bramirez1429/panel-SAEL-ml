@@ -8,6 +8,7 @@ import { createPublicationVariantRows } from "./publication-variant-row";
 import { PublicationVariantsTable } from "./publication-variants-table.client";
 import styles from "./publication-detail-view.module.css";
 import type { PublicationStatusAction, PublicationUpdateAction } from "./publication-variants-table.client";
+import { PublicationStatusSwitch } from "./publication-status-switch.client";
 
 export type PublicationDetailViewProps = Readonly<{
   publication: PublicationDetail;
@@ -58,7 +59,14 @@ export function PublicationDetailView({
               <Tag color={isFamily ? "blue" : undefined}>
                 {isFamily ? "Familia" : "Anterior"}
               </Tag>
-              <PublicationStatus status={publication.status} />
+              {isFamily || !statusAction ? <PublicationStatus status={publication.status} /> : (
+                <PublicationStatusSwitch
+                  action={statusAction}
+                  initialStatus={publication.status}
+                  publicationId={publication.id}
+                  target={{ type: "legacy", itemId: publication.id, variationId: null }}
+                />
+              )}
             </Space>
             <h2>{publication.title}</h2>
           </div>

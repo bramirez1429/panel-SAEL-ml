@@ -22,6 +22,10 @@ export type UpdatePublicationInput = Readonly<{
 export class UpdatePublicationCommand {
   constructor(private readonly repository: PublicationEditRepository) {}
 
+  async getSku(target: PublicationEditTarget): Promise<string | null> {
+    return this.repository.getSku(target);
+  }
+
   async execute(input: UpdatePublicationInput): Promise<boolean> {
     const current = input.current;
     const draft = input.draft;

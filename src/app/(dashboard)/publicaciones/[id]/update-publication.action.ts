@@ -20,7 +20,8 @@ export async function updatePublicationAction(
   input: UpdatePublicationInput,
 ): Promise<UpdatePublicationActionResult> {
   try {
-    const changed = await createUpdatePublicationCommand().execute(input);
+    const command = createUpdatePublicationCommand();
+    const changed = await command.execute(input);
     // Confirmamos la escritura leyendo de nuevo el detalle y, para familias,
     // también su colección completa antes de informar éxito al cliente.
     if (!changed) return { ok: true, confirmed: {} };
@@ -30,11 +31,14 @@ export async function updatePublicationAction(
     for (let attempt = 0; attempt < 3; attempt += 1) {
       const freshDetail = await createGetPublicationByIdQuery().execute(input.publicationId);
       detail = freshDetail;
-      const confirmed = getConfirmedValues(freshDetail, input);
+      const confirmedSku = changedFields.sku === undefined
+        ? undefined
+        : await command.getSku(input.target);
+      const confirmed = getConfirmedValues(freshDetail, input, confirmedSku);
       if (matchesChangedFields(confirmed, changedFields) || attempt === 2) {
         return { ok: true, confirmed };
       }
-      await wait(40);
+      await wait(changedFields.sku === undefined ? 40 : 220);
     }
     return { ok: true, confirmed: detail ? getConfirmedValues(detail, input) : {} };
   } catch (error: unknown) {
@@ -73,6 +77,7 @@ export async function updatePublicationStatusAction(
 function getConfirmedValues(
   detail: PublicationDetail,
   input: UpdatePublicationInput,
+  confirmedSku?: string | null,
 ): Readonly<{ sku?: string | null; price?: number | null; stock?: number | null }> {
   const variationId = input.target.type === "legacy" ? input.target.variationId : null;
   const variant = input.target.type === "family"
@@ -81,7 +86,9 @@ function getConfirmedValues(
       ? null
       : detail.variants.find((item) => item.id === String(variationId));
   return {
-    sku: variant?.sku ?? (variant ? null : getAttributeValue(detail, "SELLER_SKU")),
+    sku: confirmedSku === undefined
+      ? variant?.sku ?? (variant ? null : getAttributeValue(detail, "SELLER_SKU"))
+      : confirmedSku,
     price: variant?.price?.amount ?? (variant ? null : detail.price?.from ?? null),
     stock: variant?.stock ?? (variant ? null : detail.stock),
   };

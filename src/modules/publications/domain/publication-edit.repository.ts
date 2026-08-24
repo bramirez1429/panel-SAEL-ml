@@ -4,6 +4,7 @@ export type PublicationEditTarget =
 export type PublicationEditStatus = "active" | "paused";
 
 export interface PublicationEditRepository {
+  getSku(target: PublicationEditTarget): Promise<string | null>;
   updatePrice(target: PublicationEditTarget, price: number): Promise<void>;
   updateStock(target: PublicationEditTarget, quantity: number): Promise<void>;
   updateSku(target: PublicationEditTarget, sku: string): Promise<void>;

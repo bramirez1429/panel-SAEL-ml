@@ -8,6 +8,7 @@ const current = { price: 10, stock: 2, sku: "OLD" };
 
 function repository(): PublicationEditRepository {
   return {
+    getSku: vi.fn(),
     updatePrice: vi.fn(),
     updateStock: vi.fn(),
     updateSku: vi.fn(),

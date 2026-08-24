@@ -3,9 +3,9 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-const mocks = vi.hoisted(() => ({ update: vi.fn(), updateStatus: vi.fn(), refresh: vi.fn() }));
+const mocks = vi.hoisted(() => ({ update: vi.fn(), updateStatus: vi.fn(), getSku: vi.fn(), refresh: vi.fn() }));
 vi.mock("@/modules/publications/publications.composition.server", () => ({
-  createUpdatePublicationCommand: () => ({ execute: mocks.update, updateStatus: mocks.updateStatus }),
+  createUpdatePublicationCommand: () => ({ execute: mocks.update, updateStatus: mocks.updateStatus, getSku: mocks.getSku }),
   createGetPublicationByIdQuery: () => ({ execute: mocks.refresh }),
 }));
 
@@ -19,6 +19,19 @@ const input = {
 };
 
 describe("updatePublicationAction", () => {
+  it("confirma el SKU mediante el endpoint específico", async () => {
+    mocks.update.mockResolvedValue(true);
+    mocks.getSku.mockResolvedValue("NEW");
+    mocks.refresh.mockResolvedValue({
+      id: "MLA-1", title: "Test", channel: "MERCADO_LIBRE", status: "active", thumbnailUrl: null, permalink: null,
+      price: { from: 11, to: 11, currency: null }, stock: 3, sold: 0, attributes: [],
+      group: { key: "family:F1", type: "USER_PRODUCT", familyId: "F1", userProductId: "UP1", itemId: "MLA-1", childrenCount: 1 },
+      variants: [{ id: "MLA-1", itemId: "MLA-1", userProductId: "UP1", label: null, title: "Test", thumbnailUrl: null, status: "active", price: { amount: 11, currency: null }, stock: 3, sold: 0, sku: "OLD", attributes: [], permalink: null }],
+    });
+    await expect(updatePublicationAction(input)).resolves.toMatchObject({ ok: true, confirmed: { sku: "NEW" } });
+    expect(mocks.getSku).toHaveBeenCalledWith(input.target);
+  });
+
   it("confirma la mutación leyendo nuevamente el detalle", async () => {
     mocks.update.mockResolvedValue(true);
     mocks.refresh.mockResolvedValue({

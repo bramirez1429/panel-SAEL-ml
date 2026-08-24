@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Image, Input, InputNumber, Switch, Table, message } from "antd";
+import { Button, Image, Input, InputNumber, Table, message } from "antd";
 import type { TableColumnsType } from "antd";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -12,13 +12,14 @@ import type { PublicationEditStatus } from "../domain/publication-edit.repositor
 import { PublicationStatus } from "./publication-status";
 import type { PublicationVariantTableRow, PublicationVariationTableRow } from "./publication-variant-row";
 import { groupFamilyRows } from "./publication-variant-row";
+import { PublicationStatusSwitch, type PublicationStatusUpdateAction } from "./publication-status-switch.client";
 import styles from "./publication-detail-view.module.css";
 
 export type PublicationUpdateAction = (input: UpdatePublicationInput) => Promise<
   Readonly<{ ok: true; confirmed: Readonly<{ sku?: string | null; price?: number | null; stock?: number | null; status?: PublicationEditStatus }> } | { ok: false; message: string }>
 >;
 
-export type PublicationStatusAction = (input: Readonly<{ publicationId: string; target: PublicationEditTarget; status: PublicationEditStatus }>) => Promise<Readonly<{ ok: true; confirmed: PublicationEditStatus } | { ok: false; message: string }>>;
+export type PublicationStatusAction = PublicationStatusUpdateAction;
 type Props = Readonly<{ rows: readonly PublicationVariantTableRow[]; updateAction?: PublicationUpdateAction; statusAction?: PublicationStatusAction }>;
 type Draft = { sku: string; price: number | null; stock: number | null };
 const missingValue = <span title="Dato no disponible">—</span>;
@@ -84,12 +85,12 @@ function EditableTables({ rows, updateAction, statusAction }: { rows: readonly P
   };
   const actions = (row: PublicationVariantTableRow) => editingKey === row.key ? <><Button type="link" loading={saving} onClick={() => save(row)}>Guardar</Button><Button type="link" disabled={saving} onClick={() => { setEditingKey(null); setDraft(null); }}>Cancelar</Button></> : <><Button type="link" onClick={() => startEditing(row)}>Editar</Button>{row.permalink ? <Button href={row.permalink} rel="noreferrer" target="_blank" type="link">Ver en Mercado Libre</Button> : missingValue}</>;
 
-  const legacy = legacyColumns(editCell, actions, statusAction, rows[0]?.key, (key, status) => setConfirmed((previous) => ({ ...previous, [key]: { ...previous[key], status } })));
+  const legacy = legacyColumns(editCell, actions);
   const familyMain = familyColumns(editCell, actions);
   const offerColumns: TableColumnsType<PublicationVariantTableRow> = [
     { title: "ID publicación", dataIndex: "publicationId", key: "publicationId" },
     { title: "Precio", key: "price", render: (_, row) => editCell(row, "price") ?? <span>{formatPrice(row.price)} <small>Precio de esta oferta</small></span> },
-    { title: "Estado", key: "status", render: (_, row) => <StatusControl key={`${row.key}-${row.status}`} row={row} action={statusAction} onConfirmed={(status) => setConfirmed((previous) => ({ ...previous, [row.key]: { ...previous[row.key], status } }))} /> },
+    { title: "Estado", key: "status", render: (_, row) => <PublicationStatusSwitch key={`${row.key}-${row.status}`} publicationId={row.publicationId} target={toEditTarget(row)} initialStatus={row.status} action={statusAction} onConfirmed={(status) => setConfirmed((previous) => ({ ...previous, [row.key]: { ...previous[row.key], status } }))} /> },
     { title: "Vendidos", dataIndex: "sold", key: "sold", render: (value: number | null) => value ?? missingValue },
     { title: "Acciones", key: "actions", render: (_, row) => actions(row) },
   ];
@@ -113,7 +114,7 @@ function familyColumns(editCell?: (row: PublicationVariantTableRow, field: keyof
   ];
 }
 
-function legacyColumns(editCell?: (row: PublicationVariantTableRow, field: keyof Draft) => React.ReactNode, actions?: (row: PublicationVariantTableRow) => React.ReactNode, statusAction?: PublicationStatusAction, statusKey?: string, onStatus?: (key: string, status: PublicationEditStatus) => void): TableColumnsType<PublicationVariantTableRow> {
+function legacyColumns(editCell?: (row: PublicationVariantTableRow, field: keyof Draft) => React.ReactNode, actions?: (row: PublicationVariantTableRow) => React.ReactNode): TableColumnsType<PublicationVariantTableRow> {
   return [
     { title: "Imagen", key: "image", render: (_, row) => row.imageUrl ? <Image alt={`Imagen de ${row.publicationId}`} preview={false} src={row.imageUrl} width={48} /> : missingValue },
     { title: "ID publicación", dataIndex: "publicationId", key: "publicationId" },
@@ -124,7 +125,7 @@ function legacyColumns(editCell?: (row: PublicationVariantTableRow, field: keyof
     { title: "Precio", key: "price", render: (_, row) => editCell ? editCell(row, "price") ?? formatPrice(row.price) : formatPrice(row.price) },
     { title: "Stock", key: "stock", render: (_, row) => editCell ? editCell(row, "stock") ?? row.stock ?? missingValue : row.stock ?? missingValue },
     { title: "Vendidos", dataIndex: "sold", key: "sold", render: (value: number | null) => value ?? missingValue },
-    { title: "Estado", key: "status", render: (_, row) => statusAction && row.key === statusKey ? <StatusControl key={`${row.key}-${row.status}`} row={row} action={statusAction} onConfirmed={(status) => onStatus?.(row.key, status)} /> : <PublicationStatus status={row.status} /> },
+    { title: "Estado", key: "status", render: (_, row) => <PublicationStatus status={row.status} /> },
     ...(actions ? [{ title: "Acciones", key: "actions", render: (_: unknown, row: PublicationVariantTableRow) => actions(row) }] : []),
   ];
 }
@@ -147,21 +148,4 @@ function applyConfirmed(row: PublicationVariantTableRow, values: Readonly<{ sku?
   };
 }
 function formatPrice(price: PublicationVariantTableRow["price"]): React.ReactNode { if (!price) return missingValue; const amount = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 }).format(price.amount); return price.currency ? `${price.currency} ${amount}` : amount; }
-function StatusControl({ row, action, onConfirmed }: { row: PublicationVariantTableRow; action?: PublicationStatusAction; onConfirmed?: (status: PublicationEditStatus) => void }) {
-  const [saving, setSaving] = useState(false);
-  const [messageApi, contextHolder] = message.useMessage();
-  const [status, setStatus] = useState<PublicationEditStatus | null>(row.status === "active" || row.status === "paused" ? row.status : null);
-  const visibleStatus = status ?? row.status;
-  if (row.status === "closed") return <><PublicationStatus status="closed" /><Switch disabled checked={false} /></>;
-  if (!action || status === null) return <PublicationStatus status={visibleStatus} />;
-  return <>{contextHolder}<span><PublicationStatus status={visibleStatus} /><Switch checked={status === "active"} loading={saving} disabled={saving} onChange={async (checked) => {
-    setSaving(true);
-    try {
-      const result = await action({ publicationId: row.publicationId, target: toEditTarget(row), status: checked ? "active" : "paused" });
-      if (result.ok) { setStatus(result.confirmed); onConfirmed?.(result.confirmed); }
-      else messageApi.error(result.message);
-    } finally { setSaving(false); }
-  }} /></span></>;
-}
-
 function OfferTable({ rows }: { rows: readonly PublicationVariantTableRow[] }) { return <Table<PublicationVariantTableRow> columns={[{ title: "ID publicación", dataIndex: "publicationId", key: "publicationId" }, { title: "Precio", key: "price", render: (_, row) => formatPrice(row.price) }, { title: "Estado", key: "status", render: (_, row) => <PublicationStatus status={row.status} /> }, { title: "Vendidos", dataIndex: "sold", key: "sold", render: (value: number | null) => value ?? missingValue }, { title: "Ver en Mercado Libre", key: "link", render: (_, row) => row.permalink ? <Button href={row.permalink} rel="noreferrer" target="_blank" type="link">Ver en Mercado Libre</Button> : missingValue }]} dataSource={[...rows]} pagination={false} rowKey="key" size="small" />; }
