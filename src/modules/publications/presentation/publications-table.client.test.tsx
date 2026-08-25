@@ -89,7 +89,7 @@ describe("PublicationsTable", () => {
     render(<PublicationsTable page={pageWithPublication} />);
 
     expect(screen.getByRole("region", { name: "Tabla de publicaciones" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Volver a replicar" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Volver a replicar" })).not.toBeInTheDocument();
     expect(screen.getByText("Publicación real")).toBeInTheDocument();
     expect(screen.getByText("Mercado Libre")).toBeInTheDocument();
     expect(screen.getAllByText("Anterior").length).toBeGreaterThan(0);
@@ -122,7 +122,7 @@ describe("PublicationsTable", () => {
 
     await user.click(screen.getByRole("button", { name: "Replicar TN" }));
 
-    expect(action).toHaveBeenCalledWith("123e4567-e89b-42d3-a456-426614174000");
-    expect(action).not.toHaveBeenCalledWith("item:MLA1");
+    expect(action).toHaveBeenCalledWith("item:MLA1");
+    expect(action).not.toHaveBeenCalledWith("123e4567-e89b-42d3-a456-426614174000");
   });
 });

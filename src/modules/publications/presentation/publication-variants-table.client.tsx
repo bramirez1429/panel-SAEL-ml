@@ -83,7 +83,8 @@ function EditableTables({ rows, updateAction, statusAction }: { rows: readonly P
     if (field === "sku") return <Input value={draft.sku} onChange={(event) => setDraft({ ...draft, sku: event.target.value })} />;
     return <InputNumber min={field === "price" ? 0.01 : 0} precision={field === "stock" ? 0 : undefined} value={draft[field]} onChange={(value) => setDraft({ ...draft, [field]: typeof value === "number" ? value : null })} />;
   };
-  const actions = (row: PublicationVariantTableRow) => editingKey === row.key ? <><Button type="link" loading={saving} onClick={() => save(row)}>Guardar</Button><Button type="link" disabled={saving} onClick={() => { setEditingKey(null); setDraft(null); }}>Cancelar</Button></> : <><Button type="link" onClick={() => startEditing(row)}>Editar</Button>{row.permalink ? <Button href={row.permalink} rel="noreferrer" target="_blank" type="link">Ver en Mercado Libre</Button> : missingValue}</>;
+  const cancelEditing = () => { if (saving) return; setEditingKey(null); setDraft(null); };
+  const actions = (row: PublicationVariantTableRow) => editingKey === row.key ? <><Button type="link" loading={saving} onClick={() => save(row)}>Guardar</Button><Button type="link" onClick={cancelEditing}>Cancelar</Button></> : <><Button type="link" onClick={() => startEditing(row)}>Editar</Button>{row.permalink ? <Button href={row.permalink} rel="noreferrer" target="_blank" type="link">Ver en Mercado Libre</Button> : missingValue}</>;
 
   const legacy = legacyColumns(editCell, actions);
   const familyMain = familyColumns(editCell, actions);

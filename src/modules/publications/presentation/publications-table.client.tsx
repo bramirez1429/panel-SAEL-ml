@@ -50,7 +50,7 @@ function createColumns(
           status: "NOT_REPLICATED",
           tiendanubeProductId: null,
         }}
-        sourceId={publication.group.productId ?? null}
+        sourceKey={publication.group.key}
       />
     ),
     width: 120,
@@ -68,7 +68,7 @@ function createColumns(
         <TiendanubeRereplicationCell
           action={replicateAction}
           initialState={replicationState}
-          sourceId={publication.group.productId ?? null}
+          sourceKey={publication.group.key}
         />
       );
     },
@@ -194,6 +194,7 @@ export function PublicationsTable({
   const columns = createColumns(searchParams, tiendanubeStatusBySourceKey, replicateAction);
 
   const goToNextPage = () => {
+    if (isPending || !hasNextPage) return;
     const current = parsePublicationsSearchParams(
       Object.fromEntries(searchParams.entries()),
     );
@@ -231,21 +232,9 @@ export function PublicationsTable({
       {!loading && page.count > 0 ? (
         <div className={styles.pagination} aria-label="Paginación por cursor">
           <Space>
-            <Button
-              disabled={page.page <= 1 || isPending}
-              onClick={() => router.back()}
-            >
-              Anterior
-            </Button>
+            {page.page > 1 ? <Button onClick={() => { if (!isPending) router.back(); }}>Anterior</Button> : null}
             <span>Página {page.page}</span>
-            <Button
-              disabled={!hasNextPage || isPending}
-              loading={isPending}
-              onClick={goToNextPage}
-              type="primary"
-            >
-              Siguiente
-            </Button>
+            {hasNextPage ? <Button loading={isPending} onClick={goToNextPage} type="primary">Siguiente</Button> : null}
           </Space>
         </div>
       ) : null}

@@ -8,12 +8,11 @@ export type ReplicatePublicationActionResult =
   | Readonly<{ ok: true; action: "created" | "updated" }>
   | Readonly<{ ok: false; message: string }>;
 
-export async function replicatePublicationAction(sourceId: string): Promise<ReplicatePublicationActionResult> {
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sourceId)) {
-    return { ok: false, message: "La publicación no tiene un product_id UUID válido." };
-  }
+/** Server Action que transporta sourceKey sin exponer credenciales ni infraestructura al navegador. */
+export async function replicatePublicationAction(sourceKey: string): Promise<ReplicatePublicationActionResult> {
+  if (!sourceKey.trim()) return { ok: false, message: "La clave sourceKey está vacía." };
   try {
-    const action = await createReplicatePublicationCommand().execute(sourceId);
+    const action = await createReplicatePublicationCommand().execute(sourceKey);
     return { ok: true, action };
   } catch (error: unknown) {
     if (error instanceof ApiError && error.status === 409 && /más de 3 atributos/i.test(error.message)) {
