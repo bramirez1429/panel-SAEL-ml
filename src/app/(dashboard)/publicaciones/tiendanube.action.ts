@@ -8,22 +8,19 @@ export type ReplicatePublicationActionResult =
   | Readonly<{ ok: true; action: "created" | "updated" }>
   | Readonly<{ ok: false; message: string }>;
 
-export async function replicatePublicationAction(sourceId: string): Promise<ReplicatePublicationActionResult> {
-  if (!isUuid(sourceId)) {
-    return { ok: false, message: "No se encontró el identificador interno de la publicación." };
+/** Server Action: recibe sólo la clave pública estable y conserva la autenticación en servidor. */
+export async function replicatePublicationAction(sourceKey: string): Promise<ReplicatePublicationActionResult> {
+  if (!sourceKey.trim()) {
+    return { ok: false, message: "No se encontró la clave de origen de la publicación." };
   }
   try {
-    const action = await createReplicatePublicationCommand().execute(sourceId);
+    const action = await createReplicatePublicationCommand().execute(sourceKey);
     return { ok: true, action };
   } catch (error: unknown) {
-    if (error instanceof ApiError && error.status === 409 && /m[aá]s de 3 atributos/i.test(error.message)) {
+    if (error instanceof ApiError && error.status === 409 && /más de 3 atributos/i.test(error.message)) {
       return { ok: false, message: "Esta publicación usa más atributos de variación de los permitidos por Tiendanube." };
     }
     if (error instanceof AppError) return { ok: false, message: error.message };
     return { ok: false, message: "No se pudo replicar la publicación en Tiendanube." };
   }
-}
-
-function isUuid(value: unknown): value is string {
-  return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }

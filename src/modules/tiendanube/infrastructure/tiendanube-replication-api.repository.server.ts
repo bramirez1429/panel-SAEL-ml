@@ -26,9 +26,9 @@ export class TiendanubeReplicationApiRepository implements TiendanubeReplication
     }));
   }
 
-  async replicate(sourceId: string) {
+  async replicate(sourceKey: string) {
     const parsed = replicationResponseSchema.safeParse(
-      await this.httpClient.post(`/tiendanube/replicate/${encodeURIComponent(sourceId)}`),
+      await this.httpClient.post("/tiendanube/replicate/source", { sourceKey }),
     );
     if (!parsed.success) {
       throw new ApiError("El backend devolvió una respuesta inválida al replicar.", "API_INVALID_RESPONSE", { cause: parsed.error });

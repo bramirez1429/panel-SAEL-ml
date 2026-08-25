@@ -17,8 +17,6 @@ export type PublicationGroup = Readonly<{
 
 export type Publication = Readonly<{
   id: string;
-  /** UUID interno de mercadolibre_products usado por integraciones server-side. */
-  productId?: string | null;
   title: string;
   channel: SalesChannel;
   status: string | null;

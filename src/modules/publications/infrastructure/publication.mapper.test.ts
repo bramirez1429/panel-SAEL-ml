@@ -19,7 +19,6 @@ describe("mapPublicationsResponse", () => {
     expect(result.publications).toEqual([
       expect.objectContaining({
         id: "MLA100",
-        productId: "123e4567-e89b-42d3-a456-426614174000",
         title: "Publicación clásica",
         channel: "MERCADO_LIBRE",
         sold: 2,
@@ -28,7 +27,6 @@ describe("mapPublicationsResponse", () => {
       }),
       expect.objectContaining({
         id: "MLA200",
-        productId: "123e4567-e89b-42d3-a456-426614174001",
         title: "Familia real",
         stock: 3,
         sold: 10,

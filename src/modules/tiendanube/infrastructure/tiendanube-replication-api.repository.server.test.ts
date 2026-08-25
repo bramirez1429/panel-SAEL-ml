@@ -22,10 +22,17 @@ describe("TiendanubeReplicationApiRepository", () => {
     expect(http.get.mock.calls[0]?.[0]).toContain("sourceKeys=item%3AMLA1%2Cfamily%3A22");
   });
 
-  it("replica usando el UUID sourceId", async () => {
+  it("replica usando sourceKey item", async () => {
     const http = client();
     vi.mocked(http.post).mockResolvedValue({ ok: true, action: "updated", mercadolibreSourceId: "uuid-1", tiendanubeProductId: "10" });
-    await expect(new TiendanubeReplicationApiRepository(http).replicate("uuid-1")).resolves.toBe("updated");
-    expect(http.post).toHaveBeenCalledWith("/tiendanube/replicate/uuid-1");
+    await expect(new TiendanubeReplicationApiRepository(http).replicate("item:MLA1")).resolves.toBe("updated");
+    expect(http.post).toHaveBeenCalledWith("/tiendanube/replicate/source", { sourceKey: "item:MLA1" });
+  });
+
+  it("replica usando sourceKey family", async () => {
+    const http = client();
+    vi.mocked(http.post).mockResolvedValue({ ok: true, action: "created", mercadolibreSourceId: "uuid-1", tiendanubeProductId: "10" });
+    await expect(new TiendanubeReplicationApiRepository(http).replicate("family:22")).resolves.toBe("created");
+    expect(http.post).toHaveBeenCalledWith("/tiendanube/replicate/source", { sourceKey: "family:22" });
   });
 });

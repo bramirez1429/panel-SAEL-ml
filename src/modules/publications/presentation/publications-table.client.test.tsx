@@ -35,7 +35,6 @@ const pageWithPublication: PublicationsPage = {
   publications: [
     {
       id: "publication/id",
-      productId: "123e4567-e89b-42d3-a456-426614174000",
       title: "Publicación real",
       channel: "MERCADO_LIBRE",
       status: "active",
@@ -115,14 +114,14 @@ describe("PublicationsTable", () => {
     expect(screen.getByTitle("Imagen no disponible")).toBeInTheDocument();
   });
 
-  it("replica usando el productId UUID y no el itemId", async () => {
+  it("replica usando group.key y no IDs internos", async () => {
     const action = vi.fn().mockResolvedValue({ ok: true, action: "created" as const });
     const user = userEvent.setup();
     render(<PublicationsTable page={pageWithPublication} replicateAction={action} />);
 
     await user.click(screen.getByRole("button", { name: "Replicar TN" }));
 
-    expect(action).toHaveBeenCalledWith("123e4567-e89b-42d3-a456-426614174000");
-    expect(action).not.toHaveBeenCalledWith("MLA1");
+    expect(action).toHaveBeenCalledWith("item:MLA1");
+    expect(action).not.toHaveBeenCalledWith("123e4567-e89b-42d3-a456-426614174000");
   });
 });

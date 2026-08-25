@@ -4,7 +4,7 @@ import type { TiendanubeReplicationRepository } from "../domain/tiendanube-repli
 export class ReplicatePublicationCommand {
   constructor(private readonly repository: TiendanubeReplicationRepository) {}
 
-  execute(sourceId: string) {
-    return this.repository.replicate(sourceId);
+  execute(sourceKey: string) {
+    return this.repository.replicate(sourceKey);
   }
 }
