@@ -4,26 +4,26 @@ import { replicationResponseSchema } from "./tiendanube-replication-response.sch
 const response = (action: "created" | "updated") => ({
   ok: true,
   action,
-  sourceKey: "item:MLA1",
+  mercadolibreSourceId: "123e4567-e89b-42d3-a456-426614174000",
   tiendanubeProductId: "tn-10",
 });
 
 describe("replicationResponseSchema", () => {
-  it("acepta created con sourceKey", () => {
+  it("acepta created con UUID interno", () => {
     expect(replicationResponseSchema.safeParse(response("created")).success).toBe(true);
   });
 
-  it("acepta updated con sourceKey", () => {
+  it("acepta updated con UUID interno", () => {
     expect(replicationResponseSchema.safeParse(response("updated")).success).toBe(true);
   });
 
-  it("rechaza una respuesta sin sourceKey", () => {
+  it("rechaza una respuesta sin UUID interno", () => {
     const invalid = { ok: true, action: "created", tiendanubeProductId: "tn-10" };
     expect(replicationResponseSchema.safeParse(invalid).success).toBe(false);
   });
 
-  it("rechaza el contrato legacy con mercadolibreSourceId", () => {
-    const legacy = { ok: true, action: "created", mercadolibreSourceId: "uuid-1", tiendanubeProductId: "tn-10" };
-    expect(replicationResponseSchema.safeParse(legacy).success).toBe(false);
+  it("rechaza un identificador que no es UUID", () => {
+    const invalid = { ok: true, action: "created", mercadolibreSourceId: "item:MLA1", tiendanubeProductId: "tn-10" };
+    expect(replicationResponseSchema.safeParse(invalid).success).toBe(false);
   });
 });

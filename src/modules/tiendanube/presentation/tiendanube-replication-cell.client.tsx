@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, message, Tag, Tooltip } from "antd";
+import { Button, message } from "antd";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { TiendanubeReplicationAction, TiendanubeReplicationState } from "../domain/tiendanube-replication.model";
@@ -8,22 +8,25 @@ import type { TiendanubeReplicationAction, TiendanubeReplicationState } from "..
 export type ReplicatePublicationAction = (sourceId: string) => Promise<Readonly<{ ok: true; action: TiendanubeReplicationAction } | { ok: false; message: string }>>;
 
 type Props = Readonly<{
-  sourceKey: string;
+  sourceId: string | null;
   initialState: TiendanubeReplicationState;
   action: ReplicatePublicationAction;
 }>;
 
-/** Isla interactiva: ejecuta la Server Action sin conocer JWT ni URLs del backend. */
-export function TiendanubeReplicationCell({ sourceKey, initialState, action }: Props) {
+export function TiendanubeReplicationCell({ sourceId, initialState, action }: Props) {
   const [state, setState] = useState(initialState);
   const [loading, setLoading] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
   const router = useRouter();
 
   const replicate = async () => {
+    if (!sourceId) {
+      messageApi.error("La publicación no tiene un product_id válido.");
+      return;
+    }
     setLoading(true);
     try {
-      const result = await action(sourceKey);
+      const result = await action(sourceId);
       if (result.ok) {
         setState({ ...state, status: "COMPLETED" });
         messageApi.success("Se replicó correctamente en Tiendanube.");
@@ -31,43 +34,44 @@ export function TiendanubeReplicationCell({ sourceKey, initialState, action }: P
       } else {
         messageApi.error(result.message);
       }
+    } catch (error) {
+      messageApi.error(error instanceof Error ? error.message : "No se pudo replicar la publicación.");
     } finally {
       setLoading(false);
     }
   };
 
-  if (state.status === "COMPLETED") {
-    return <>{contextHolder}<Tag color="green">✓ Replicado</Tag></>;
-  }
-  if (state.status === "PENDING") {
-    return <>{contextHolder}<Button disabled size="small">Procesando...</Button></>;
-  }
-  return <>{contextHolder}<Button danger={state.status === "FAILED"} disabled={loading} loading={loading} onClick={replicate} size="small">{state.status === "FAILED" ? "Reintentar" : "Replicar TN"}</Button></>;
+  return <>{contextHolder}<Button disabled={loading || !sourceId || state.status === "PENDING"} loading={loading} onClick={replicate} size="small">Replicar TN</Button></>;
 }
 
-export function TiendanubeRereplicationCell({ sourceKey, initialState, action }: Props) {
-  const tooltip = "Próximamente: volver a sincronizar con Tiendanube";
+export function TiendanubeRereplicationCell({ sourceId, initialState, action }: Props) {
   const [loading, setLoading] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
   const router = useRouter();
 
   if (initialState.status === "COMPLETED") {
     const rereplicate = async () => {
+      if (!sourceId) {
+        messageApi.error("La publicación no tiene un product_id válido.");
+        return;
+      }
       setLoading(true);
       try {
-        const result = await action(sourceKey);
+        const result = await action(sourceId);
         if (result.ok) {
           messageApi.success("Se replicó correctamente en Tiendanube.");
           router.refresh();
         } else {
           messageApi.error(result.message);
         }
+      } catch (error) {
+        messageApi.error(error instanceof Error ? error.message : "No se pudo replicar la publicación.");
       } finally {
         setLoading(false);
       }
     };
-    return <>{contextHolder}<Button loading={loading} disabled={loading} onClick={rereplicate} size="small">Volver a replicar</Button></>;
+    return <>{contextHolder}<Button loading={loading} disabled={loading || !sourceId} onClick={rereplicate} size="small">Volver a replicar</Button></>;
   }
 
-  return <Tooltip title={tooltip}><Button disabled size="small" title={tooltip}>Volver a replicar</Button></Tooltip>;
+  return <>{contextHolder}<Button disabled size="small">Volver a replicar</Button></>;
 }

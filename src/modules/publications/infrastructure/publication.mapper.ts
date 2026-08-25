@@ -27,6 +27,7 @@ function mapSharedProduct(dto: SharedProductDto): Publication {
     attributes: [],
     group: {
       key: dto.key,
+      productId: dto.product_id ?? null,
       type: "LEGACY",
       familyId: null,
       userProductId: null,
@@ -63,6 +64,7 @@ function mapFamilySummary(dto: FamilySummaryDto): Publication {
     attributes: [],
     group: {
       key: dto.key,
+      productId: dto.product_id ?? null,
       type: "USER_PRODUCT",
       familyId: dto.familyId,
       userProductId: dto.variants[0]?.userProductId ?? null,

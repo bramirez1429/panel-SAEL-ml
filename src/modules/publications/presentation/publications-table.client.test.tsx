@@ -46,6 +46,7 @@ const pageWithPublication: PublicationsPage = {
       attributes: [],
       group: {
         key: "item:MLA1",
+        productId: "123e4567-e89b-42d3-a456-426614174000",
         type: "LEGACY",
         familyId: null,
         userProductId: null,
@@ -121,7 +122,7 @@ describe("PublicationsTable", () => {
 
     await user.click(screen.getByRole("button", { name: "Replicar TN" }));
 
-    expect(action).toHaveBeenCalledWith("item:MLA1");
-    expect(action).not.toHaveBeenCalledWith("123e4567-e89b-42d3-a456-426614174000");
+    expect(action).toHaveBeenCalledWith("123e4567-e89b-42d3-a456-426614174000");
+    expect(action).not.toHaveBeenCalledWith("item:MLA1");
   });
 });

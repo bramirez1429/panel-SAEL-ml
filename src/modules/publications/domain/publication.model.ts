@@ -8,6 +8,7 @@ export type SalesChannel = "MERCADO_LIBRE";
 
 export type PublicationGroup = Readonly<{
   key: string;
+  productId?: string | null;
   type: PublicationType;
   familyId: string | null;
   userProductId: string | null;

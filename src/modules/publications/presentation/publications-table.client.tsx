@@ -50,7 +50,7 @@ function createColumns(
           status: "NOT_REPLICATED",
           tiendanubeProductId: null,
         }}
-        sourceKey={publication.group.key}
+        sourceId={publication.group.productId ?? null}
       />
     ),
     width: 120,
@@ -68,7 +68,7 @@ function createColumns(
         <TiendanubeRereplicationCell
           action={replicateAction}
           initialState={replicationState}
-          sourceKey={publication.group.key}
+          sourceId={publication.group.productId ?? null}
         />
       );
     },
