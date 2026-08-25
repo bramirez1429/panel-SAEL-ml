@@ -13,6 +13,7 @@ type FamilySummaryDto = Extract<
 function mapSharedProduct(dto: SharedProductDto): Publication {
   return {
     id: dto.itemId,
+    productId: dto.product_id ?? null,
     title: dto.title ?? dto.itemId,
     channel: "MERCADO_LIBRE",
     status: dto.status,
@@ -45,6 +46,7 @@ function mapFamilySummary(dto: FamilySummaryDto): Publication {
 
   return {
     id: firstItem?.itemId ?? dto.familyId,
+    productId: dto.product_id ?? firstItem?.product_id ?? null,
     title: dto.familyName ?? firstItem?.title ?? dto.familyId,
     channel: "MERCADO_LIBRE",
     status: null,

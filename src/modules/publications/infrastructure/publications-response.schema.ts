@@ -22,6 +22,7 @@ const familyPictureDtoSchema = z.object({
 });
 
 const familyItemSummaryDtoSchema = z.object({
+  product_id: z.string().uuid().nullable().optional(),
   itemId: z.string().min(1),
   title: z.string().nullable(),
   price: z.number().nullable(),
@@ -42,6 +43,7 @@ const familyVariantSummaryDtoSchema = z.object({
 const sharedProductDtoSchema = z.object({
   key: z.string().min(1),
   model: z.literal("SHARED"),
+  product_id: z.string().uuid().nullable().optional(),
   itemId: z.string().min(1),
   title: z.string().nullable(),
   price: z.number().nullable(),
@@ -55,6 +57,7 @@ const sharedProductDtoSchema = z.object({
 const familySummaryDtoSchema = z.object({
   key: z.string().min(1),
   model: z.literal("VARIANT_PRICING"),
+  product_id: z.string().uuid().nullable().optional(),
   familyId: z.string().min(1),
   familyName: z.string().nullable(),
   variantsCount: z.number().int().nonnegative(),

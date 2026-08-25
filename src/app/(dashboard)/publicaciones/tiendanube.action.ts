@@ -9,6 +9,9 @@ export type ReplicatePublicationActionResult =
   | Readonly<{ ok: false; message: string }>;
 
 export async function replicatePublicationAction(sourceId: string): Promise<ReplicatePublicationActionResult> {
+  if (!isUuid(sourceId)) {
+    return { ok: false, message: "No se encontró el identificador interno de la publicación." };
+  }
   try {
     const action = await createReplicatePublicationCommand().execute(sourceId);
     return { ok: true, action };
@@ -19,4 +22,8 @@ export async function replicatePublicationAction(sourceId: string): Promise<Repl
     if (error instanceof AppError) return { ok: false, message: error.message };
     return { ok: false, message: "No se pudo replicar la publicación en Tiendanube." };
   }
+}
+
+function isUuid(value: unknown): value is string {
+  return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }

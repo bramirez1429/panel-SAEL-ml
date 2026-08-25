@@ -6,6 +6,7 @@ import type {
 export const legacyPublicationDto = {
   key: "item:MLA100",
   model: "SHARED",
+  product_id: "123e4567-e89b-42d3-a456-426614174000",
   itemId: "MLA100",
   title: "Publicación clásica",
   price: 1000,
@@ -28,7 +29,8 @@ export const userProductPublicationDto = {
       userProductId: "MLAU200",
       items: [
         {
-          itemId: "MLA200",
+        itemId: "MLA200",
+          product_id: "123e4567-e89b-42d3-a456-426614174001",
           title: "Variante azul",
           price: 1500,
           stock: 2,
@@ -45,7 +47,8 @@ export const userProductPublicationDto = {
       userProductId: "MLAU201",
       items: [
         {
-          itemId: "MLA201",
+        itemId: "MLA201",
+          product_id: "123e4567-e89b-42d3-a456-426614174002",
           title: "Variante roja",
           price: 1700,
           stock: 1,
