@@ -6,9 +6,12 @@ import {
   type PublicationsUrlState,
 } from "./publications-search-params";
 import { PublicationsTable } from "./publications-table.client";
+import type { ReplicatePublicationAction } from "@/modules/tiendanube/presentation/tiendanube-replication-cell.client";
+import type { TiendanubeReplicationState } from "@/modules/tiendanube/domain/tiendanube-replication.model";
 import styles from "./publications-view.module.css";
 
 type PublicationsViewProps = Readonly<{ filters: PublicationsUrlState }> &
+  Readonly<{ tiendanubeStatusBySourceKey?: Readonly<Record<string, TiendanubeReplicationState>>; replicateAction?: ReplicatePublicationAction }> &
   (
     | Readonly<{ state: "loading" }>
     | Readonly<{ state: "error"; errorMessage: string }>
@@ -38,7 +41,7 @@ export function PublicationsView(props: PublicationsViewProps) {
       {props.state === "loading" ? (
         <>
           <p className={styles.summaryText}>Cargando publicaciones…</p>
-          <PublicationsTable page={emptyPage} loading />
+          <PublicationsTable page={emptyPage} loading tiendanubeStatusBySourceKey={props.tiendanubeStatusBySourceKey} replicateAction={props.replicateAction} />
         </>
       ) : null}
 
@@ -65,7 +68,7 @@ export function PublicationsView(props: PublicationsViewProps) {
             </p>
           ) : null}
 
-          <PublicationsTable page={props.page} />
+          <PublicationsTable page={props.page} tiendanubeStatusBySourceKey={props.tiendanubeStatusBySourceKey} replicateAction={props.replicateAction} />
         </>
       ) : null}
     </div>

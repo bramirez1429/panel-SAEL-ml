@@ -17,10 +17,14 @@ import {
 } from "./publications-search-params";
 import { PublicationStatus } from "./publication-status";
 import styles from "./publications-view.module.css";
+import { TiendanubeReplicationCell, type ReplicatePublicationAction } from "@/modules/tiendanube/presentation/tiendanube-replication-cell.client";
+import type { TiendanubeReplicationState } from "@/modules/tiendanube/domain/tiendanube-replication.model";
 
 type PublicationsTableProps = Readonly<{
   page: PublicationsPage;
   loading?: boolean;
+  tiendanubeStatusBySourceKey?: Readonly<Record<string, TiendanubeReplicationState>>;
+  replicateAction?: ReplicatePublicationAction;
 }>;
 
 const missingValue = <span title="Dato no disponible">—</span>;
@@ -31,8 +35,26 @@ const salesChannelLabels: Record<SalesChannel, string> = {
 
 function createColumns(
   searchParams: URLSearchParams,
+  tiendanubeStatusBySourceKey: Readonly<Record<string, TiendanubeReplicationState>>,
+  replicateAction: ReplicatePublicationAction,
 ): TableColumnsType<Publication> {
   return [
+  {
+    title: "Tiendanube",
+    key: "tiendanube",
+    render: (_, publication) => (
+      <TiendanubeReplicationCell
+        action={replicateAction}
+        initialState={tiendanubeStatusBySourceKey[publication.group.key] ?? {
+          sourceKey: publication.group.key,
+          status: "NOT_REPLICATED",
+          tiendanubeProductId: null,
+        }}
+        sourceKey={publication.group.key}
+      />
+    ),
+    width: 150,
+  },
   {
     title: "Imagen",
     key: "thumbnail",
@@ -144,11 +166,13 @@ function createColumns(
 export function PublicationsTable({
   page,
   loading = false,
+  tiendanubeStatusBySourceKey = {},
+  replicateAction = async () => ({ ok: false as const, message: "La replicación no está disponible." }),
 }: PublicationsTableProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
-  const columns = createColumns(searchParams);
+  const columns = createColumns(searchParams, tiendanubeStatusBySourceKey, replicateAction);
 
   const goToNextPage = () => {
     const current = parsePublicationsSearchParams(
