@@ -4,6 +4,8 @@ export type TiendanubeReplicationStatus =
   | "FAILED"
   | "COMPLETED";
 
+export type TiendanubeReplicationAction = "created" | "updated";
+
 export type TiendanubeReplicationState = Readonly<{
   sourceKey: string;
   status: TiendanubeReplicationStatus;

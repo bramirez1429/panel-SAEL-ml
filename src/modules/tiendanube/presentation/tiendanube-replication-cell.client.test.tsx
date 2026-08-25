@@ -14,30 +14,31 @@ describe("TiendanubeReplicationCell", () => {
   });
 
   it.each([
-    ["NOT_REPLICATED", "Replicar"],
+    ["NOT_REPLICATED", "Replicar a Tiendanube"],
     ["PENDING", "Procesando"],
     ["FAILED", "Reintentar"],
-    ["COMPLETED", "Replicado"],
+    ["COMPLETED", "Volver a replicar"],
   ] as const)("muestra %s correctamente", (status, text) => {
-    render(<TiendanubeReplicationCell action={vi.fn()} initialState={{ ...state, status }} sourceKey={state.sourceKey} />);
+    render(<TiendanubeReplicationCell action={vi.fn()} initialState={{ ...state, status }} sourceId="uuid-1" />);
     expect(screen.getByText(text)).toBeInTheDocument();
   });
 
   it("deshabilita la acción mientras replica y refresca al confirmar", async () => {
-    let resolve: ((value: { ok: true }) => void) | undefined;
-    const action = vi.fn(() => new Promise<{ ok: true }>((done) => { resolve = done; }));
-    render(<TiendanubeReplicationCell action={action} initialState={state} sourceKey={state.sourceKey} />);
-    const button = screen.getByRole("button", { name: "Replicar" });
+    let resolve: ((value: { ok: true; action: "created" }) => void) | undefined;
+    const action = vi.fn(() => new Promise<{ ok: true; action: "created" }>((done) => { resolve = done; }));
+    render(<TiendanubeReplicationCell action={action} initialState={state} sourceId="uuid-1" />);
+    const button = screen.getByRole("button", { name: "Replicar a Tiendanube" });
     fireEvent.click(button);
     expect(button).toBeDisabled();
-    resolve?.({ ok: true });
-    await vi.waitFor(() => expect(screen.getByText("Replicado")).toBeInTheDocument());
+    resolve?.({ ok: true, action: "created" });
+    await vi.waitFor(() => expect(screen.getByText("✓ Publicado en Tiendanube")).toBeInTheDocument());
     await vi.waitFor(() => expect(screen.getByText("Se replicó correctamente en Tiendanube.")).toBeInTheDocument());
     expect(refresh).toHaveBeenCalled();
+    expect(action).toHaveBeenCalledWith("uuid-1");
   });
 
   it("deja Volver a replicar deshabilitado mientras no existe una action real", async () => {
-    render(<TiendanubeRereplicationCell />);
+    render(<TiendanubeRereplicationCell action={vi.fn()} initialState={state} sourceId="uuid-1" />);
     const button = screen.getByRole("button", { name: "Volver a replicar" });
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute("title", "Próximamente: volver a sincronizar con Tiendanube");

@@ -50,7 +50,7 @@ function createColumns(
           status: "NOT_REPLICATED",
           tiendanubeProductId: null,
         }}
-        sourceKey={publication.group.key}
+        sourceId={publication.id}
       />
     ),
     width: 120,
@@ -58,7 +58,20 @@ function createColumns(
   {
     title: "Volver a replicar",
     key: "rereplicate",
-    render: () => <TiendanubeRereplicationCell />,
+    render: (_, publication) => {
+      const replicationState = tiendanubeStatusBySourceKey[publication.group.key] ?? {
+        sourceKey: publication.group.key,
+        status: "NOT_REPLICATED" as const,
+        tiendanubeProductId: null,
+      };
+      return (
+        <TiendanubeRereplicationCell
+          action={replicateAction}
+          initialState={replicationState}
+          sourceId={publication.id}
+        />
+      );
+    },
     width: 120,
   },
   {

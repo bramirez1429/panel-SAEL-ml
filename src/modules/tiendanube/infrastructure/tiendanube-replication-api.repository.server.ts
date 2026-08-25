@@ -26,12 +26,13 @@ export class TiendanubeReplicationApiRepository implements TiendanubeReplication
     }));
   }
 
-  async replicate(sourceKey: string): Promise<void> {
+  async replicate(sourceId: string) {
     const parsed = replicationResponseSchema.safeParse(
-      await this.httpClient.post("/tiendanube/replication/mercadolibre/source", { sourceKey }),
+      await this.httpClient.post(`/tiendanube/replicate/${encodeURIComponent(sourceId)}`),
     );
     if (!parsed.success) {
       throw new ApiError("El backend devolvió una respuesta inválida al replicar.", "API_INVALID_RESPONSE", { cause: parsed.error });
     }
+    return parsed.data.action;
   }
 }
