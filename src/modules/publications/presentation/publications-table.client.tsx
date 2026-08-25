@@ -17,7 +17,7 @@ import {
 } from "./publications-search-params";
 import { PublicationStatus } from "./publication-status";
 import styles from "./publications-view.module.css";
-import { TiendanubeReplicationCell, type ReplicatePublicationAction } from "@/modules/tiendanube/presentation/tiendanube-replication-cell.client";
+import { TiendanubeReplicationCell, TiendanubeRereplicationCell, type ReplicatePublicationAction } from "@/modules/tiendanube/presentation/tiendanube-replication-cell.client";
 import type { TiendanubeReplicationState } from "@/modules/tiendanube/domain/tiendanube-replication.model";
 
 type PublicationsTableProps = Readonly<{
@@ -53,7 +53,13 @@ function createColumns(
         sourceKey={publication.group.key}
       />
     ),
-    width: 150,
+    width: 120,
+  },
+  {
+    title: "Volver a replicar",
+    key: "rereplicate",
+    render: () => <TiendanubeRereplicationCell />,
+    width: 120,
   },
   {
     title: "Imagen",
@@ -72,7 +78,7 @@ function createColumns(
           —
         </span>
       ),
-    width: 76,
+    width: 60,
   },
   {
     title: "Producto",
@@ -82,13 +88,13 @@ function createColumns(
     render: (title: Publication["title"]) => (
       <span className={styles.productTitle}>{title}</span>
     ),
-    width: 260,
+    width: 180,
   },
   {
     title: "Canal",
     key: "channel",
     render: (_, publication) => salesChannelLabels[publication.channel],
-    width: 130,
+    width: 100,
   },
   {
     title: "Tipo",
@@ -105,7 +111,7 @@ function createColumns(
       ) : (
         <Tag>Anterior</Tag>
       ),
-    width: 100,
+    width: 85,
   },
   {
     title: "Variantes",
@@ -115,21 +121,21 @@ function createColumns(
       publication.group.type === "USER_PRODUCT"
         ? publication.group.childrenCount
         : missingValue,
-    width: 100,
+    width: 75,
   },
   {
     title: "Precio",
     key: "price",
     align: "right",
     render: (_, publication) => formatPrice(publication),
-    width: 170,
+    width: 125,
   },
   {
     title: "Stock",
     dataIndex: "stock",
     key: "stock",
     align: "right",
-    width: 90,
+    width: 65,
   },
   {
     title: "Vendidos",
@@ -138,14 +144,14 @@ function createColumns(
     align: "right",
     render: (sold: Publication["sold"]) =>
       sold === null ? missingValue : sold,
-    width: 100,
+    width: 75,
   },
   {
     title: "Estado",
     key: "status",
     render: (_, publication) =>
       <PublicationStatus status={publication.status} />,
-    width: 120,
+    width: 95,
   },
   {
     title: "Acciones",
@@ -158,7 +164,7 @@ function createColumns(
         Ver detalle
       </Link>
     ),
-    width: 130,
+    width: 95,
   },
   ];
 }
@@ -205,8 +211,8 @@ export function PublicationsTable({
         locale={{ emptyText: "No se encontraron publicaciones." }}
         pagination={false}
         rowKey="id"
-        scroll={{ x: 1170 }}
-        size="middle"
+        scroll={{ x: "max-content" }}
+        size="small"
       />
 
       {!loading && page.count > 0 ? (

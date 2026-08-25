@@ -87,6 +87,7 @@ describe("PublicationsTable", () => {
     render(<PublicationsTable page={pageWithPublication} />);
 
     expect(screen.getByRole("region", { name: "Tabla de publicaciones" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Volver a replicar" })).toBeDisabled();
     expect(screen.getByText("Publicación real")).toBeInTheDocument();
     expect(screen.getByText("Mercado Libre")).toBeInTheDocument();
     expect(screen.getAllByText("Anterior").length).toBeGreaterThan(0);

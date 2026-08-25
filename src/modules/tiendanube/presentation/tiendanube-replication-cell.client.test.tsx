@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { TiendanubeReplicationCell } from "./tiendanube-replication-cell.client";
+import { TiendanubeReplicationCell, TiendanubeRereplicationCell } from "./tiendanube-replication-cell.client";
 
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
@@ -32,6 +32,14 @@ describe("TiendanubeReplicationCell", () => {
     expect(button).toBeDisabled();
     resolve?.({ ok: true });
     await vi.waitFor(() => expect(screen.getByText("Replicado")).toBeInTheDocument());
+    await vi.waitFor(() => expect(screen.getByText("Se replicó correctamente en Tiendanube.")).toBeInTheDocument());
     expect(refresh).toHaveBeenCalled();
+  });
+
+  it("deja Volver a replicar deshabilitado mientras no existe una action real", async () => {
+    render(<TiendanubeRereplicationCell />);
+    const button = screen.getByRole("button", { name: "Volver a replicar" });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute("title", "Próximamente: volver a sincronizar con Tiendanube");
   });
 });

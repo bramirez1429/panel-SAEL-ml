@@ -99,6 +99,7 @@
 
 .tableCard :global(.ant-table-tbody > tr > td) {
   vertical-align: middle;
+  font-size: 13px;
 }
 
 .productTitle {

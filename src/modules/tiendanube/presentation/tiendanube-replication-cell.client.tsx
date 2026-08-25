@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, message, Tag } from "antd";
+import { Button, message, Tag, Tooltip } from "antd";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { TiendanubeReplicationState } from "../domain/tiendanube-replication.model";
@@ -26,6 +26,7 @@ export function TiendanubeReplicationCell({ sourceKey, initialState, action }: P
       const result = await action(sourceKey);
       if (result.ok) {
         setState({ ...state, status: "COMPLETED" });
+        messageApi.success("Se replicó correctamente en Tiendanube.");
         router.refresh();
       } else {
         messageApi.error(result.message);
@@ -36,6 +37,16 @@ export function TiendanubeReplicationCell({ sourceKey, initialState, action }: P
   };
 
   return <>{contextHolder}{renderState(state.status, replicate, loading)}</>;
+}
+
+/** Acción reservada hasta que el backend exponga una re-replicación real. */
+export function TiendanubeRereplicationCell() {
+  const tooltip = "Próximamente: volver a sincronizar con Tiendanube";
+  return (
+    <Tooltip title={tooltip}>
+      <Button disabled size="small" title={tooltip}>Volver a replicar</Button>
+    </Tooltip>
+  );
 }
 
 function renderState(status: TiendanubeReplicationState["status"], replicate: () => Promise<void>, loading: boolean) {
