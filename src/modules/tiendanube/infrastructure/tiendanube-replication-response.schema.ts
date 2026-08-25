@@ -13,6 +13,6 @@ export const statusResponseSchema = z.object({
 export const replicationResponseSchema = z.object({
   ok: z.literal(true),
   action: z.enum(["created", "updated"]),
-  mercadolibreSourceId: z.string().min(1),
+  sourceKey: z.string().min(1),
   tiendanubeProductId: z.string().min(1),
-});
+}).strict();
