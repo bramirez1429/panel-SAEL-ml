@@ -6,6 +6,7 @@ import { ApiError } from "./api-error";
 export type HttpGetClient = Pick<HttpClient, "get">;
 export type HttpPostClient = Pick<HttpClient, "post">;
 export type HttpPatchClient = Pick<HttpClient, "patch">;
+export type HttpDeleteClient = Pick<HttpClient, "delete">;
 export type HttpRequestOptions = Readonly<{
   bearerToken?: string;
   cookieHeader?: string;
@@ -13,6 +14,7 @@ export type HttpRequestOptions = Readonly<{
 export type HttpGetOptions = HttpRequestOptions;
 export type HttpPostOptions = HttpRequestOptions;
 export type HttpPatchOptions = HttpRequestOptions;
+export type HttpDeleteOptions = HttpRequestOptions;
 export type HttpResponse = Readonly<{
   body: unknown;
   headers: Headers;
@@ -97,6 +99,22 @@ export class HttpClient {
         ...(options.cookieHeader ? { Cookie: options.cookieHeader } : {}),
       },
       body: hasBody ? JSON.stringify(body) : undefined,
+    });
+  }
+
+  async delete(path: string, options: HttpDeleteOptions = {}): Promise<unknown> {
+    const response = await this.deleteResponse(path, options);
+    return response.body;
+  }
+
+  async deleteResponse(path: string, options: HttpDeleteOptions = {}): Promise<HttpResponse> {
+    return this.request(path, {
+      method: "DELETE",
+      headers: {
+        Accept: "application/json, text/plain;q=0.9",
+        ...(options.bearerToken ? { Authorization: `Bearer ${options.bearerToken}` } : {}),
+        ...(options.cookieHeader ? { Cookie: options.cookieHeader } : {}),
+      },
     });
   }
 

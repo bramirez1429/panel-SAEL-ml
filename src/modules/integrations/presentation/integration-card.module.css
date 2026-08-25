@@ -1,0 +1,9 @@
+.card { height: 100%; border-radius: 12px; box-shadow: 0 8px 24px rgb(15 23 42 / 5%); }
+.heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.identity { display: flex; gap: 12px; align-items: center; }
+.icon { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 10px; background: #eef4ff; font-size: 22px; }
+.identity h2 { margin: 0; font-size: 18px; }
+.identity p, .detail { margin: 4px 0 0; color: #667085; }
+.detail { margin-top: 20px; }
+.actions { margin-top: 24px; }
+.muted { color: #667085; }

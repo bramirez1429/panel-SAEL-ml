@@ -20,12 +20,14 @@ export type AuthenticatedHttpClient = Readonly<{
   postResponse(path: string, body?: unknown): Promise<HttpResponse>;
   patch(path: string, body?: unknown): Promise<unknown>;
   patchResponse(path: string, body?: unknown): Promise<HttpResponse>;
+  delete(path: string): Promise<unknown>;
+  deleteResponse(path: string): Promise<HttpResponse>;
 }>;
 
 export function createAuthenticatedHttpClient(
   httpClient: Pick<
     HttpClient,
-    "get" | "getResponse" | "post" | "postResponse" | "patch" | "patchResponse"
+    "get" | "getResponse" | "post" | "postResponse" | "patch" | "patchResponse" | "delete" | "deleteResponse"
   >,
 ): AuthenticatedHttpClient {
   return {
@@ -35,6 +37,8 @@ export function createAuthenticatedHttpClient(
     postResponse: (path, body) => authenticatedPostResponse(httpClient, path, body),
     patch: (path, body) => authenticatedPatch(httpClient, path, body),
     patchResponse: (path, body) => authenticatedPatchResponse(httpClient, path, body),
+    delete: (path) => authenticatedDelete(httpClient, path),
+    deleteResponse: (path) => authenticatedDeleteResponse(httpClient, path),
   };
 }
 
@@ -88,6 +92,16 @@ async function authenticatedPatchResponse(
 ): Promise<HttpResponse> {
   const token = await requireAccessToken();
   return httpClient.patchResponse(path, body, { bearerToken: token });
+}
+
+async function authenticatedDelete(httpClient: Pick<HttpClient, "delete">, path: string): Promise<unknown> {
+  const token = await requireAccessToken();
+  return httpClient.delete(path, { bearerToken: token });
+}
+
+async function authenticatedDeleteResponse(httpClient: Pick<HttpClient, "deleteResponse">, path: string): Promise<HttpResponse> {
+  const token = await requireAccessToken();
+  return httpClient.deleteResponse(path, { bearerToken: token });
 }
 
 async function requireAccessToken(): Promise<string> {

@@ -5,8 +5,6 @@ import type { AuthenticatedHttpClient } from "@/shared/api/authenticated-http-cl
 import type { HttpResponse } from "@/shared/api/http-client.server";
 
 const CONNECT_ENDPOINT = "/mercadolibre/connect";
-const CONNECTION_PROBE_ENDPOINT =
-  "/mercadolibre/direct/publicaciones/agrupadas?limit=1";
 
 export class MercadoLibreApiRepository {
   constructor(private readonly httpClient: AuthenticatedHttpClient) {}
@@ -38,16 +36,20 @@ export class MercadoLibreApiRepository {
     }
   }
 
-  async hasConnection(): Promise<boolean> {
-    try {
-      await this.httpClient.get(CONNECTION_PROBE_ENDPOINT);
-      return true;
-    } catch (error: unknown) {
-      if (error instanceof ApiError && error.status === 401) {
-        return false;
-      }
-      throw error;
+  async getConnection(): Promise<{ connected: false } | { connected: true; sellerId: number }> {
+    const body = await this.httpClient.get("/mercadolibre/connection");
+    if (!isObject(body) || typeof body.connected !== "boolean") {
+      throw new ApiError("El backend devolvió un estado Mercado Libre inválido.", "API_INVALID_RESPONSE");
     }
+    if (!body.connected) return { connected: false };
+    if (typeof body.sellerId !== "number" || !Number.isInteger(body.sellerId)) {
+      throw new ApiError("El backend devolvió un sellerId inválido.", "API_INVALID_RESPONSE");
+    }
+    return { connected: true, sellerId: body.sellerId };
+  }
+
+  async disconnect(): Promise<void> {
+    await this.httpClient.delete("/mercadolibre/connection");
   }
 }
 

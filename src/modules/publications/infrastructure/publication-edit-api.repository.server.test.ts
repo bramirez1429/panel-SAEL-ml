@@ -6,7 +6,7 @@ import type { AuthenticatedHttpClient } from "@/shared/api/authenticated-http-cl
 import { PublicationEditApiRepository } from "./publication-edit-api.repository.server";
 
 function client() {
-  return { get: vi.fn(), getResponse: vi.fn(), post: vi.fn(), postResponse: vi.fn(), patch: vi.fn(), patchResponse: vi.fn() } satisfies AuthenticatedHttpClient;
+  return { get: vi.fn(), getResponse: vi.fn(), post: vi.fn(), postResponse: vi.fn(), patch: vi.fn(), patchResponse: vi.fn(), delete: vi.fn(), deleteResponse: vi.fn() } satisfies AuthenticatedHttpClient;
 }
 
 describe("PublicationEditApiRepository", () => {
