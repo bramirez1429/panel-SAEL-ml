@@ -37,6 +37,9 @@ export class PublicationsApiRepository implements PublicationsRepository {
     if (request.cursor) {
       query.set("cursor", request.cursor);
     }
+    if (request.search?.trim()) {
+      query.set("search", request.search.trim());
+    }
     const response = await this.httpClient.get(
       `${PUBLICATIONS_ENDPOINT}?${query.toString()}`,
     );

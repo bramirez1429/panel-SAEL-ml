@@ -79,6 +79,7 @@ describe("GetPublicationsQuery", () => {
     expect(getPublications).toHaveBeenCalledWith({
       pageSize: 20,
       cursor: "cursor-2",
+      search: "",
     });
   });
 
@@ -93,8 +94,8 @@ describe("GetPublicationsQuery", () => {
       search: "  FAMILIA  ",
     });
 
-    expect(result.publications).toEqual([familyPublication]);
-    expect(result.count).toBe(1);
+    expect(result.publications).toEqual([legacyPublication, familyPublication]);
+    expect(result.count).toBe(2);
     expect(result.productsCount).toBe(2);
   });
 

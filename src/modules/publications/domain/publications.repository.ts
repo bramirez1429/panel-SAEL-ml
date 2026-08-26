@@ -6,6 +6,7 @@ import type {
 export type PublicationsRequest = Readonly<{
   pageSize: number;
   cursor: string | null;
+  search?: string;
 }>;
 
 /**

@@ -4,7 +4,6 @@ import type {
   PublicationType,
 } from "../domain/publication.model";
 import type { PublicationsRepository } from "../domain/publications.repository";
-import { matchesPublicationTitle } from "./matches-publication-title";
 
 export type GetPublicationsQueryInput = Readonly<{
   page: number;
@@ -19,13 +18,12 @@ function matchesFilters(
   publication: Publication,
   input: GetPublicationsQueryInput,
 ): boolean {
-  const matchesSearch = matchesPublicationTitle(publication.title, input.search);
   const matchesType =
     input.type === null || publication.group.type === input.type;
   const matchesStatus =
     input.status === null || publication.status === input.status;
 
-  return matchesSearch && matchesType && matchesStatus;
+  return matchesType && matchesStatus;
 }
 
 /** Coordina la lectura y aplica filtros sólo sobre el lote del cursor recibido. */
@@ -36,6 +34,7 @@ export class GetPublicationsQuery {
     const page = await this.repository.getPublications({
       pageSize: input.pageSize,
       cursor: input.cursor,
+      search: input.search,
     });
     const publications = page.publications.filter((publication) =>
       matchesFilters(publication, input),
