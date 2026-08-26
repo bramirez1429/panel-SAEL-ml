@@ -1,33 +1,39 @@
 "use client";
 
-import { Button, message, Modal, Select, Tag } from "antd";
+import { Button, InputNumber, message, Modal, Radio, Select, Tag } from "antd";
 import { useState } from "react";
 import type { ReplicationOptions, TiendanubeCategory, TiendanubeReplicationAction, TiendanubeReplicationState } from "../domain/tiendanube-replication.model";
 
 export type ReplicatePublicationAction = (sourceKey: string, options: ReplicationOptions) => Promise<Readonly<{ ok: true; action: TiendanubeReplicationAction } | { ok: false; message: string }>>;
 type Props = Readonly<{ sourceKey: string; initialState: TiendanubeReplicationState; action: ReplicatePublicationAction; categories?: readonly TiendanubeCategory[] }>;
 
-/** Isla cliente para confirmar una réplica; autenticación y HTTP permanecen en el servidor. */
+/** Isla cliente para configurar la réplica; autenticación y HTTP permanecen en el servidor. */
 export function TiendanubeReplicationCell({ sourceKey, initialState, action, categories = [] }: Props) {
   const [state, setState] = useState(initialState);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
+  const [priceMode, setPriceMode] = useState<ReplicationOptions["priceMode"]>("KEEP_SOURCE");
+  const [price, setPrice] = useState<number>();
+  const [categoryId, setCategoryId] = useState<number | undefined>(categories[0]?.id);
+  const mantenerPrecio = priceMode === "KEEP_SOURCE";
   const [messageApi, contextHolder] = message.useMessage();
   const replicate = async () => {
     if (loading) return;
-    if (!categoryId) { messageApi.error("Seleccioná una categoría."); return; }
+    if (categoryId === undefined) { messageApi.error("Seleccioná una categoría."); return; }
+    if (priceMode === "OVERRIDE" && (price === undefined || !Number.isFinite(price) || price <= 0)) { messageApi.error("El precio debe ser mayor que cero."); return; }
     setLoading(true);
     try {
-      const result = await action(sourceKey, { categoryId });
+      const options: ReplicationOptions = { priceMode, categoryId, ...(priceMode === "OVERRIDE" && price !== undefined ? { price } : {}) };
+      const result = await action(sourceKey, options);
       if (result.ok) { setState({ ...state, status: "COMPLETED" }); setOpen(false); messageApi.success("Se replicó correctamente en Tiendanube."); }
       else messageApi.error(result.message);
     } finally { setLoading(false); }
   };
-  const categoryOptions = categories.map((category) => ({ label: category.name, value: String(category.id) }));
   const modal = <Modal open={open} title="Replicar en Tiendanube" okText="Replicar" cancelText="Cancelar" confirmLoading={loading} onCancel={() => setOpen(false)} onOk={replicate}>
-    {categories.length === 0 ? <p role="alert">No se pudieron cargar las categorías de Tiendanube.</p> : null}
-    <Select aria-label="Categoría" placeholder="Seleccionar categoría" value={categoryId || undefined} onChange={setCategoryId} options={categoryOptions} style={{ width: "100%" }} />
+    <p>¿Mantener precio de Mercado Libre?</p>
+    <Radio.Group aria-label="Mantener precio de Mercado Libre" value={mantenerPrecio} onChange={(event) => setPriceMode(event.target.value ? "KEEP_SOURCE" : "OVERRIDE")} options={[{ label: "Sí", value: true }, { label: "No", value: false }]} />
+    {!mantenerPrecio ? <InputNumber aria-label="Precio" prefix="$" min={0.01} value={price} onChange={(value) => setPrice(value ?? undefined)} style={{ width: "100%", marginTop: 12 }} formatter={(value) => value === undefined ? "" : `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")} parser={(value) => Number((value ?? "").replace(/\./g, ""))} /> : null}
+    <Select aria-label="Categoría" placeholder="Seleccionar categoría" value={categoryId} onChange={setCategoryId} options={categories.map((category) => ({ label: category.name, value: category.id }))} style={{ width: "100%", marginTop: 12 }} />
   </Modal>;
   if (state.status === "PENDING") return <>{contextHolder}<span>Procesando...</span></>;
   if (state.status === "UNKNOWN") return <>{contextHolder}<span>Verificando estado...</span></>;

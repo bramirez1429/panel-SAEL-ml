@@ -6,8 +6,8 @@ export type TiendanubeReplicationStatus =
   | "COMPLETED";
 
 export type TiendanubeReplicationAction = "created" | "updated";
-export type ReplicationOptions = Readonly<{ categoryId: string }>;
-export type TiendanubeCategory = Readonly<{ id: string; name: string; parentId: number | null }>;
+export type ReplicationOptions = Readonly<{ priceMode: "KEEP_SOURCE" | "OVERRIDE"; price?: number; categoryId: number }>;
+export type TiendanubeCategory = Readonly<{ id: number; name: string; parentId: number | null }>;
 
 export type TiendanubeReplicationState = Readonly<{
   sourceKey: string;

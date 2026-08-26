@@ -14,5 +14,5 @@ export const replicationResponseSchema = z.object({
 }).strict();
 
 export const categoriesResponseSchema = z.object({
-  items: z.array(z.object({ id: z.number().transform(String), name: z.string().min(1), parentId: z.number().nullable() })),
+  items: z.array(z.object({ id: z.number(), name: z.string().min(1), parentId: z.number().nullable() })),
 });

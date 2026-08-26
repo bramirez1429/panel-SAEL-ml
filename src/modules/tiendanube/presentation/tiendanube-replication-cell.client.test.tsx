@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { TiendanubeReplicationCell } from "./tiendanube-replication-cell.client";
 
 const state = { sourceKey: "item:MLA1", status: "NOT_REPLICATED" as const, tiendanubeProductId: null };
-const categories = [{ id: "10", name: "Remeras", parentId: null }];
+const categories = [{ id: 10, name: "Remeras", parentId: null }];
 
 describe("TiendanubeReplicationCell", () => {
   afterEach(cleanup);
@@ -22,6 +22,6 @@ describe("TiendanubeReplicationCell", () => {
     fireEvent.click(screen.getByRole("button", { name: "Replicar TN" }));
     fireEvent.click(screen.getByRole("button", { name: "Replicar" }));
     await vi.waitFor(() => expect(screen.getByText("✓ Replicado")).toBeInTheDocument());
-    expect(action).toHaveBeenCalledWith("item:MLA1", { categoryId: "10" });
+    expect(action).toHaveBeenCalledWith("item:MLA1", { priceMode: "KEEP_SOURCE", categoryId: 10 });
   });
 });
