@@ -4,6 +4,7 @@ import type {
   PublicationType,
 } from "../domain/publication.model";
 import type { PublicationsRepository } from "../domain/publications.repository";
+import { matchesPublicationTitle } from "./matches-publication-title";
 
 export type GetPublicationsQueryInput = Readonly<{
   page: number;
@@ -18,10 +19,7 @@ function matchesFilters(
   publication: Publication,
   input: GetPublicationsQueryInput,
 ): boolean {
-  const normalizedSearch = input.search.trim().toLocaleLowerCase("es");
-  const matchesSearch =
-    normalizedSearch.length === 0 ||
-    publication.title.toLocaleLowerCase("es").includes(normalizedSearch);
+  const matchesSearch = matchesPublicationTitle(publication.title, input.search);
   const matchesType =
     input.type === null || publication.group.type === input.type;
   const matchesStatus =
