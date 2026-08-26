@@ -26,6 +26,20 @@ describe("PublicationsApiRepository", () => {
     );
   });
 
+  it("uses a dedicated timeout for global title search", async () => {
+    const get = vi.fn<HttpGetClient["get"]>();
+    get.mockResolvedValue(createPublicationsResponse());
+    await new PublicationsApiRepository({ get }).getPublications({ pageSize: 20, cursor: null, search: "buzo" });
+    expect(get).toHaveBeenCalledWith("/mercadolibre/direct/publicaciones/agrupadas?limit=20&search=buzo", { timeoutMs: 30_000 });
+  });
+
+  it("does not customize timeout when search is absent", async () => {
+    const get = vi.fn<HttpGetClient["get"]>();
+    get.mockResolvedValue(createPublicationsResponse());
+    await new PublicationsApiRepository({ get }).getPublications({ pageSize: 20, cursor: null });
+    expect(get).toHaveBeenCalledWith("/mercadolibre/direct/publicaciones/agrupadas?limit=20");
+  });
+
   it("translates an invalid payload into a controlled API error", async () => {
     const get = vi.fn<HttpGetClient["get"]>();
     get.mockResolvedValue({ publications: [] });

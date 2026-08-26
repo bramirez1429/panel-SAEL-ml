@@ -40,9 +40,10 @@ export class PublicationsApiRepository implements PublicationsRepository {
     if (request.search?.trim()) {
       query.set("search", request.search.trim());
     }
-    const response = await this.httpClient.get(
-      `${PUBLICATIONS_ENDPOINT}?${query.toString()}`,
-    );
+    const endpoint = `${PUBLICATIONS_ENDPOINT}?${query.toString()}`;
+    const response = request.search?.trim()
+      ? await this.httpClient.get(endpoint, { timeoutMs: 30_000 })
+      : await this.httpClient.get(endpoint);
     const validation = publicationsResponseSchema.safeParse(response);
 
     if (!validation.success) {
