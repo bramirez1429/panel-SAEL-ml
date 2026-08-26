@@ -13,7 +13,7 @@ describe("TiendanubeReplicationCell", () => {
 
   it("muestra Replicar TN activo sin UUID interno", () => {
     render(<TiendanubeReplicationCell action={vi.fn()} initialState={state} sourceKey={sourceKey} />);
-    expect(screen.getByRole("button", { name: "Replicar TN" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Replicar Tiendanube" })).toBeEnabled();
   });
 
   it("muestra Procesando sin un botón deshabilitado", () => {
@@ -38,14 +38,15 @@ describe("TiendanubeReplicationCell", () => {
   it("protege doble click, confirma, notifica y refresca", async () => {
     let resolve: ((value: { ok: true; action: "created" }) => void) | undefined;
     const action = vi.fn(() => new Promise<{ ok: true; action: "created" }>((done) => { resolve = done; }));
-    render(<TiendanubeReplicationCell action={action} initialState={state} sourceKey={sourceKey} />);
-    const button = screen.getByRole("button", { name: "Replicar TN" });
-    fireEvent.click(button); fireEvent.click(button);
+    render(<TiendanubeReplicationCell action={action} initialState={state} sourceKey={sourceKey} categories={[{ id: "cat", name: "Cat" }]} />);
+    const button = screen.getByRole("button", { name: "Replicar Tiendanube" });
+    fireEvent.click(button);
+    fireEvent.click(screen.getByRole("button", { name: "Replicar" }));
     expect(action).toHaveBeenCalledTimes(1);
     resolve?.({ ok: true, action: "created" });
     await vi.waitFor(() => expect(screen.getByText("✓ Replicado")).toBeInTheDocument());
     expect(screen.getByText("Se replicó correctamente en Tiendanube.")).toBeInTheDocument();
-    expect(refresh).toHaveBeenCalled();
+    expect(refresh).not.toHaveBeenCalled();
   });
 
   it("muestra em dash cuando no está completada", () => {

@@ -3,8 +3,8 @@ import "server-only";
 import { ApiError } from "@/shared/api/api-error";
 import type { AuthenticatedHttpClient } from "@/shared/api/authenticated-http-client.server";
 import type { TiendanubeReplicationRepository } from "../domain/tiendanube-replication.repository";
-import type { TiendanubeReplicationState } from "../domain/tiendanube-replication.model";
-import { replicationResponseSchema, statusResponseSchema } from "./tiendanube-replication-response.schema";
+import type { TiendanubeCategory, TiendanubeReplicationState } from "../domain/tiendanube-replication.model";
+import { categoriesResponseSchema, replicationResponseSchema, statusResponseSchema, storeSummaryResponseSchema } from "./tiendanube-replication-response.schema";
 
 /** Única capa que conoce los endpoints de replicación por sourceKey. */
 export class TiendanubeReplicationApiRepository implements TiendanubeReplicationRepository {
@@ -26,13 +26,25 @@ export class TiendanubeReplicationApiRepository implements TiendanubeReplication
     }));
   }
 
-  async replicate(sourceKey: string) {
+  async replicate(sourceKey: string, options: import("../domain/tiendanube-replication.model").ReplicationOptions) {
     const parsed = replicationResponseSchema.safeParse(
-      await this.httpClient.post("/tiendanube/replicate/source", { sourceKey }),
+      await this.httpClient.post("/tiendanube/replicate/source", { sourceKey, options }),
     );
     if (!parsed.success) {
       throw new ApiError("El backend devolvió una respuesta inválida al replicar.", "API_INVALID_RESPONSE", { cause: parsed.error });
     }
     return parsed.data.action;
+  }
+
+  async getCategories(): Promise<readonly TiendanubeCategory[]> {
+    const parsed = categoriesResponseSchema.safeParse(await this.httpClient.get("/tiendanube/categories"));
+    if (!parsed.success) throw new ApiError("El backend devolvió categorías inválidas.", "API_INVALID_RESPONSE", { cause: parsed.error });
+    return parsed.data;
+  }
+
+  async getStoreSummary() {
+    const parsed = storeSummaryResponseSchema.safeParse(await this.httpClient.get("/tiendanube/store-summary"));
+    if (!parsed.success) throw new ApiError("El backend devolvió un resumen de tienda inválido.", "API_INVALID_RESPONSE", { cause: parsed.error });
+    return parsed.data;
   }
 }

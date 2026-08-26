@@ -20,3 +20,11 @@ export function createGetTiendanubeReplicationStatusQuery(): GetTiendanubeReplic
 export function createReplicatePublicationCommand(): ReplicatePublicationCommand {
   return new ReplicatePublicationCommand(createRepository());
 }
+
+export async function getTiendanubeCategories() {
+  return createRepository().getCategories();
+}
+
+export async function getTiendanubeStoreSummary() {
+  return createRepository().getStoreSummary();
+}

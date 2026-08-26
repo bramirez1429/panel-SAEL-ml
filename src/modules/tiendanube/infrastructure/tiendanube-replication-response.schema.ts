@@ -16,3 +16,6 @@ export const replicationResponseSchema = z.object({
   sourceKey: z.string().min(1),
   tiendanubeProductId: z.string().min(1),
 }).strict();
+
+export const categoriesResponseSchema = z.array(z.object({ id: z.union([z.string(), z.number()]).transform(String), name: z.string().min(1), path: z.string().optional() }));
+export const storeSummaryResponseSchema = z.object({ planName: z.string().min(1) });

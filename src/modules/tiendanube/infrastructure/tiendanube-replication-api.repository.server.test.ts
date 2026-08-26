@@ -25,8 +25,9 @@ describe("TiendanubeReplicationApiRepository", () => {
     const http = client();
     vi.mocked(http.post).mockResolvedValue({ ok: true, action, sourceKey, tiendanubeProductId: "10" });
 
-    await expect(new TiendanubeReplicationApiRepository(http).replicate(sourceKey)).resolves.toBe(action);
-    expect(http.post).toHaveBeenCalledWith("/tiendanube/replicate/source", { sourceKey });
+    const options = { priceMode: "KEEP_SOURCE" as const, categoryId: "cat-1" };
+    await expect(new TiendanubeReplicationApiRepository(http).replicate(sourceKey, options)).resolves.toBe(action);
+    expect(http.post).toHaveBeenCalledWith("/tiendanube/replicate/source", { sourceKey, options });
     expect(http.post.mock.calls[0]?.[0]).not.toMatch(/\/replicate\/[0-9a-f-]+$/i);
   });
 
@@ -34,6 +35,6 @@ describe("TiendanubeReplicationApiRepository", () => {
     const http = client();
     const error = new ApiError("La tienda Tiendanube no está conectada", "API_HTTP_ERROR", { status: 409 });
     vi.mocked(http.post).mockRejectedValue(error);
-    await expect(new TiendanubeReplicationApiRepository(http).replicate("item:MLA1")).rejects.toBe(error);
+    await expect(new TiendanubeReplicationApiRepository(http).replicate("item:MLA1", { priceMode: "KEEP_SOURCE", categoryId: "cat-1" })).rejects.toBe(error);
   });
 });
