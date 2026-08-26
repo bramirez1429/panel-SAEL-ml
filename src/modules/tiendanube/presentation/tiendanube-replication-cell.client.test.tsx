@@ -22,6 +22,6 @@ describe("TiendanubeReplicationCell", () => {
     fireEvent.click(screen.getByRole("button", { name: "Replicar TN" }));
     fireEvent.click(screen.getByRole("button", { name: "Replicar" }));
     await vi.waitFor(() => expect(screen.getByText("✓ Replicado")).toBeInTheDocument());
-    expect(action).toHaveBeenCalledWith("item:MLA1", { priceMode: "KEEP_SOURCE", categoryId: 10 });
+    expect(action).toHaveBeenCalledWith("item:MLA1", { priceMode: "KEEP_SOURCE", tagMode: "KEEP_SOURCE", categoryId: 10 });
   });
 });
