@@ -24,7 +24,3 @@ export function createReplicatePublicationCommand(): ReplicatePublicationCommand
 export async function getTiendanubeCategories() {
   return createRepository().getCategories();
 }
-
-export async function getTiendanubeStoreSummary() {
-  return createRepository().getStoreSummary();
-}

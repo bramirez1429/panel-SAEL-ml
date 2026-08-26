@@ -3,11 +3,7 @@ import { z } from "zod";
 const statusSchema = z.enum(["NOT_REPLICATED", "PENDING", "FAILED", "COMPLETED"]);
 
 export const statusResponseSchema = z.object({
-  items: z.array(z.object({
-    sourceKey: z.string().min(1),
-    status: statusSchema,
-    tiendanubeProductId: z.string().nullable().optional(),
-  })),
+  items: z.array(z.object({ sourceKey: z.string().min(1), status: statusSchema, tiendanubeProductId: z.string().nullable().optional() })),
 });
 
 export const replicationResponseSchema = z.object({
@@ -17,5 +13,6 @@ export const replicationResponseSchema = z.object({
   tiendanubeProductId: z.string().min(1),
 }).strict();
 
-export const categoriesResponseSchema = z.array(z.object({ id: z.union([z.string(), z.number()]).transform(String), name: z.string().min(1), path: z.string().optional() }));
-export const storeSummaryResponseSchema = z.object({ planName: z.string().min(1) });
+export const categoriesResponseSchema = z.object({
+  items: z.array(z.object({ id: z.number().transform(String), name: z.string().min(1), parentId: z.number().nullable() })),
+});

@@ -120,7 +120,7 @@ describe("PublicationsTable", () => {
     const user = userEvent.setup();
     render(<PublicationsTable page={pageWithPublication} replicateAction={action} />);
 
-    await user.click(screen.getByRole("button", { name: "Replicar Tiendanube" }));
+    await user.click(screen.getByRole("button", { name: "Replicar TN" }));
 
     expect(action).not.toHaveBeenCalled();
     expect(action).not.toHaveBeenCalledWith("123e4567-e89b-42d3-a456-426614174000");

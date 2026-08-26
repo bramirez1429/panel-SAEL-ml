@@ -17,8 +17,8 @@ import {
 } from "./publications-search-params";
 import { PublicationStatus } from "./publication-status";
 import styles from "./publications-view.module.css";
-import { TiendanubeReplicationCell, TiendanubeRereplicationCell, type ReplicatePublicationAction } from "@/modules/tiendanube/presentation/tiendanube-replication-cell.client";
-import type { TiendanubeCategory, TiendanubeReplicationState, TiendanubeStoreSummary } from "@/modules/tiendanube/domain/tiendanube-replication.model";
+import { TiendanubeReplicationCell, type ReplicatePublicationAction } from "@/modules/tiendanube/presentation/tiendanube-replication-cell.client";
+import type { TiendanubeCategory, TiendanubeReplicationState } from "@/modules/tiendanube/domain/tiendanube-replication.model";
 
 type PublicationsTableProps = Readonly<{
   page: PublicationsPage;
@@ -26,7 +26,6 @@ type PublicationsTableProps = Readonly<{
   tiendanubeStatusBySourceKey?: Readonly<Record<string, TiendanubeReplicationState>>;
   replicateAction?: ReplicatePublicationAction;
   categories?: readonly TiendanubeCategory[];
-  storeSummary?: TiendanubeStoreSummary | null;
 }>;
 
 const missingValue = <span title="Dato no disponible">—</span>;
@@ -40,7 +39,6 @@ function createColumns(
   tiendanubeStatusBySourceKey: Readonly<Record<string, TiendanubeReplicationState>>,
   replicateAction: ReplicatePublicationAction,
   categories: readonly TiendanubeCategory[],
-  storeSummary: TiendanubeStoreSummary | null,
 ): TableColumnsType<Publication> {
   return [
   {
@@ -56,30 +54,8 @@ function createColumns(
         }}
         sourceKey={publication.group.key}
         categories={categories}
-        storeSummary={storeSummary}
       />
     ),
-    width: 120,
-  },
-  {
-    title: "Volver a replicar",
-    key: "rereplicate",
-    render: (_, publication) => {
-      const replicationState = tiendanubeStatusBySourceKey[publication.group.key] ?? {
-        sourceKey: publication.group.key,
-        status: "NOT_REPLICATED" as const,
-        tiendanubeProductId: null,
-      };
-      return (
-        <TiendanubeRereplicationCell
-          action={replicateAction}
-          initialState={replicationState}
-          sourceKey={publication.group.key}
-          categories={categories}
-          storeSummary={storeSummary}
-        />
-      );
-    },
     width: 120,
   },
   {
@@ -196,12 +172,11 @@ export function PublicationsTable({
   tiendanubeStatusBySourceKey = {},
   replicateAction = async () => ({ ok: false as const, message: "La replicación no está disponible." }),
   categories = [],
-  storeSummary = null,
 }: PublicationsTableProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
-  const columns = createColumns(searchParams, tiendanubeStatusBySourceKey, replicateAction, categories, storeSummary);
+  const columns = createColumns(searchParams, tiendanubeStatusBySourceKey, replicateAction, categories);
 
   const goToNextPage = () => {
     if (isPending || !hasNextPage) return;
