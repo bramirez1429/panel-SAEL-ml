@@ -14,15 +14,16 @@ import type {
  * repository o componente.
  */
 export type AuthenticatedHttpClient = Readonly<{
-  get(path: string): Promise<unknown>;
-  getResponse(path: string): Promise<HttpResponse>;
-  post(path: string, body?: unknown): Promise<unknown>;
-  postResponse(path: string, body?: unknown): Promise<HttpResponse>;
+  get(path: string, options?: AuthenticatedRequestOptions): Promise<unknown>;
+  getResponse(path: string, options?: AuthenticatedRequestOptions): Promise<HttpResponse>;
+  post(path: string, body?: unknown, options?: AuthenticatedRequestOptions): Promise<unknown>;
+  postResponse(path: string, body?: unknown, options?: AuthenticatedRequestOptions): Promise<HttpResponse>;
   patch(path: string, body?: unknown): Promise<unknown>;
   patchResponse(path: string, body?: unknown): Promise<HttpResponse>;
   delete(path: string): Promise<unknown>;
   deleteResponse(path: string): Promise<HttpResponse>;
 }>;
+export type AuthenticatedRequestOptions = Readonly<{ timeoutMs?: number }>;
 
 export function createAuthenticatedHttpClient(
   httpClient: Pick<
@@ -31,10 +32,10 @@ export function createAuthenticatedHttpClient(
   >,
 ): AuthenticatedHttpClient {
   return {
-    get: (path) => authenticatedGet(httpClient, path),
-    getResponse: (path) => authenticatedGetResponse(httpClient, path),
-    post: (path, body) => authenticatedPost(httpClient, path, body),
-    postResponse: (path, body) => authenticatedPostResponse(httpClient, path, body),
+    get: (path, options) => authenticatedGet(httpClient, path, options),
+    getResponse: (path, options) => authenticatedGetResponse(httpClient, path, options),
+    post: (path, body, options) => authenticatedPost(httpClient, path, body, options),
+    postResponse: (path, body, options) => authenticatedPostResponse(httpClient, path, body, options),
     patch: (path, body) => authenticatedPatch(httpClient, path, body),
     patchResponse: (path, body) => authenticatedPatchResponse(httpClient, path, body),
     delete: (path) => authenticatedDelete(httpClient, path),
@@ -45,35 +46,39 @@ export function createAuthenticatedHttpClient(
 async function authenticatedGet(
   httpClient: Pick<HttpClient, "get">,
   path: string,
+  options?: AuthenticatedRequestOptions,
 ): Promise<unknown> {
   const token = await requireAccessToken();
-  return httpClient.get(path, { bearerToken: token });
+  return httpClient.get(path, { bearerToken: token, ...options });
 }
 
 async function authenticatedGetResponse(
   httpClient: Pick<HttpClient, "getResponse">,
   path: string,
+  options?: AuthenticatedRequestOptions,
 ): Promise<HttpResponse> {
   const token = await requireAccessToken();
-  return httpClient.getResponse(path, { bearerToken: token });
+  return httpClient.getResponse(path, { bearerToken: token, ...options });
 }
 
 async function authenticatedPost(
   httpClient: Pick<HttpClient, "post">,
   path: string,
   body?: unknown,
+  options?: AuthenticatedRequestOptions,
 ): Promise<unknown> {
   const token = await requireAccessToken();
-  return httpClient.post(path, body, { bearerToken: token });
+  return httpClient.post(path, body, { bearerToken: token, ...options });
 }
 
 async function authenticatedPostResponse(
   httpClient: Pick<HttpClient, "postResponse">,
   path: string,
   body?: unknown,
+  options?: AuthenticatedRequestOptions,
 ): Promise<HttpResponse> {
   const token = await requireAccessToken();
-  return httpClient.postResponse(path, body, { bearerToken: token });
+  return httpClient.postResponse(path, body, { bearerToken: token, ...options });
 }
 
 async function authenticatedPatch(

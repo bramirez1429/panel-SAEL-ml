@@ -10,6 +10,7 @@ export type HttpDeleteClient = Pick<HttpClient, "delete">;
 export type HttpRequestOptions = Readonly<{
   bearerToken?: string;
   cookieHeader?: string;
+  timeoutMs?: number;
 }>;
 export type HttpGetOptions = HttpRequestOptions;
 export type HttpPostOptions = HttpRequestOptions;
@@ -46,7 +47,7 @@ export class HttpClient {
           : {}),
         ...(options.cookieHeader ? { Cookie: options.cookieHeader } : {}),
       },
-    });
+    }, options.timeoutMs);
   }
 
   async post(
@@ -76,7 +77,7 @@ export class HttpClient {
         ...(options.cookieHeader ? { Cookie: options.cookieHeader } : {}),
       },
       body: hasBody ? JSON.stringify(body) : undefined,
-    });
+    }, options.timeoutMs);
   }
 
   async patch(path: string, body?: unknown, options: HttpPatchOptions = {}): Promise<unknown> {
@@ -99,7 +100,7 @@ export class HttpClient {
         ...(options.cookieHeader ? { Cookie: options.cookieHeader } : {}),
       },
       body: hasBody ? JSON.stringify(body) : undefined,
-    });
+    }, options.timeoutMs);
   }
 
   async delete(path: string, options: HttpDeleteOptions = {}): Promise<unknown> {
@@ -115,17 +116,21 @@ export class HttpClient {
         ...(options.bearerToken ? { Authorization: `Bearer ${options.bearerToken}` } : {}),
         ...(options.cookieHeader ? { Cookie: options.cookieHeader } : {}),
       },
-    });
+    }, options.timeoutMs);
   }
 
-  private async request(path: string, init: RequestInit): Promise<HttpResponse> {
+  private async request(path: string, init: RequestInit, timeoutMs?: number): Promise<HttpResponse> {
+    const effectiveTimeout = timeoutMs ?? this.config.timeoutMs;
+    if (!Number.isInteger(effectiveTimeout) || effectiveTimeout <= 0) {
+      throw new ApiError("El timeout debe ser un entero positivo.", "API_CONFIGURATION_ERROR");
+    }
     try {
       const response = await this.fetchImplementation(
         resolveApiUrl(this.config.baseUrl, path),
         {
           ...init,
           cache: "no-store",
-          signal: AbortSignal.timeout(this.config.timeoutMs),
+          signal: AbortSignal.timeout(effectiveTimeout),
         },
       );
 

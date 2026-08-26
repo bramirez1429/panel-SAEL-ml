@@ -27,7 +27,7 @@ describe("TiendanubeReplicationApiRepository", () => {
 
     const options = { priceMode: "KEEP_SOURCE" as const, categoryId: 10 };
     await expect(new TiendanubeReplicationApiRepository(http).replicate(sourceKey, options)).resolves.toBe(action);
-    expect(http.post).toHaveBeenCalledWith("/tiendanube/replicate/source", { sourceKey, options });
+    expect(http.post).toHaveBeenCalledWith("/tiendanube/replicate/source", { sourceKey, options }, { timeoutMs: 120_000 });
     expect(http.post.mock.calls[0]?.[0]).not.toMatch(/\/replicate\/[0-9a-f-]+$/i);
   });
 
