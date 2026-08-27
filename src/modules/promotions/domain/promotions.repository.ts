@@ -62,7 +62,7 @@ export type PromotionAnalysisRequest = Readonly<{
 
 export interface PromotionsRepository {
   getCatalog(request: PromotionsRequest): Promise<PromotionsPage>;
-  analyze(request: PromotionAnalysisRequest): Promise<PromotionAnalysisPage>;
+  getPromotionAnalysis(request: PromotionAnalysisRequest): Promise<PromotionAnalysisPage>;
   getOptions(itemId: string): Promise<readonly PromotionOption[]>;
   preview(
     sourceKey: string,

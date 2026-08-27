@@ -10,7 +10,6 @@ import type {
   PromotionsRepository,
   PromotionsRequest,
 } from "../domain/promotions.repository";
-import { mapPromotionAnalysis } from "../domain/promotion-analysis.mapper";
 import { promotionAnalysisResponseSchema } from "./promotion-analysis.schema";
 import {
   catalogSchema,
@@ -37,7 +36,7 @@ export class PromotionsApiRepository implements PromotionsRepository {
     return parsed.data;
   }
 
-  async analyze(request: PromotionAnalysisRequest) {
+  async getPromotionAnalysis(request: PromotionAnalysisRequest) {
     const response = await this.http.get(
       `/mercadolibre/direct/promociones/analysis?${analysisParams(request)}`,
       { timeoutMs: PREVIEW_TIMEOUT_MS },
@@ -46,7 +45,7 @@ export class PromotionsApiRepository implements PromotionsRepository {
     if (!parsed.success) {
       throw invalidResponse("Análisis de promociones inválido.", parsed.error);
     }
-    return mapPromotionAnalysis(parsed.data);
+    return parsed.data;
   }
 
   async getOptions(itemId: string): Promise<readonly PromotionOption[]> {

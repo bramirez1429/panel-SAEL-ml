@@ -74,9 +74,9 @@ describe("PromotionsApiRepository publication operations", () => {
 
   it.each(["WOMEN", "GIRLS"] as const)("consulta el análisis read-only con audiencia %s", async (audience) => {
     const http = client();
-    vi.mocked(http.get).mockResolvedValue({ done: true, nextCursor: null, publications: [] });
+    vi.mocked(http.get).mockResolvedValue({ done: true, nextCursor: null, count: 0, publications: [] });
 
-    await new PromotionsApiRepository(http).analyze({ promotionId: "P-1", audience, limit: 20, cursor: "next" });
+    await new PromotionsApiRepository(http).getPromotionAnalysis({ promotionId: "P-1", audience, limit: 20, cursor: "next" });
 
     expect(http.get).toHaveBeenCalledWith(
       `/mercadolibre/direct/promociones/analysis?promotionId=P-1&limit=20&cursor=next&audience=${audience}`,
