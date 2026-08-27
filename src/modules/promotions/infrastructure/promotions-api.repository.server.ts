@@ -5,10 +5,13 @@ import { ApiError } from "@/shared/api/api-error";
 
 import type {
   PromotionApplyRequest,
+  PromotionAnalysisRequest,
   PromotionOption,
   PromotionsRepository,
   PromotionsRequest,
 } from "../domain/promotions.repository";
+import { mapPromotionAnalysis } from "../domain/promotion-analysis.mapper";
+import { promotionAnalysisResponseSchema } from "./promotion-analysis.schema";
 import {
   catalogSchema,
   optionsSchema,
@@ -32,6 +35,18 @@ export class PromotionsApiRepository implements PromotionsRepository {
       throw invalidResponse("Catálogo de promociones inválido.", parsed.error);
     }
     return parsed.data;
+  }
+
+  async analyze(request: PromotionAnalysisRequest) {
+    const response = await this.http.get(
+      `/mercadolibre/direct/promociones/analisis?${analysisParams(request)}`,
+      { timeoutMs: PREVIEW_TIMEOUT_MS },
+    );
+    const parsed = promotionAnalysisResponseSchema.safeParse(response);
+    if (!parsed.success) {
+      throw invalidResponse("Análisis de promociones inválido.", parsed.error);
+    }
+    return mapPromotionAnalysis(parsed.data);
   }
 
   async getOptions(itemId: string): Promise<readonly PromotionOption[]> {
@@ -112,6 +127,16 @@ function catalogParams(request: PromotionsRequest): URLSearchParams {
   if (request.promotionStatus)
     params.set("promotionStatus", request.promotionStatus);
   if (request.promotionType) params.set("promotionType", request.promotionType);
+  return params;
+}
+
+function analysisParams(request: PromotionAnalysisRequest): URLSearchParams {
+  const params = new URLSearchParams({
+    promotionId: request.promotionId,
+    limit: String(request.limit),
+  });
+  if (request.cursor) params.set("cursor", request.cursor);
+  if (request.audience) params.set("audience", request.audience);
   return params;
 }
 
