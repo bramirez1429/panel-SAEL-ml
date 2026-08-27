@@ -1,11 +1,12 @@
 "use client";
-import { Image, Modal, Table, Tag } from "antd";
+import { Button, Image, Modal, Table, Tag, message } from "antd";
 import { useState } from "react";
 import type { PromotionRow, PromotionsPage } from "../domain/promotion.model";
 type Props = Readonly<{ page: PromotionsPage; mode: "Masivo" | "Individual"; selected?: React.Key[]; onSelectionChange?: (keys: React.Key[]) => void }>;
 const groupLabel: Record<PromotionRow["productGroup"], string> = { WOMEN_TSHIRT: "Remeras Mujer", WOMEN_SWEATSHIRT: "Buzos Mujer", GIRLS_TSHIRT: "Remeras Niña", GIRLS_SWEATSHIRT: "Buzos Niña" };
 export function PromotionsTable({ page, mode, selected, onSelectionChange }: Props) {
-  const [visible, setVisible] = useState<PromotionRow | null>(null);
+  const [visible, setVisible] = useState<PromotionRow | null>(null); const [loading, setLoading] = useState<string | null>(null);
+  const deactivate = async (row: PromotionRow) => { setLoading(row.itemId); const { deactivatePromotion } = await import("./deactivate-promotion.action"); const result = await deactivatePromotion(row.itemId); setLoading(null); if (result.ok) message.success("Promoción desactivada."); else message.error(result.message); };
   const [localSelected, setLocalSelected] = useState<React.Key[]>([]);
   const selectedKeys = selected ?? localSelected;
   return <>
@@ -18,7 +19,7 @@ export function PromotionsTable({ page, mode, selected, onSelectionChange }: Pro
     { title: "Precio promoción", render: (_: unknown, row: PromotionRow) => row.currentPromotion?.promotionPrice == null ? "—" : `$${row.currentPromotion.promotionPrice.toLocaleString("es-AR")}` },
     { title: "A recibir aprox.", render: (_: unknown, row: PromotionRow) => row.saleEstimate ? `$${row.saleEstimate.estimatedNetAmount.toLocaleString("es-AR")}` : "—" },
     { title: "Otras promociones", render: (_: unknown, row: PromotionRow) => row.availablePromotions.length ? <Tag role="button" onClick={() => setVisible(row)}>{`Ver ${row.availablePromotions.length} disponibles`}</Tag> : "—" },
-    { title: "Estado promoción", render: (_: unknown, row: PromotionRow) => <Tag>{row.promotionStatus === "NONE" ? "Sin promoción" : row.promotionStatus === "ACTIVE" ? "Activa" : row.promotionStatus === "AVAILABLE" ? "Disponible" : "Pendiente"}</Tag> },
+    { title: "Estado promoción", render: (_: unknown, row: PromotionRow) => <><Tag>{row.promotionStatus === "NONE" ? "Sin promoción" : row.promotionStatus === "ACTIVE" ? "Activa" : row.promotionStatus === "AVAILABLE" ? "Disponible" : "Pendiente"}</Tag>{row.currentPromotion ? <Button size="small" loading={loading === row.itemId} onClick={() => void deactivate(row)}>Desactivar promoción</Button> : null}</> },
   ]} /><Modal title="Promociones disponibles" open={visible !== null} onCancel={() => setVisible(null)} footer={null}>{visible?.availablePromotions.map((promotion) => <div key={promotion.id ?? promotion.type ?? promotion.name}><strong>{promotion.name ?? "Promoción"}</strong> {promotion.type ?? ""}{promotion.discountPercent == null ? "" : ` · ${promotion.discountPercent}% OFF`}</div>)}</Modal>
   </>;
 }
