@@ -1,24 +1,21 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
-import type { PromotionExecutionActionResult } from "../domain/promotion-action.model";
+import type { PromotionPreviewActionResult } from "../domain/promotion-action.model";
 import type { PromotionOption } from "../domain/promotions.repository";
 import { createPromotionsRepository } from "../promotions.composition.server";
 import { mapPromotionError } from "./promotion-error.mapper";
 import { promotionOptionToApplyRequest } from "./promotion-apply-request.mapper";
 
-export async function applyPromotion(
+export async function getPromotionPreview(
   sourceKey: string,
   option: PromotionOption,
-): Promise<PromotionExecutionActionResult> {
+): Promise<PromotionPreviewActionResult> {
   try {
-    const result = await createPromotionsRepository().apply(
+    const preview = await createPromotionsRepository().preview(
       sourceKey,
       promotionOptionToApplyRequest(option),
     );
-    revalidatePath("/promociones");
-    return { ok: true, result };
+    return { ok: true, preview };
   } catch (error: unknown) {
     return mapPromotionError(error);
   }

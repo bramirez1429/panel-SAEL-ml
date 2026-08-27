@@ -36,6 +36,22 @@ describe("createAuthenticatedHttpClient", () => {
     expect(deps.get).not.toHaveBeenCalled();
   });
 
+  it("propaga timeout en DELETE sin permitir reemplazar el bearer", async () => {
+    vi.mocked(getAccessToken).mockResolvedValue("real-jwt");
+    const deps = dependencies();
+    const client = createAuthenticatedHttpClient(deps);
+
+    await client.delete("/private/remove", {
+      timeoutMs: 120_000,
+      ...({ bearerToken: "caller-jwt" } as unknown as object),
+    });
+
+    expect(deps.delete).toHaveBeenCalledWith("/private/remove", {
+      timeoutMs: 120_000,
+      bearerToken: "real-jwt",
+    });
+  });
+
   it("autentica publicaciones agrupadas y OAuth", async () => {
     vi.mocked(getAccessToken).mockResolvedValue("private-jwt");
     const deps = dependencies();
