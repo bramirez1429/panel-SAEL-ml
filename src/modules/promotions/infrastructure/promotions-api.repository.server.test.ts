@@ -79,7 +79,7 @@ describe("PromotionsApiRepository publication operations", () => {
     await new PromotionsApiRepository(http).analyze({ promotionId: "P-1", audience, limit: 20, cursor: "next" });
 
     expect(http.get).toHaveBeenCalledWith(
-      `/mercadolibre/direct/promociones/analisis?promotionId=P-1&limit=20&cursor=next&audience=${audience}`,
+      `/mercadolibre/direct/promociones/analysis?promotionId=P-1&limit=20&cursor=next&audience=${audience}`,
       { timeoutMs: 30_000 },
     );
   });

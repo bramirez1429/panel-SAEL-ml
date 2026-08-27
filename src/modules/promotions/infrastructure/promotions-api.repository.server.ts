@@ -39,7 +39,7 @@ export class PromotionsApiRepository implements PromotionsRepository {
 
   async analyze(request: PromotionAnalysisRequest) {
     const response = await this.http.get(
-      `/mercadolibre/direct/promociones/analisis?${analysisParams(request)}`,
+      `/mercadolibre/direct/promociones/analysis?${analysisParams(request)}`,
       { timeoutMs: PREVIEW_TIMEOUT_MS },
     );
     const parsed = promotionAnalysisResponseSchema.safeParse(response);
