@@ -1,6 +1,5 @@
 export type PromotionStatus = "ACTIVE" | "AVAILABLE" | "PENDING" | "NONE";
-export type PromotionFacet = Readonly<{ id: string; name: string; values: readonly Readonly<{ value: string; count: number }>[] }>;
-export type PromotionCategory = Readonly<{ id: string; name: string; path: readonly string[]; count?: number }>;
-export type PromotionFacets = Readonly<{ categories: readonly PromotionCategory[]; attributes: readonly PromotionFacet[] }>;
-export type PromotionRow = Readonly<{ itemId: string; familyId: string | null; title: string; thumbnail: string | null; category: PromotionCategory; price: number; publicationStatus: string; attributes: readonly Readonly<{ id: string; name: string; value: string }>[]; promotionSummary: Readonly<{ status: PromotionStatus; activeTypes: readonly string[]; candidateTypes: readonly string[]; pendingTypes: readonly string[] }> }>;
+export type PromotionProductGroup = "WOMEN_TSHIRT" | "WOMEN_SWEATSHIRT" | "GIRLS_TSHIRT" | "GIRLS_SWEATSHIRT";
+export type PromotionDetails = Readonly<{ id: string | null; type: string | null; name: string | null; originalPrice: number | null; promotionPrice: number | null; discountPercent: number | null; startDate: string | null; finishDate: string | null }>;
+export type PromotionRow = Readonly<{ itemId: string; familyId: string | null; title: string; thumbnail: string | null; productGroup: PromotionProductGroup; price: number; currentPromotion: PromotionDetails | null; availablePromotions: readonly PromotionDetails[]; promotionStatus: PromotionStatus; saleEstimate: Readonly<{ saleFeeAmount: number; estimatedNetAmount: number }> | null }>;
 export type PromotionsPage = Readonly<{ publications: readonly PromotionRow[]; done: boolean; nextCursor: string | null; count: number }>;
