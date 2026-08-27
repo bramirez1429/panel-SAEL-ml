@@ -14,12 +14,11 @@ export function PromotionsTable({ page, mode, selected, onSelectionChange }: Pro
     { title: "Imagen", render: (_: unknown, row: PromotionRow) => row.thumbnail ? <Image alt={row.title} src={row.thumbnail} width={40} preview={false} /> : "—" },
     { title: "Producto", dataIndex: "title" }, { title: "MLA", dataIndex: "itemId" }, { title: "Tipo", render: (_: unknown, row: PromotionRow) => groupLabel[row.productGroup] },
     { title: "Precio normal", render: (_: unknown, row: PromotionRow) => `$${row.price.toLocaleString("es-AR")}` },
-    { title: "Promoción actual", render: (_: unknown, row: PromotionRow) => row.currentPromotion?.name ?? row.currentPromotion?.type ?? "Sin promoción" },
+    { title: "Promoción actual", render: (_: unknown, row: PromotionRow) => row.currentPromotion ? <>{row.currentPromotion.name ?? ""} {row.currentPromotion.type ?? ""} {row.currentPromotion.discountPercent == null ? "" : `${row.currentPromotion.discountPercent}%`} {row.currentPromotion.promotionPrice == null ? "" : `$${row.currentPromotion.promotionPrice.toLocaleString("es-AR")}`}</> : "Sin promoción" },
     { title: "Descuento", render: (_: unknown, row: PromotionRow) => row.currentPromotion?.discountPercent == null ? "—" : `${row.currentPromotion.discountPercent}%` },
     { title: "Precio promoción", render: (_: unknown, row: PromotionRow) => row.currentPromotion?.promotionPrice == null ? "—" : `$${row.currentPromotion.promotionPrice.toLocaleString("es-AR")}` },
-    { title: "A recibir aprox.", render: (_: unknown, row: PromotionRow) => row.saleEstimate ? `$${row.saleEstimate.estimatedNetAmount.toLocaleString("es-AR")}` : "—" },
-    { title: "Otras promociones", render: (_: unknown, row: PromotionRow) => row.availablePromotions.length ? <Tag role="button" onClick={() => setVisible(row)}>{`Ver ${row.availablePromotions.length} disponibles`}</Tag> : "—" },
+    { title: "Otras promociones", render: (_: unknown, row: PromotionRow) => row.availablePromotionsCount > 0 ? <Tag role="button" onClick={() => setVisible(row)}>{`Elegir promoción (${row.availablePromotionsCount})`}</Tag> : "—" },
     { title: "Estado promoción", render: (_: unknown, row: PromotionRow) => <><Tag>{row.promotionStatus === "NONE" ? "Sin promoción" : row.promotionStatus === "ACTIVE" ? "Activa" : row.promotionStatus === "AVAILABLE" ? "Disponible" : "Pendiente"}</Tag>{row.currentPromotion ? <Button size="small" loading={loading === row.itemId} onClick={() => void deactivate(row)}>Desactivar promoción</Button> : null}</> },
-  ]} /><Modal title="Promociones disponibles" open={visible !== null} onCancel={() => setVisible(null)} footer={null}>{visible?.availablePromotions.map((promotion) => <div key={promotion.id ?? promotion.type ?? promotion.name}><strong>{promotion.name ?? "Promoción"}</strong> {promotion.type ?? ""}{promotion.discountPercent == null ? "" : ` · ${promotion.discountPercent}% OFF`}</div>)}</Modal>
+  ]} /><Modal title="Elegir promoción" open={visible !== null} onCancel={() => setVisible(null)} footer={null}><p>Las promociones disponibles se consultarán al abrir esta sección.</p></Modal>
   </>;
 }
