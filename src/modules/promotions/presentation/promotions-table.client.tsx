@@ -1,7 +1,8 @@
 "use client";
-import { Button, Image, Modal, Table, Tag, message } from "antd";
+import { Button, Image, Table, Tag, message } from "antd";
 import { useState } from "react";
 import type { PromotionRow, PromotionsPage } from "../domain/promotion.model";
+import { PromotionOptionsModal } from "./promotion-options-modal.client";
 type Props = Readonly<{ page: PromotionsPage; mode: "Masivo" | "Individual"; selected?: React.Key[]; onSelectionChange?: (keys: React.Key[]) => void }>;
 const groupLabel: Record<PromotionRow["productGroup"], string> = { WOMEN_TSHIRT: "Remeras Mujer", WOMEN_SWEATSHIRT: "Buzos Mujer", GIRLS_TSHIRT: "Remeras Niña", GIRLS_SWEATSHIRT: "Buzos Niña" };
 export function PromotionsTable({ page, mode, selected, onSelectionChange }: Props) {
@@ -19,6 +20,6 @@ export function PromotionsTable({ page, mode, selected, onSelectionChange }: Pro
     { title: "Precio promoción", render: (_: unknown, row: PromotionRow) => row.currentPromotion?.promotionPrice == null ? "—" : `$${row.currentPromotion.promotionPrice.toLocaleString("es-AR")}` },
     { title: "Otras promociones", render: (_: unknown, row: PromotionRow) => row.availablePromotionsCount > 0 ? <Tag role="button" onClick={() => setVisible(row)}>{`Elegir promoción (${row.availablePromotionsCount})`}</Tag> : "—" },
     { title: "Estado promoción", render: (_: unknown, row: PromotionRow) => <><Tag>{row.promotionStatus === "NONE" ? "Sin promoción" : row.promotionStatus === "ACTIVE" ? "Activa" : row.promotionStatus === "AVAILABLE" ? "Disponible" : "Pendiente"}</Tag>{row.currentPromotion ? <Button size="small" loading={loading === row.itemId} onClick={() => void deactivate(row)}>Desactivar promoción</Button> : null}</> },
-  ]} /><Modal title="Elegir promoción" open={visible !== null} onCancel={() => setVisible(null)} footer={null}><p>Las promociones disponibles se consultarán al abrir esta sección.</p></Modal>
+  ]} /><PromotionOptionsModal row={visible} open={visible !== null} onClose={() => setVisible(null)} />
   </>;
 }
