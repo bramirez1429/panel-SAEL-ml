@@ -11,7 +11,7 @@ const request = {
 
 const page: PromotionCampaignItems = {
   items: [{
-    itemId: "MLA1", title: "Remera", thumbnail: null, status: "candidate", eligible: true, currentPrice: 20000, promotionPrice: 16000, requiresPriceSelection: false, sellerDiscountAmount: null, mercadoLibreBaseContributionAmount: null, mercadoLibreBoostAmount: null, mercadoLibreContributionAmount: null, estimatedNetAmount: null,
+    itemId: "MLA1", title: "Remera", thumbnail: null, status: "candidate", eligible: true, currentPrice: 20000, promotionPrice: 16000, minPromotionPrice: null, maxPromotionPrice: null, suggestedPromotionPrice: null, requiresPriceSelection: false, sellerDiscountAmount: null, mercadoLibreBaseContributionAmount: null, mercadoLibreBoostAmount: null, mercadoLibreContributionAmount: null, estimatedNetAmount: null,
   }],
 };
 

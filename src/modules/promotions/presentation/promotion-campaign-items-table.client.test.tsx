@@ -25,7 +25,9 @@ describe("PromotionCampaignItemsTable", () => {
   afterEach(cleanup);
 
   it("renderiza imagen, título y los importes enriquecidos", () => {
-    render(<PromotionCampaignItemsTable campaign={campaign} page={page([item()])} />);
+    render(<PromotionCampaignItemsTable campaign={campaign} page={page([
+      item({ minPromotionPrice: 15_000, maxPromotionPrice: 17_000, suggestedPromotionPrice: 15_500, requiresPriceSelection: true }),
+    ])} />);
 
     expect(screen.getByRole("img", { name: "Remera" })).toHaveAttribute("src", "https://img/MLA1.jpg");
     expect(screen.getByText("Remera")).toBeInTheDocument();
@@ -34,18 +36,38 @@ describe("PromotionCampaignItemsTable", () => {
     expect(screen.getByText("1/1")).toBeInTheDocument();
     expect(screen.getByText("Aplicar")).toBeInTheDocument();
     expect(screen.getByText(currency(16000))).toBeInTheDocument();
+    expect(screen.queryByText(`${currency(15_500)} sugerido`)).not.toBeInTheDocument();
     expect(screen.getAllByText(currency(2000))).toHaveLength(2);
     expect(screen.getByText(currency(14000))).toBeInTheDocument();
   });
 
-  it("muestra elegibilidad y solicitud de precio sin inventar cero", () => {
+  it("trata eligible y requiresPriceSelection null como no informados", () => {
     render(<PromotionCampaignItemsTable campaign={campaign} page={page([
-      item({ eligible: false, promotionPrice: 0, requiresPriceSelection: true, status: "pending" }),
+      item({ eligible: null, promotionPrice: null, requiresPriceSelection: null }),
+    ])} />);
+
+    expect(screen.getAllByText("\u2014")).toHaveLength(2);
+    expect(screen.queryByText("Definir precio")).not.toBeInTheDocument();
+  });
+
+  it("muestra precio sugerido y rango sin inventar cero", () => {
+    render(<PromotionCampaignItemsTable campaign={campaign} page={page([
+      item({ eligible: false, promotionPrice: 0, suggestedPromotionPrice: 15_500, minPromotionPrice: 15_000, maxPromotionPrice: 17_000, requiresPriceSelection: true, status: "pending" }),
+    ])} />);
+
+    expect(screen.getByText(`${currency(15_500)} sugerido`)).toBeInTheDocument();
+    expect(screen.getByText(`Rango ${currency(15_000)} - ${currency(17_000)}`)).toBeInTheDocument();
+    expect(screen.getByText("Programada")).toBeInTheDocument();
+    expect(screen.queryByText(currency(0))).not.toBeInTheDocument();
+  });
+
+  it("muestra definir precio y min max cuando no hay sugerido", () => {
+    render(<PromotionCampaignItemsTable campaign={campaign} page={page([
+      item({ promotionPrice: null, suggestedPromotionPrice: null, minPromotionPrice: 14_000, maxPromotionPrice: 18_000, requiresPriceSelection: true }),
     ])} />);
 
     expect(screen.getByText("Definir precio")).toBeInTheDocument();
-    expect(screen.getByText("Programada")).toBeInTheDocument();
-    expect(screen.queryByText(currency(0))).not.toBeInTheDocument();
+    expect(screen.getByText(`Rango ${currency(14_000)} - ${currency(18_000)}`)).toBeInTheDocument();
   });
 
   it("mapea los estados restantes sin conectar acciones", () => {
@@ -60,7 +82,7 @@ describe("PromotionCampaignItemsTable", () => {
   });
 
   it("muestra null como guion y usa placeholder cuando no hay imagen", () => {
-    render(<PromotionCampaignItemsTable campaign={campaign} page={page([item({ eligible: false, thumbnail: null, title: null, status: null, promotionPrice: null, sellerDiscountAmount: null, mercadoLibreContributionAmount: null, estimatedNetAmount: null })])} />);
+    render(<PromotionCampaignItemsTable campaign={campaign} page={page([item({ eligible: null, thumbnail: null, title: null, status: null, promotionPrice: null, requiresPriceSelection: null, sellerDiscountAmount: null, mercadoLibreContributionAmount: null, estimatedNetAmount: null })])} />);
 
     expect(screen.getByLabelText("Sin imagen")).toBeInTheDocument();
     expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(7);
@@ -89,6 +111,9 @@ function item(overrides: Partial<PromotionCampaignItems["items"][number]> = {}) 
     eligible: true,
     currentPrice: 20000,
     promotionPrice: 16000,
+    minPromotionPrice: null,
+    maxPromotionPrice: null,
+    suggestedPromotionPrice: null,
     requiresPriceSelection: false,
     sellerDiscountAmount: 2000,
     mercadoLibreBaseContributionAmount: 1500,

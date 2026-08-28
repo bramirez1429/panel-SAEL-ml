@@ -86,7 +86,7 @@ function campaignColumns(campaignName: string | null): TableColumnsType<Promotio
       title: "Precio promo",
       dataIndex: "promotionPrice",
       key: "promotionPrice",
-      render: (price: number | null, item) => item.requiresPriceSelection ? "Definir precio" : formatPrice(price),
+      render: (_, item) => formatPromotionPrice(item),
     },
     { title: "Tu descuento", dataIndex: "sellerDiscountAmount", key: "sellerDiscountAmount", render: formatPrice },
     { title: "Aporte ML", dataIndex: "mercadoLibreContributionAmount", key: "mercadoLibreContributionAmount", render: formatPrice },
@@ -97,6 +97,28 @@ function campaignColumns(campaignName: string | null): TableColumnsType<Promotio
 
 function formatPrice(price: number | null): string {
   return price === null ? missingValue : currencyFormatter.format(price);
+}
+
+function formatPromotionPrice(item: PromotionCampaignItem) {
+  const promotionPrice = positivePrice(item.promotionPrice);
+  if (promotionPrice !== null) return formatPrice(promotionPrice);
+  if (item.requiresPriceSelection !== true) return missingValue;
+
+  const suggestedPrice = positivePrice(item.suggestedPromotionPrice);
+  const minPrice = positivePrice(item.minPromotionPrice);
+  const maxPrice = positivePrice(item.maxPromotionPrice);
+  const range = minPrice !== null && maxPrice !== null
+    ? `Rango ${formatPrice(minPrice)} - ${formatPrice(maxPrice)}`
+    : null;
+
+  return <div>
+    <div>{suggestedPrice === null ? "Definir precio" : `${formatPrice(suggestedPrice)} sugerido`}</div>
+    {range ? <small>{range}</small> : null}
+  </div>;
+}
+
+function positivePrice(price: number | null): number | null {
+  return price !== null && price > 0 ? price : null;
 }
 
 function formatAction(status: string | null): string {
