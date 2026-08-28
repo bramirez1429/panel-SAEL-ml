@@ -2,9 +2,10 @@ export type PromotionCampaign = Readonly<{
   id: string;
   name: string;
   type: string;
-  eligibleItems: number;
+  status: string;
   startDate: string | null;
   finishDate: string | null;
+  deadlineDate: string | null;
 }>;
 
 export type PromotionCampaigns = Readonly<{

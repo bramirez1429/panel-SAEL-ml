@@ -10,7 +10,6 @@ import type {
   PromotionsRepository,
   PromotionsRequest,
 } from "../domain/promotions.repository";
-import type { PromotionAudience } from "../domain/promotion-analysis.model";
 import { promotionAnalysisResponseSchema } from "./promotion-analysis.schema";
 import { promotionCampaignsSchema } from "./promotion-campaigns.schema";
 import {
@@ -21,7 +20,6 @@ import {
 } from "./promotions.schema";
 
 const PREVIEW_TIMEOUT_MS = 30_000;
-const CAMPAIGNS_TIMEOUT_MS = 120_000;
 const WRITE_TIMEOUT_MS = 120_000;
 
 export class PromotionsApiRepository implements PromotionsRepository {
@@ -51,11 +49,9 @@ export class PromotionsApiRepository implements PromotionsRepository {
     return parsed.data;
   }
 
-  async getCampaigns(audience?: PromotionAudience) {
-    const params = audience ? `?${new URLSearchParams({ audience })}` : "";
+  async getCampaigns() {
     const response = await this.http.get(
-      `/mercadolibre/direct/promociones/campaigns${params}`,
-      { timeoutMs: CAMPAIGNS_TIMEOUT_MS },
+      "/mercadolibre/direct/promociones/campaigns",
     );
     const parsed = promotionCampaignsSchema.safeParse(response);
     if (!parsed.success) {

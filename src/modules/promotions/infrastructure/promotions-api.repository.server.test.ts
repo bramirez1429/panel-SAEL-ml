@@ -86,14 +86,14 @@ describe("PromotionsApiRepository publication operations", () => {
 });
 
 describe("PromotionsApiRepository campaigns", () => {
-  it.each([undefined, "WOMEN", "GIRLS"] as const)("consulta campañas con audiencia %s", async (audience) => {
+  it("consulta campañas sin audiencia y con timeout normal", async () => {
     const http = client();
     vi.mocked(http.get).mockResolvedValue({ campaigns: [] });
-    await new PromotionsApiRepository(http).getCampaigns(audience);
-    const suffix = audience ? `?audience=${audience}` : "";
+
+    await new PromotionsApiRepository(http).getCampaigns();
+
     expect(http.get).toHaveBeenCalledWith(
-      `/mercadolibre/direct/promociones/campaigns${suffix}`,
-      { timeoutMs: 120_000 },
+      "/mercadolibre/direct/promociones/campaigns",
     );
   });
 });

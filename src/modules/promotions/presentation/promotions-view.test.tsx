@@ -16,20 +16,21 @@ vi.mock("next/navigation", () => ({
 }));
 
 const campaigns: readonly PromotionCampaign[] = [{
-  id: "C-1", name: "Cyber Fest", type: "DEAL", eligibleItems: 30, startDate: null, finishDate: null,
+  id: "C-1", name: "Cyber Fest", type: "DEAL", status: "started", startDate: null, finishDate: null, deadlineDate: null,
 }];
 
 describe("PromotionsView", () => {
   beforeEach(() => navigation.push.mockReset());
   afterEach(cleanup);
 
-  it("renderiza selector de promoción y su cobertura sin mostrar el ID", async () => {
+  it("renderiza selector de promoción sin mostrar el ID ni cobertura", async () => {
     const user = userEvent.setup();
     render(<PromotionsView campaigns={campaigns} />);
     expect(screen.getByRole("combobox", { name: "Promoción" })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Público" })).toBeInTheDocument();
     await user.click(screen.getByRole("combobox", { name: "Promoción" }));
-    expect(await screen.findByText("Cyber Fest · 30 publicaciones elegibles")).toBeInTheDocument();
+    expect(await screen.findByText("Cyber Fest")).toBeInTheDocument();
+    expect(screen.queryByText(/publicaciones elegibles/)).not.toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Promoción" }).parentElement).not.toHaveTextContent("C-1");
   });
 
@@ -37,7 +38,7 @@ describe("PromotionsView", () => {
     const user = userEvent.setup();
     render(<PromotionsView campaigns={campaigns} />);
     await user.click(screen.getByRole("combobox", { name: "Promoción" }));
-    await user.click(await screen.findByText("Cyber Fest · 30 publicaciones elegibles"));
+    await user.click(await screen.findByText("Cyber Fest"));
     await waitFor(() => {
       expect(navigation.push).toHaveBeenCalledWith("/promociones?promotionId=C-1&audience=WOMEN");
     });
