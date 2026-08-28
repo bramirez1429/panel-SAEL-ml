@@ -8,6 +8,7 @@ import type {
   PublicationPromotionResult,
 } from "./publication-promotion.model";
 import type { PromotionAnalysisPage, PromotionAudience } from "./promotion-analysis.model";
+import type { PromotionCampaigns } from "./promotion-campaign.model";
 
 export type PromotionOption = Readonly<{
   id: string | null;
@@ -62,6 +63,7 @@ export type PromotionAnalysisRequest = Readonly<{
 
 export interface PromotionsRepository {
   getCatalog(request: PromotionsRequest): Promise<PromotionsPage>;
+  getCampaigns(audience?: PromotionAudience): Promise<PromotionCampaigns>;
   getPromotionAnalysis(request: PromotionAnalysisRequest): Promise<PromotionAnalysisPage>;
   getOptions(itemId: string): Promise<readonly PromotionOption[]>;
   preview(

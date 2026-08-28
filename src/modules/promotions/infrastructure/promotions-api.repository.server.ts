@@ -10,7 +10,9 @@ import type {
   PromotionsRepository,
   PromotionsRequest,
 } from "../domain/promotions.repository";
+import type { PromotionAudience } from "../domain/promotion-analysis.model";
 import { promotionAnalysisResponseSchema } from "./promotion-analysis.schema";
+import { promotionCampaignsSchema } from "./promotion-campaigns.schema";
 import {
   catalogSchema,
   optionsSchema,
@@ -44,6 +46,19 @@ export class PromotionsApiRepository implements PromotionsRepository {
     const parsed = promotionAnalysisResponseSchema.safeParse(response);
     if (!parsed.success) {
       throw invalidResponse("Análisis de promociones inválido.", parsed.error);
+    }
+    return parsed.data;
+  }
+
+  async getCampaigns(audience?: PromotionAudience) {
+    const params = audience ? `?${new URLSearchParams({ audience })}` : "";
+    const response = await this.http.get(
+      `/mercadolibre/direct/promociones/campaigns${params}`,
+      { timeoutMs: PREVIEW_TIMEOUT_MS },
+    );
+    const parsed = promotionCampaignsSchema.safeParse(response);
+    if (!parsed.success) {
+      throw invalidResponse("Campañas de promoción inválidas.", parsed.error);
     }
     return parsed.data;
   }

@@ -85,6 +85,19 @@ describe("PromotionsApiRepository publication operations", () => {
   });
 });
 
+describe("PromotionsApiRepository campaigns", () => {
+  it.each([undefined, "WOMEN", "GIRLS"] as const)("consulta campañas con audiencia %s", async (audience) => {
+    const http = client();
+    vi.mocked(http.get).mockResolvedValue({ campaigns: [] });
+    await new PromotionsApiRepository(http).getCampaigns(audience);
+    const suffix = audience ? `?audience=${audience}` : "";
+    expect(http.get).toHaveBeenCalledWith(
+      `/mercadolibre/direct/promociones/campaigns${suffix}`,
+      { timeoutMs: 30_000 },
+    );
+  });
+});
+
 function client() {
   return {
     get: vi.fn<AuthenticatedHttpClient["get"]>(),
