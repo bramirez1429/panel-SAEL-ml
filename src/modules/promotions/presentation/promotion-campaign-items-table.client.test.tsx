@@ -31,13 +31,36 @@ describe("PromotionCampaignItemsTable", () => {
     expect(screen.getByText("Remera")).toBeInTheDocument();
     expect(screen.getByText("MLA1")).toBeInTheDocument();
     expect(screen.getByText("Cyber Fest")).toBeInTheDocument();
+    expect(screen.getByText("1/1")).toBeInTheDocument();
+    expect(screen.getByText("Aplicar")).toBeInTheDocument();
     expect(screen.getByText(currency(16000))).toBeInTheDocument();
     expect(screen.getAllByText(currency(2000))).toHaveLength(2);
     expect(screen.getByText(currency(14000))).toBeInTheDocument();
   });
 
+  it("muestra elegibilidad y solicitud de precio sin inventar cero", () => {
+    render(<PromotionCampaignItemsTable campaign={campaign} page={page([
+      item({ eligible: false, promotionPrice: 0, requiresPriceSelection: true, status: "pending" }),
+    ])} />);
+
+    expect(screen.getByText("Definir precio")).toBeInTheDocument();
+    expect(screen.getByText("Programada")).toBeInTheDocument();
+    expect(screen.queryByText(currency(0))).not.toBeInTheDocument();
+  });
+
+  it("mapea los estados restantes sin conectar acciones", () => {
+    render(<PromotionCampaignItemsTable campaign={campaign} page={page([
+      item({ itemId: "MLA-started", status: "started" }),
+      item({ itemId: "MLA-other", status: "paused" }),
+    ])} />);
+
+    expect(screen.getByText("Activa")).toBeInTheDocument();
+    expect(screen.getByText("\u2014")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Aplicar" })).not.toBeInTheDocument();
+  });
+
   it("muestra null como guion y usa placeholder cuando no hay imagen", () => {
-    render(<PromotionCampaignItemsTable campaign={campaign} page={page([item({ thumbnail: null, title: null, promotionPrice: null, sellerDiscountAmount: null, mercadoLibreContributionAmount: null, estimatedNetAmount: null })])} />);
+    render(<PromotionCampaignItemsTable campaign={campaign} page={page([item({ eligible: false, thumbnail: null, title: null, status: null, promotionPrice: null, sellerDiscountAmount: null, mercadoLibreContributionAmount: null, estimatedNetAmount: null })])} />);
 
     expect(screen.getByLabelText("Sin imagen")).toBeInTheDocument();
     expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(7);
@@ -63,8 +86,10 @@ function item(overrides: Partial<PromotionCampaignItems["items"][number]> = {}) 
     title: "Remera",
     thumbnail: "https://img/MLA1.jpg",
     status: "candidate",
+    eligible: true,
     currentPrice: 20000,
     promotionPrice: 16000,
+    requiresPriceSelection: false,
     sellerDiscountAmount: 2000,
     mercadoLibreBaseContributionAmount: 1500,
     mercadoLibreBoostAmount: 500,

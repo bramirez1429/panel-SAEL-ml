@@ -21,7 +21,7 @@ describe("PromotionCampaignItems integration", () => {
   it("valida y renderiza el contrato enriquecido desde repository hasta la tabla", async () => {
     http.get.mockResolvedValue({
       items: [{
-        itemId: "MLA123", title: "Remera oficial", thumbnail: "https://img/MLA123.jpg", status: "candidate", currentPrice: 20_000, promotionPrice: 16_000, sellerDiscountAmount: 2_000, mercadoLibreBaseContributionAmount: 1_500, mercadoLibreBoostAmount: 500, mercadoLibreContributionAmount: 2_000, estimatedNetAmount: 14_000,
+        itemId: "MLA123", title: "Remera oficial", thumbnail: "https://img/MLA123.jpg", status: "candidate", eligible: true, currentPrice: 20_000, promotionPrice: 16_000, requiresPriceSelection: false, sellerDiscountAmount: 2_000, mercadoLibreBaseContributionAmount: 1_500, mercadoLibreBoostAmount: 500, mercadoLibreContributionAmount: 2_000, estimatedNetAmount: 14_000,
       }],
       paging: { total: 1, offset: 0, limit: 50 },
     });

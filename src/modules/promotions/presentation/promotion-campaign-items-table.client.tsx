@@ -81,15 +81,27 @@ function campaignColumns(campaignName: string | null): TableColumnsType<Promotio
       </div>,
     },
     { title: "Promo", key: "promotion", render: () => campaignName ?? missingValue },
-    { title: "Elegibles", key: "eligible", render: () => missingValue },
-    { title: "Precio promo", dataIndex: "promotionPrice", key: "promotionPrice", render: formatPrice },
+    { title: "Elegibles", key: "eligible", render: (_, item) => item.eligible ? "1/1" : missingValue },
+    {
+      title: "Precio promo",
+      dataIndex: "promotionPrice",
+      key: "promotionPrice",
+      render: (price: number | null, item) => item.requiresPriceSelection ? "Definir precio" : formatPrice(price),
+    },
     { title: "Tu descuento", dataIndex: "sellerDiscountAmount", key: "sellerDiscountAmount", render: formatPrice },
     { title: "Aporte ML", dataIndex: "mercadoLibreContributionAmount", key: "mercadoLibreContributionAmount", render: formatPrice },
     { title: "Vos recibís aprox.", dataIndex: "estimatedNetAmount", key: "estimatedNetAmount", render: formatPrice },
-    { title: "Acción", key: "action", render: () => missingValue },
+    { title: "Acción", key: "action", render: (_, item) => formatAction(item.status) },
   ];
 }
 
 function formatPrice(price: number | null): string {
   return price === null ? missingValue : currencyFormatter.format(price);
+}
+
+function formatAction(status: string | null): string {
+  if (status === "candidate") return "Aplicar";
+  if (status === "started") return "Activa";
+  if (status === "pending") return "Programada";
+  return missingValue;
 }

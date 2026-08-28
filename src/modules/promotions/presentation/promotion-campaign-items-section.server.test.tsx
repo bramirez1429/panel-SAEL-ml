@@ -24,7 +24,7 @@ const campaign = {
 
 const page = {
   items: [{
-    itemId: "MLA123456", title: "Remera", thumbnail: null, status: "candidate", currentPrice: 20_000, promotionPrice: 16_000, sellerDiscountAmount: 2_000, mercadoLibreBaseContributionAmount: 1_500, mercadoLibreBoostAmount: 500, mercadoLibreContributionAmount: 2_000, estimatedNetAmount: 14_000,
+    itemId: "MLA123456", title: "Remera", thumbnail: null, status: "candidate", eligible: true, currentPrice: 20_000, promotionPrice: 16_000, requiresPriceSelection: false, sellerDiscountAmount: 2_000, mercadoLibreBaseContributionAmount: 1_500, mercadoLibreBoostAmount: 500, mercadoLibreContributionAmount: 2_000, estimatedNetAmount: 14_000,
   }],
   paging: { total: 1, offset: 0, limit: 50 },
 };
