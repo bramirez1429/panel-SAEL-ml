@@ -6,11 +6,15 @@ import { PageHeader } from "@/shared/ui/page-header/page-header";
 
 export const dynamic = "force-dynamic";
 
-export default function PromotionsPage() {
+type Props = Readonly<{
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}>;
+
+export default function PromotionsPage({ searchParams }: Props) {
   return <>
     <PageHeader description="Promociones de tus publicaciones de Mercado Libre." />
     <Suspense fallback={<PromotionCampaignsSkeleton />}>
-      <PromotionCampaignsSection />
+      <PromotionCampaignsSection searchParams={searchParams} />
     </Suspense>
   </>;
 }

@@ -9,6 +9,10 @@ import type {
 } from "./publication-promotion.model";
 import type { PromotionAnalysisPage, PromotionAudience } from "./promotion-analysis.model";
 import type { PromotionCampaigns } from "./promotion-campaign.model";
+import type {
+  PromotionCampaignItems,
+  PromotionCampaignItemsPagingRequest,
+} from "./promotion-campaign-items.model";
 
 export type PromotionOption = Readonly<{
   id: string | null;
@@ -61,9 +65,16 @@ export type PromotionAnalysisRequest = Readonly<{
   cursor: string | null;
 }>;
 
+export type PromotionCampaignItemsRequest = Readonly<{
+  promotionId: string;
+  promotionType: string;
+  paging: PromotionCampaignItemsPagingRequest;
+}>;
+
 export interface PromotionsRepository {
   getCatalog(request: PromotionsRequest): Promise<PromotionsPage>;
   getCampaigns(audience?: PromotionAudience): Promise<PromotionCampaigns>;
+  getCampaignItems(request: PromotionCampaignItemsRequest): Promise<PromotionCampaignItems>;
   getPromotionAnalysis(request: PromotionAnalysisRequest): Promise<PromotionAnalysisPage>;
   getOptions(itemId: string): Promise<readonly PromotionOption[]>;
   preview(

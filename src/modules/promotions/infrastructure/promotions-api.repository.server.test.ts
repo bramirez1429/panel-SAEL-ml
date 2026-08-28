@@ -124,6 +124,23 @@ describe("PromotionsApiRepository campaigns", () => {
       }],
     });
   });
+  it("consulta una sola pagina de items con id y tipo de campana", async () => {
+    const http = client();
+    vi.mocked(http.get).mockResolvedValue({
+      items: [],
+      paging: { total: 100, offset: 0, limit: 50 },
+    });
+
+    await new PromotionsApiRepository(http).getCampaignItems({
+      promotionId: "C/1",
+      promotionType: "MARKETPLACE_CAMPAIGN",
+      paging: { limit: 50, offset: 0 },
+    });
+
+    expect(http.get).toHaveBeenCalledWith(
+      "/mercadolibre/direct/promociones/campaigns/C%2F1/items?promotionType=MARKETPLACE_CAMPAIGN&limit=50&offset=0",
+    );
+  });
 });
 
 function client() {

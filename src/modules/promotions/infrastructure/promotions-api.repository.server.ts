@@ -6,6 +6,7 @@ import { ApiError } from "@/shared/api/api-error";
 import type {
   PromotionApplyRequest,
   PromotionAnalysisRequest,
+  PromotionCampaignItemsRequest,
   PromotionOption,
   PromotionsRepository,
   PromotionsRequest,
@@ -13,6 +14,7 @@ import type {
 import type { PromotionAudience } from "../domain/promotion-analysis.model";
 import { promotionAnalysisResponseSchema } from "./promotion-analysis.schema";
 import { promotionCampaignsSchema } from "./promotion-campaigns.schema";
+import { promotionCampaignItemsSchema } from "./promotion-campaign-items.schema";
 import {
   catalogSchema,
   optionsSchema,
@@ -58,6 +60,17 @@ export class PromotionsApiRepository implements PromotionsRepository {
     const parsed = promotionCampaignsSchema.safeParse(response);
     if (!parsed.success) {
       throw invalidResponse("Campañas de promoción inválidas.", parsed.error);
+    }
+    return parsed.data;
+  }
+
+  async getCampaignItems(request: PromotionCampaignItemsRequest) {
+    const response = await this.http.get(
+      `/mercadolibre/direct/promociones/campaigns/${encodeURIComponent(request.promotionId)}/items?${campaignItemsParams(request)}`,
+    );
+    const parsed = promotionCampaignItemsSchema.safeParse(response);
+    if (!parsed.success) {
+      throw invalidResponse("Items de campaÃ±a de promociÃ³n invÃ¡lidos.", parsed.error);
     }
     return parsed.data;
   }
@@ -151,6 +164,14 @@ function analysisParams(request: PromotionAnalysisRequest): URLSearchParams {
   if (request.cursor) params.set("cursor", request.cursor);
   if (request.audience) params.set("audience", request.audience);
   return params;
+}
+
+function campaignItemsParams(request: PromotionCampaignItemsRequest): URLSearchParams {
+  return new URLSearchParams({
+    promotionType: request.promotionType,
+    limit: String(request.paging.limit),
+    offset: String(request.paging.offset),
+  });
 }
 
 function invalidResponse(message: string, cause: unknown): ApiError {

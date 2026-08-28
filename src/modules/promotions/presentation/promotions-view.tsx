@@ -2,12 +2,16 @@
 
 import { Select, Space } from "antd";
 import { useRouter, useSearchParams } from "next/navigation";
+import type { ReactNode } from "react";
 
 import type { PromotionCampaign } from "../domain/promotion-campaign.model";
 
-type Props = Readonly<{ campaigns: readonly PromotionCampaign[] }>;
+type Props = Readonly<{
+  campaigns: readonly PromotionCampaign[];
+  children?: ReactNode;
+}>;
 
-export function PromotionsView({ campaigns }: Props) {
+export function PromotionsView({ campaigns, children }: Props) {
   const router = useRouter();
   const current = useSearchParams();
   const selectedPromotionId = campaigns.some((campaign) => campaign.id === current.get("promotionId"))
@@ -33,5 +37,6 @@ export function PromotionsView({ campaigns }: Props) {
       />
     </Space>
     {campaigns.length === 0 ? <p>No hay promociones disponibles actualmente.</p> : null}
+    {children}
   </div>;
 }
