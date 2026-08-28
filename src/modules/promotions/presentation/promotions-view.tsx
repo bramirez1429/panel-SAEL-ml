@@ -5,35 +5,17 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import type { PromotionCampaign } from "../domain/promotion-campaign.model";
 
-type Props = Readonly<{
-  campaigns: readonly PromotionCampaign[];
-  children?: React.ReactNode;
-}>;
+type Props = Readonly<{ campaigns: readonly PromotionCampaign[] }>;
 
-const audiences = [
-  { label: "Todos", value: "" },
-  { label: "Mujer", value: "WOMEN" },
-  { label: "Niña", value: "GIRLS" },
-] as const;
-
-export function PromotionsView({ campaigns, children }: Props) {
+export function PromotionsView({ campaigns }: Props) {
   const router = useRouter();
   const current = useSearchParams();
-  const currentPromotionId = current.get("promotionId");
-  const selectedPromotionId = campaigns.some((campaign) => campaign.id === currentPromotionId)
-    ? currentPromotionId
+  const selectedPromotionId = campaigns.some((campaign) => campaign.id === current.get("promotionId"))
+    ? current.get("promotionId") ?? undefined
     : undefined;
-  const navigate = (update: Readonly<{ promotionId?: string; audience?: string }>) => {
-    const params = new URLSearchParams(current);
-    if (update.promotionId !== undefined) {
-      if (update.promotionId) params.set("promotionId", update.promotionId);
-      else params.delete("promotionId");
-    }
-    if (update.audience !== undefined) {
-      if (update.audience) params.set("audience", update.audience);
-      else params.delete("audience");
-    }
-    params.delete("cursor");
+  const selectCampaign = (promotionId: string) => {
+    const params = new URLSearchParams();
+    if (promotionId) params.set("promotionId", promotionId);
     router.push(`/promociones?${params}`);
   };
 
@@ -47,16 +29,9 @@ export function PromotionsView({ campaigns, children }: Props) {
           label: campaign.name ?? "Promoción de Mercado Libre",
         }))}
         value={selectedPromotionId}
-        onChange={(promotionId: string) => navigate({ promotionId })}
-      />
-      <Select
-        aria-label="Público"
-        options={[...audiences]}
-        value={current.get("audience") ?? ""}
-        onChange={(audience: string) => navigate({ audience })}
+        onChange={selectCampaign}
       />
     </Space>
     {campaigns.length === 0 ? <p>No hay promociones disponibles actualmente.</p> : null}
-    {children}
   </div>;
 }

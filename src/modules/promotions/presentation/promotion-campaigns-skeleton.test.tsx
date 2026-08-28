@@ -7,7 +7,6 @@ describe("PromotionCampaignsSkeleton", () => {
   it("renderiza placeholders para filtros y filas mientras campaigns está pendiente", () => {
     render(<PromotionCampaignsSkeleton />);
     expect(screen.getByLabelText("Cargando promociones")).toBeInTheDocument();
-    expect(document.querySelectorAll(".ant-skeleton-input")).toHaveLength(2);
-    expect(document.querySelectorAll(".ant-skeleton-paragraph li").length).toBeGreaterThan(2);
+    expect(document.querySelectorAll(".ant-skeleton-input")).toHaveLength(1);
   });
 });
