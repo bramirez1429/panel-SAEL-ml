@@ -14,7 +14,18 @@ const promotionSchema = z.object({
 
 export const optionsSchema = z.array(
   promotionSchema.extend({
+    status: z.string().nullable(),
+    minPromotionPrice: z.number().nullable(),
+    maxPromotionPrice: z.number().nullable(),
+    suggestedPromotionPrice: z.number().nullable(),
+    requiresPriceSelection: z.boolean().nullable(),
+    sellerDiscountAmount: z.number().nullable(),
+    mercadoLibreBaseContributionAmount: z.number().nullable(),
+    mercadoLibreBoostAmount: z.number().nullable(),
+    mercadoLibreContributionAmount: z.number().nullable(),
+    estimatedNetAmount: z.number().nullable(),
     canApply: z.boolean(),
+    canRemove: z.boolean(),
     saleEstimate: z
       .object({ saleFeeAmount: z.number(), estimatedNetAmount: z.number() })
       .nullable(),

@@ -1,15 +1,32 @@
 "use client";
-import { useState } from "react";
-import { Segmented } from "antd";
+
+import { Button } from "antd";
+import { useRouter, useSearchParams } from "next/navigation";
+
 import type { PromotionsPage } from "../domain/promotion.model";
+import { PromotionSelectionSummary } from "./promotion-selection-summary.client";
 import { PromotionsTable } from "./promotions-table.client";
+
 type Props = Readonly<{ page: PromotionsPage }>;
+
 export function PromotionsCatalogClient({ page }: Props) {
-  const [mode, setMode] = useState<"Masivo" | "Individual">("Masivo");
-  const [selected, setSelected] = useState<React.Key[]>([]);
-  return <>
-    <Segmented options={["Masivo", "Individual"]} value={mode} onChange={(value) => { setMode(value as "Masivo" | "Individual"); setSelected([]); }} />
-    {page.publications.length ? <PromotionsTable page={page} mode={mode} selected={selected} onSelectionChange={setSelected} /> : <p>No se encontraron publicaciones.</p>}
-    {selected.length ? <p>{selected.length} publicaciones seleccionadas</p> : null}
-  </>;
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const nextPage = () => {
+    if (!page.nextCursor) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("cursor", page.nextCursor);
+    router.push(`/promociones?${params.toString()}`);
+  };
+
+  return <div className="promotions-layout">
+    <PromotionSelectionSummary />
+    {page.publications.length > 0
+      ? <PromotionsTable page={page} />
+      : <p>No se encontraron publicaciones.</p>}
+    {!page.done && page.nextCursor
+      ? <Button onClick={nextPage} style={{ marginTop: 16 }}>Siguiente</Button>
+      : null}
+  </div>;
 }

@@ -19,12 +19,23 @@ export type PromotionOption = Readonly<{
   offerId: string | null;
   type: string | null;
   name: string | null;
+  status: string | null;
   originalPrice: number | null;
   promotionPrice: number | null;
+  minPromotionPrice: number | null;
+  maxPromotionPrice: number | null;
+  suggestedPromotionPrice: number | null;
+  requiresPriceSelection: boolean | null;
   discountPercent: number | null;
+  sellerDiscountAmount: number | null;
+  mercadoLibreBaseContributionAmount: number | null;
+  mercadoLibreBoostAmount: number | null;
+  mercadoLibreContributionAmount: number | null;
+  estimatedNetAmount: number | null;
   startDate: string | null;
   finishDate: string | null;
   canApply: boolean;
+  canRemove: boolean;
   saleEstimate: Readonly<{
     saleFeeAmount: number;
     estimatedNetAmount: number;
