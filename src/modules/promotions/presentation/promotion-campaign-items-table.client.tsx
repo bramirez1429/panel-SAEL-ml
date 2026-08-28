@@ -88,15 +88,30 @@ function campaignColumns(campaignName: string | null): TableColumnsType<Promotio
       key: "promotionPrice",
       render: (_, item) => formatPromotionPrice(item),
     },
-    { title: "Tu descuento", dataIndex: "sellerDiscountAmount", key: "sellerDiscountAmount", render: formatPrice },
-    { title: "Aporte ML", dataIndex: "mercadoLibreContributionAmount", key: "mercadoLibreContributionAmount", render: formatPrice },
-    { title: "Vos recibís aprox.", dataIndex: "estimatedNetAmount", key: "estimatedNetAmount", render: formatPrice },
+    { title: "Tu descuento", dataIndex: "sellerDiscountAmount", key: "sellerDiscountAmount", render: (amount: number | null) => formatFinancialAmount(amount, "No informado") },
+    { title: "Aporte ML", dataIndex: "mercadoLibreContributionAmount", key: "mercadoLibreContributionAmount", render: (amount: number | null) => formatFinancialAmount(amount, "ML no informa") },
+    { title: "Vos recibís aprox.", dataIndex: "estimatedNetAmount", key: "estimatedNetAmount", render: (amount: number | null, item) => formatEstimatedNetAmount(amount, item) },
     { title: "Acción", key: "action", render: (_, item) => formatAction(item.status) },
   ];
 }
 
 function formatPrice(price: number | null): string {
   return price === null ? missingValue : currencyFormatter.format(price);
+}
+
+function formatFinancialAmount(amount: number | null, unavailableText: string): string {
+  return amount === null ? unavailableText : currencyFormatter.format(amount);
+}
+
+function formatEstimatedNetAmount(
+  amount: number | null,
+  item: PromotionCampaignItem,
+): string {
+  if (amount !== null) return currencyFormatter.format(amount);
+  if (item.requiresPriceSelection === true && item.suggestedPromotionPrice === null) {
+    return "Se calcula al elegir precio";
+  }
+  return "No disponible";
 }
 
 function formatPromotionPrice(item: PromotionCampaignItem) {

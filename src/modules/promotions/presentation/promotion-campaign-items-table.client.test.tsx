@@ -41,6 +41,58 @@ describe("PromotionCampaignItemsTable", () => {
     expect(screen.getByText(currency(14000))).toBeInTheDocument();
   });
 
+  it("muestra sellerDiscountAmount con monto", () => {
+    render(<PromotionCampaignItemsTable campaign={campaign} page={page([item({ sellerDiscountAmount: 2_345 })])} />);
+
+    expect(screen.getByText(currency(2_345))).toBeInTheDocument();
+  });
+
+  it("muestra sellerDiscountAmount null como no informado", () => {
+    render(<PromotionCampaignItemsTable campaign={campaign} page={page([item({ sellerDiscountAmount: null })])} />);
+
+    expect(screen.getByText("No informado")).toBeInTheDocument();
+  });
+
+  it("muestra aporte ML con monto", () => {
+    render(<PromotionCampaignItemsTable campaign={campaign} page={page([item({ mercadoLibreContributionAmount: 987 })])} />);
+
+    expect(screen.getByText(currency(987))).toBeInTheDocument();
+  });
+
+  it("muestra aporte ML cero real", () => {
+    render(<PromotionCampaignItemsTable campaign={campaign} page={page([item({ mercadoLibreContributionAmount: 0 })])} />);
+
+    expect(screen.getByText(currency(0))).toBeInTheDocument();
+  });
+
+  it("muestra aporte ML null como no informado por ML", () => {
+    render(<PromotionCampaignItemsTable campaign={campaign} page={page([item({ mercadoLibreContributionAmount: null })])} />);
+
+    expect(screen.getByText("ML no informa")).toBeInTheDocument();
+  });
+
+  it("muestra estimatedNetAmount con monto", () => {
+    render(<PromotionCampaignItemsTable campaign={campaign} page={page([item({ estimatedNetAmount: 13_579 })])} />);
+
+    expect(screen.getByText(currency(13_579))).toBeInTheDocument();
+  });
+
+  it("explica estimatedNetAmount null cuando falta elegir precio", () => {
+    render(<PromotionCampaignItemsTable campaign={campaign} page={page([
+      item({ estimatedNetAmount: null, promotionPrice: null, requiresPriceSelection: true, suggestedPromotionPrice: null }),
+    ])} />);
+
+    expect(screen.getByText("Se calcula al elegir precio")).toBeInTheDocument();
+  });
+
+  it("muestra estimatedNetAmount null genérico como no disponible", () => {
+    render(<PromotionCampaignItemsTable campaign={campaign} page={page([
+      item({ estimatedNetAmount: null, requiresPriceSelection: false }),
+    ])} />);
+
+    expect(screen.getByText("No disponible")).toBeInTheDocument();
+  });
+
   it("trata eligible y requiresPriceSelection null como no informados", () => {
     render(<PromotionCampaignItemsTable campaign={campaign} page={page([
       item({ eligible: null, promotionPrice: null, requiresPriceSelection: null }),
@@ -85,7 +137,7 @@ describe("PromotionCampaignItemsTable", () => {
     render(<PromotionCampaignItemsTable campaign={campaign} page={page([item({ eligible: null, thumbnail: null, title: null, status: null, promotionPrice: null, requiresPriceSelection: null, sellerDiscountAmount: null, mercadoLibreContributionAmount: null, estimatedNetAmount: null })])} />);
 
     expect(screen.getByLabelText("Sin imagen")).toBeInTheDocument();
-    expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(7);
+    expect(screen.getAllByText("\u2014").length).toBeGreaterThanOrEqual(5);
   });
 
   it("pide la siguiente página mediante offset y elimina cursor", async () => {
