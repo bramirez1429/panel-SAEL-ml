@@ -15,10 +15,12 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: navigation.push }),
   useSearchParams: () => navigation.searchParams,
 }));
+vi.mock("./apply-deal-promotion.action", () => ({ applyDealPromotion: vi.fn() }));
 
 const campaign: PromotionCampaign = {
   id: "C-1", name: "Cyber Fest", type: "MARKETPLACE_CAMPAIGN", status: "started", startDate: null, finishDate: null, deadlineDate: null,
 };
+const dealCampaign: PromotionCampaign = { ...campaign, type: "DEAL" };
 
 describe("PromotionCampaignItemsTable", () => {
   beforeEach(() => navigation.push.mockReset());
@@ -91,6 +93,36 @@ describe("PromotionCampaignItemsTable", () => {
     ])} />);
 
     expect(screen.getByText("No disponible")).toBeInTheDocument();
+  });
+
+  it("representa el candidate DEAL y abre el modal con el sugerido inicial", async () => {
+    const user = userEvent.setup();
+    render(<PromotionCampaignItemsTable campaign={dealCampaign} page={page([item({
+      sellerDiscountAmount: null,
+      mercadoLibreContributionAmount: 0,
+      estimatedNetAmount: null,
+      promotionPrice: null,
+      suggestedPromotionPrice: 14_449,
+      minPromotionPrice: 3_400,
+      maxPromotionPrice: 15_299,
+      requiresPriceSelection: true,
+    })])} />);
+
+    expect(screen.getByText("A definir")).toBeInTheDocument();
+    expect(screen.getByText("Se calcula al elegir precio")).toBeInTheDocument();
+    expect(screen.getByText(currency(0))).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Aplicar" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("spinbutton", { name: "Precio a aplicar" })).toHaveValue("14449");
+  });
+
+  it("no muestra botón Aplicar cuando el DEAL ya está started", () => {
+    render(<PromotionCampaignItemsTable campaign={dealCampaign} page={page([
+      item({ status: "started" }),
+    ])} />);
+
+    expect(screen.getByText("Activa")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Aplicar" })).not.toBeInTheDocument();
   });
 
   it("trata eligible y requiresPriceSelection null como no informados", () => {

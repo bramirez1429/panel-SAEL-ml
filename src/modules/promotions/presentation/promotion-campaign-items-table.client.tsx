@@ -3,12 +3,14 @@
 import { Button, Image, Space, Table } from "antd";
 import type { TableColumnsType } from "antd";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 
 import type { PromotionCampaign } from "../domain/promotion-campaign.model";
 import type {
   PromotionCampaignItem,
   PromotionCampaignItems,
 } from "../domain/promotion-campaign-items.model";
+import { DealPromotionModal } from "./deal-promotion-modal.client";
 
 type Props = Readonly<{
   campaign: PromotionCampaign;
@@ -25,6 +27,7 @@ const currencyFormatter = new Intl.NumberFormat("es-AR", {
 export function PromotionCampaignItemsTable({ campaign, page }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [selectedDeal, setSelectedDeal] = useState<PromotionCampaignItem | null>(null);
   const paging = page.paging;
   const previousOffset = paging && paging.offset > 0
     ? Math.max(0, paging.offset - paging.limit)
@@ -32,7 +35,7 @@ export function PromotionCampaignItemsTable({ campaign, page }: Props) {
   const nextOffset = paging && paging.offset + paging.limit < paging.total
     ? paging.offset + paging.limit
     : null;
-  const columns = campaignColumns(campaign.name);
+  const columns = campaignColumns(campaign, setSelectedDeal);
 
   const changeOffset = (offset: number) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -58,10 +61,18 @@ export function PromotionCampaignItemsTable({ campaign, page }: Props) {
       {previousOffset !== null ? <Button onClick={() => changeOffset(previousOffset)}>Anterior</Button> : null}
       {nextOffset !== null ? <Button onClick={() => changeOffset(nextOffset)}>Siguiente</Button> : null}
     </Space> : null}
+    {selectedDeal ? <DealPromotionModal
+      campaign={campaign}
+      item={selectedDeal}
+      onClose={() => setSelectedDeal(null)}
+    /> : null}
   </section>;
 }
 
-function campaignColumns(campaignName: string | null): TableColumnsType<PromotionCampaignItem> {
+function campaignColumns(
+  campaign: PromotionCampaign,
+  openDeal: (item: PromotionCampaignItem) => void,
+): TableColumnsType<PromotionCampaignItem> {
   return [
     {
       title: "Imagen",
@@ -80,7 +91,7 @@ function campaignColumns(campaignName: string | null): TableColumnsType<Promotio
         <small>{item.itemId}</small>
       </div>,
     },
-    { title: "Promo", key: "promotion", render: () => campaignName ?? missingValue },
+    { title: "Promo", key: "promotion", render: () => campaign.name ?? missingValue },
     { title: "Elegibles", key: "eligible", render: (_, item) => item.eligible ? "1/1" : missingValue },
     {
       title: "Precio promo",
@@ -88,10 +99,16 @@ function campaignColumns(campaignName: string | null): TableColumnsType<Promotio
       key: "promotionPrice",
       render: (_, item) => formatPromotionPrice(item),
     },
-    { title: "Tu descuento", dataIndex: "sellerDiscountAmount", key: "sellerDiscountAmount", render: (amount: number | null) => formatFinancialAmount(amount, "No informado") },
+    { title: "Tu descuento", dataIndex: "sellerDiscountAmount", key: "sellerDiscountAmount", render: (amount: number | null, item) => formatSellerDiscountAmount(amount, item) },
     { title: "Aporte ML", dataIndex: "mercadoLibreContributionAmount", key: "mercadoLibreContributionAmount", render: (amount: number | null) => formatFinancialAmount(amount, "ML no informa") },
     { title: "Vos recibís aprox.", dataIndex: "estimatedNetAmount", key: "estimatedNetAmount", render: (amount: number | null, item) => formatEstimatedNetAmount(amount, item) },
-    { title: "Acción", key: "action", render: (_, item) => formatAction(item.status) },
+    {
+      title: "Acción",
+      key: "action",
+      render: (_, item) => item.status === "candidate" && item.eligible === true && campaign.type === "DEAL"
+        ? <Button type="primary" onClick={() => openDeal(item)}>Aplicar</Button>
+        : formatAction(item.status),
+    },
   ];
 }
 
@@ -103,12 +120,20 @@ function formatFinancialAmount(amount: number | null, unavailableText: string): 
   return amount === null ? unavailableText : currencyFormatter.format(amount);
 }
 
+function formatSellerDiscountAmount(
+  amount: number | null,
+  item: PromotionCampaignItem,
+): string {
+  if (amount !== null) return currencyFormatter.format(amount);
+  return item.requiresPriceSelection === true ? "A definir" : "No informado";
+}
+
 function formatEstimatedNetAmount(
   amount: number | null,
   item: PromotionCampaignItem,
 ): string {
   if (amount !== null) return currencyFormatter.format(amount);
-  if (item.requiresPriceSelection === true && item.suggestedPromotionPrice === null) {
+  if (item.requiresPriceSelection === true) {
     return "Se calcula al elegir precio";
   }
   return "No disponible";
