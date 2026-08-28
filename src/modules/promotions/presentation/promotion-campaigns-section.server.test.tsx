@@ -17,4 +17,5 @@ describe("PromotionCampaignsSection", () => {
     await user.click(screen.getByRole("combobox", { name: "Promoción" }));
     expect(await screen.findByText(label)).toBeInTheDocument();
   });
+
 });
