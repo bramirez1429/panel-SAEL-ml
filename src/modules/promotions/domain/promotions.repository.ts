@@ -32,6 +32,7 @@ export type PromotionOption = Readonly<{
   mercadoLibreBoostAmount: number | null;
   mercadoLibreContributionAmount: number | null;
   estimatedNetAmount: number | null;
+  suggestedEstimatedNetAmount: number | null;
   startDate: string | null;
   finishDate: string | null;
   canApply: boolean;

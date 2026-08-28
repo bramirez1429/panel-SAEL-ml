@@ -227,8 +227,11 @@ function promotionPrice(option: PromotionOption): ReactNode {
   return <div>{suggested !== null ? `${money(suggested)} sugerido` : "A definir"}{range ? <><br /><small>{range}</small></> : null}</div>;
 }
 
-function netText(option: PromotionOption): string {
+function netText(option: PromotionOption): ReactNode {
   if (option.estimatedNetAmount !== null) return money(option.estimatedNetAmount);
+  if (option.requiresPriceSelection === true && option.suggestedEstimatedNetAmount !== null) {
+    return <div>{`≈ ${money(option.suggestedEstimatedNetAmount)}`}<br /><small>con precio sugerido</small></div>;
+  }
   return option.requiresPriceSelection === true ? "Se calcula al elegir precio" : "No disponible";
 }
 

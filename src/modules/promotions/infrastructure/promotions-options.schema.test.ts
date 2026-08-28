@@ -23,11 +23,13 @@ describe("optionsSchema", () => {
       mercadoLibreBoostAmount: null,
       mercadoLibreContributionAmount: null,
       estimatedNetAmount: null,
+      suggestedEstimatedNetAmount: null,
     })]);
 
     expect(result[0]?.sellerDiscountAmount).toBeNull();
     expect(result[0]?.mercadoLibreContributionAmount).toBeNull();
     expect(result[0]?.estimatedNetAmount).toBeNull();
+    expect(result[0]?.suggestedEstimatedNetAmount).toBeNull();
   });
 });
 
@@ -50,6 +52,7 @@ function option(overrides: Record<string, unknown> = {}) {
     mercadoLibreBoostAmount: 0,
     mercadoLibreContributionAmount: 0,
     estimatedNetAmount: null,
+    suggestedEstimatedNetAmount: 12_345,
     startDate: null,
     finishDate: null,
     canApply: true,

@@ -24,6 +24,7 @@ export const optionsSchema = z.array(
     mercadoLibreBoostAmount: z.number().nullable(),
     mercadoLibreContributionAmount: z.number().nullable(),
     estimatedNetAmount: z.number().nullable(),
+    suggestedEstimatedNetAmount: z.number().nullable(),
     canApply: z.boolean(),
     canRemove: z.boolean(),
     saleEstimate: z

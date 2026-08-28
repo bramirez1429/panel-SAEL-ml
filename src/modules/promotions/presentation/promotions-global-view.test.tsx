@@ -99,6 +99,29 @@ describe("vista global de promociones", () => {
     expect(screen.queryByText(money(0))).not.toBeInTheDocument();
   });
 
+  it("prioriza el neto real sobre el estimado sugerido", async () => {
+    mocks.getOptions.mockResolvedValue([candidate({ estimatedNetAmount: 12_345, suggestedEstimatedNetAmount: 44_344 })]);
+    render(<PromotionsCatalogClient page={page([publication()])} />);
+
+    expect(await screen.findByText(money(12_345))).toBeInTheDocument();
+    expect(screen.queryByText(/44\.344/)).not.toBeInTheDocument();
+  });
+
+  it("muestra el neto sugerido real informado por backend sin recalcularlo", async () => {
+    mocks.getOptions.mockResolvedValue([candidate({ estimatedNetAmount: null, suggestedEstimatedNetAmount: 44_344 })]);
+    render(<PromotionsCatalogClient page={page([publication()])} />);
+
+    expect(await screen.findByText(`≈ ${money(44_344)}`)).toBeInTheDocument();
+    expect(screen.getByText("con precio sugerido")).toBeInTheDocument();
+  });
+
+  it("explica cuándo el neto depende de elegir precio y no hay estimación", async () => {
+    mocks.getOptions.mockResolvedValue([candidate({ estimatedNetAmount: null, suggestedEstimatedNetAmount: null })]);
+    render(<PromotionsCatalogClient page={page([publication()])} />);
+
+    expect(await screen.findByText("Se calcula al elegir precio")).toBeInTheDocument();
+  });
+
   it("selecciona candidates, conserva la selección al paginar y usa botón primary", async () => {
     const user = userEvent.setup();
     mocks.getOptions.mockResolvedValue([candidate()]);
@@ -146,7 +169,7 @@ function page(publications: readonly PromotionRow[], done = true, nextCursor: st
 }
 
 function candidate(overrides: Partial<PromotionOption> = {}): PromotionOption {
-  return { id: "P-1", offerId: null, type: "DEAL", name: "Cyber Fest", status: "candidate", originalPrice: 20_000, promotionPrice: null, minPromotionPrice: 3_400, maxPromotionPrice: 15_299, suggestedPromotionPrice: 14_449, requiresPriceSelection: true, discountPercent: null, sellerDiscountAmount: null, mercadoLibreBaseContributionAmount: 0, mercadoLibreBoostAmount: 0, mercadoLibreContributionAmount: 0, estimatedNetAmount: null, startDate: null, finishDate: null, canApply: true, canRemove: false, saleEstimate: null, ...overrides };
+  return { id: "P-1", offerId: null, type: "DEAL", name: "Cyber Fest", status: "candidate", originalPrice: 20_000, promotionPrice: null, minPromotionPrice: 3_400, maxPromotionPrice: 15_299, suggestedPromotionPrice: 14_449, requiresPriceSelection: true, discountPercent: null, sellerDiscountAmount: null, mercadoLibreBaseContributionAmount: 0, mercadoLibreBoostAmount: 0, mercadoLibreContributionAmount: 0, estimatedNetAmount: null, suggestedEstimatedNetAmount: null, startDate: null, finishDate: null, canApply: true, canRemove: false, saleEstimate: null, ...overrides };
 }
 
 function money(value: number): string {
