@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const repository = vi.hoisted(() => ({ getCampaigns: vi.fn(), getCampaignItems: vi.fn() }));
+vi.mock("server-only", () => ({}));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), useSearchParams: () => new URLSearchParams() }));
 vi.mock("../promotions.composition.server", () => ({ createPromotionsRepository: () => repository }));
 import { PromotionCampaignsSection } from "./promotion-campaigns-section.server";

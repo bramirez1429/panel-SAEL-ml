@@ -1,5 +1,6 @@
 import type { PromotionCampaign } from "../domain/promotion-campaign.model";
 import { loadPromotionCampaignItems } from "../application/load-promotion-campaign-items";
+import { logPromotionCampaignItemsFailure } from "../application/log-promotion-campaign-items-failure.server";
 import type { PromotionCampaignItemsPagingRequest } from "../domain/promotion-campaign-items.model";
 import { createPromotionsRepository } from "../promotions.composition.server";
 import { PromotionCampaignItemsError } from "./promotion-campaign-items-error";
@@ -17,7 +18,8 @@ export async function PromotionCampaignItemsSection({ campaign, paging }: Props)
     paging,
   });
   if (!result.success) {
+    logPromotionCampaignItemsFailure(result.error);
     return <PromotionCampaignItemsError />;
   }
-  return <PromotionCampaignItemsTable promotionId={campaign.id} page={result.page} />;
+  return <PromotionCampaignItemsTable campaign={campaign} page={result.page} />;
 }

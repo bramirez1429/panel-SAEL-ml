@@ -1,39 +1,28 @@
 "use client";
 
-import { Button, Space, Table } from "antd";
+import { Button, Image, Space, Table } from "antd";
 import type { TableColumnsType } from "antd";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import type { PromotionCampaign } from "../domain/promotion-campaign.model";
 import type {
   PromotionCampaignItem,
   PromotionCampaignItems,
 } from "../domain/promotion-campaign-items.model";
 
 type Props = Readonly<{
-  promotionId: string;
+  campaign: PromotionCampaign;
   page: PromotionCampaignItems;
 }>;
 
-const missingValue = "\u2014";
+const missingValue = "—";
+const currencyFormatter = new Intl.NumberFormat("es-AR", {
+  style: "currency",
+  currency: "ARS",
+  maximumFractionDigits: 0,
+});
 
-const columns: TableColumnsType<PromotionCampaignItem> = [
-  { title: "Publicaci\u00f3n", dataIndex: "itemId", key: "itemId" },
-  {
-    title: "Estado",
-    dataIndex: "status",
-    key: "status",
-    render: (status: string | undefined) => status ?? missingValue,
-  },
-  { title: "Precio actual", dataIndex: "price", key: "price", render: formatPrice },
-  {
-    title: "Precio promoci\u00f3n",
-    dataIndex: "promotionPrice",
-    key: "promotionPrice",
-    render: formatPrice,
-  },
-];
-
-export function PromotionCampaignItemsTable({ promotionId, page }: Props) {
+export function PromotionCampaignItemsTable({ campaign, page }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const paging = page.paging;
@@ -43,20 +32,21 @@ export function PromotionCampaignItemsTable({ promotionId, page }: Props) {
   const nextOffset = paging && paging.offset + paging.limit < paging.total
     ? paging.offset + paging.limit
     : null;
+  const columns = campaignColumns(campaign.name);
 
   const changeOffset = (offset: number) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set("promotionId", promotionId);
+    params.set("promotionId", campaign.id);
     params.set("offset", String(offset));
     params.delete("cursor");
     router.push(`/promociones?${params.toString()}`);
   };
 
   if (page.items.length === 0) {
-    return <p>No hay publicaciones disponibles para esta promoci\u00f3n.</p>;
+    return <p>No hay publicaciones disponibles para esta promoción.</p>;
   }
 
-  return <section aria-label="Publicaciones de la promoci\u00f3n">
+  return <section aria-label="Publicaciones de la promoción">
     <Table<PromotionCampaignItem>
       columns={columns}
       dataSource={[...page.items]}
@@ -71,7 +61,35 @@ export function PromotionCampaignItemsTable({ promotionId, page }: Props) {
   </section>;
 }
 
-function formatPrice(price: number | undefined): string {
-  if (price === undefined) return missingValue;
-  return `$${new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 }).format(price)}`;
+function campaignColumns(campaignName: string | null): TableColumnsType<PromotionCampaignItem> {
+  return [
+    {
+      title: "Imagen",
+      dataIndex: "thumbnail",
+      key: "thumbnail",
+      render: (thumbnail: string | null, item) => thumbnail
+        ? <Image alt={item.title ?? item.itemId} height={56} preview={false} src={thumbnail} width={56} />
+        : <div aria-label="Sin imagen" style={{ alignItems: "center", background: "#f5f5f5", display: "flex", height: 56, justifyContent: "center", width: 56 }}>{missingValue}</div>,
+    },
+    {
+      title: "Publicación",
+      dataIndex: "title",
+      key: "title",
+      render: (title: string | null, item) => <div>
+        <div>{title ?? missingValue}</div>
+        <small>{item.itemId}</small>
+      </div>,
+    },
+    { title: "Promo", key: "promotion", render: () => campaignName ?? missingValue },
+    { title: "Elegibles", key: "eligible", render: () => missingValue },
+    { title: "Precio promo", dataIndex: "promotionPrice", key: "promotionPrice", render: formatPrice },
+    { title: "Tu descuento", dataIndex: "sellerDiscountAmount", key: "sellerDiscountAmount", render: formatPrice },
+    { title: "Aporte ML", dataIndex: "mercadoLibreContributionAmount", key: "mercadoLibreContributionAmount", render: formatPrice },
+    { title: "Vos recibís aprox.", dataIndex: "estimatedNetAmount", key: "estimatedNetAmount", render: formatPrice },
+    { title: "Acción", key: "action", render: () => missingValue },
+  ];
+}
+
+function formatPrice(price: number | null): string {
+  return price === null ? missingValue : currencyFormatter.format(price);
 }

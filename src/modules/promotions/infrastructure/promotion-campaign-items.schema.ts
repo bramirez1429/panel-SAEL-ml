@@ -2,9 +2,16 @@ import { z } from "zod";
 
 const itemSchema = z.object({
   itemId: z.string().min(1),
-  status: z.string().min(1).optional(),
-  price: z.number().finite().optional(),
-  promotionPrice: z.number().finite().optional(),
+  title: z.string().min(1).nullable(),
+  thumbnail: z.string().min(1).nullable(),
+  status: z.string().min(1).nullable(),
+  currentPrice: z.number().finite().nullable(),
+  promotionPrice: z.number().finite().nullable(),
+  sellerDiscountAmount: z.number().finite().nullable(),
+  mercadoLibreBaseContributionAmount: z.number().finite().nullable(),
+  mercadoLibreBoostAmount: z.number().finite().nullable(),
+  mercadoLibreContributionAmount: z.number().finite().nullable(),
+  estimatedNetAmount: z.number().finite().nullable(),
 }).strict();
 
 const pagingSchema = z.object({

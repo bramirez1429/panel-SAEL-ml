@@ -6,7 +6,7 @@ import type {
 
 export type CampaignItemsLoadResult =
   | Readonly<{ success: true; page: PromotionCampaignItems }>
-  | Readonly<{ success: false }>;
+  | Readonly<{ success: false; error: unknown }>;
 
 export async function loadPromotionCampaignItems(
   repository: Pick<PromotionsRepository, "getCampaignItems">,
@@ -14,7 +14,7 @@ export async function loadPromotionCampaignItems(
 ): Promise<CampaignItemsLoadResult> {
   try {
     return { success: true, page: await repository.getCampaignItems(request) };
-  } catch {
-    return { success: false };
+  } catch (error) {
+    return { success: false, error };
   }
 }
