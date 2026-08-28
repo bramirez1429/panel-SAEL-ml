@@ -102,6 +102,28 @@ describe("vista global de promociones", () => {
     expect(screen.getByText("Se calcula al elegir precio")).toBeInTheDocument();
     expect(screen.queryByText(money(0))).not.toBeInTheDocument();
   });
+
+  it("renderiza todas las opciones como filas y las ordena por estado", async () => {
+    const user = userEvent.setup();
+    mocks.getOptions.mockResolvedValue([
+      candidate({ id: "P-4", name: "Programada", status: "pending", canApply: false }),
+      candidate({ id: "P-2", name: "Disponible dos" }),
+      candidate({ id: "P-1", name: "Activa", status: "started", canApply: false, canRemove: true }),
+      candidate({ id: "P-3", name: "Disponible tres" }),
+    ]);
+    render(<PromotionsCatalogClient page={page([publication()])} />);
+
+    await user.click(screen.getByRole("button", { name: "Expandir MLA1" }));
+    expect(await screen.findByText("Disponible dos")).toBeInTheDocument();
+    const dataRows = screen.getAllByRole("row").slice(1);
+
+    expect(dataRows).toHaveLength(4);
+    expect(dataRows[0]).toHaveTextContent("Activa");
+    expect(dataRows[1]).toHaveTextContent("Disponible dos");
+    expect(dataRows[2]).toHaveTextContent("Disponible tres");
+    expect(dataRows[3]).toHaveTextContent("Programada");
+    expect(mocks.getOptions).toHaveBeenCalledTimes(1);
+  });
 });
 
 function publication(overrides: Partial<PromotionRow> = {}): PromotionRow {

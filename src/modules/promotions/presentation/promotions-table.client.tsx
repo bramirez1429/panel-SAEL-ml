@@ -11,25 +11,23 @@ import type { PromotionRow, PromotionsPage } from "../domain/promotion.model";
 import type { PromotionOption } from "../domain/promotions.repository";
 import { DealPromotionModal } from "./deal-promotion-modal.client";
 import { PromotionDeactivationModal } from "./promotion-deactivation-modal.client";
-import {
-  type CachedPromotionOptions,
-  promotionSelection,
-  promotionSelectionKey,
-  usePromotionGlobalStore,
-} from "./promotion-global.store";
+import { promotionSelection, promotionSelectionKey, usePromotionGlobalStore } from "./promotion-global.store";
 import { getPromotionOptions } from "./promotion-options.action";
 import { PromotionOptionsModal } from "./promotion-options-modal.client";
 
 type Props = Readonly<{ page: PromotionsPage }>;
 type DealSelection = Readonly<{ campaign: PromotionCampaign; item: PromotionCampaignItem }>;
+type DisplayState = "collapsed" | "loading" | "error" | "empty" | "option";
+type DisplayRow = Readonly<{
+  key: string;
+  publication: PromotionRow;
+  option: PromotionOption | null;
+  state: DisplayState;
+  publicationRowSpan: number;
+}>;
 
 const missingValue = "—";
-const moneyFormatter = new Intl.NumberFormat("es-AR", {
-  style: "currency",
-  currency: "ARS",
-  maximumFractionDigits: 0,
-});
-const optionStyle = { minHeight: 72, paddingBlock: 8 } as const;
+const moneyFormatter = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 
 export function PromotionsTable({ page }: Props) {
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
@@ -43,144 +41,173 @@ export function PromotionsTable({ page }: Props) {
   const failOptions = usePromotionGlobalStore((state) => state.failOptions);
   const toggleSelection = usePromotionGlobalStore((state) => state.toggleSelection);
 
-  async function loadOptions(row: PromotionRow): Promise<void> {
-    const cached = optionsByItem[row.itemId];
+  async function loadOptions(publication: PromotionRow): Promise<void> {
+    const cached = optionsByItem[publication.itemId];
     if (cached?.status === "loading" || cached?.status === "success") return;
-    startOptionsLoad(row.itemId);
+    startOptionsLoad(publication.itemId);
     try {
-      saveOptions(row.itemId, await getPromotionOptions(row.itemId));
+      saveOptions(publication.itemId, await getPromotionOptions(publication.itemId));
     } catch {
-      failOptions(row.itemId);
+      failOptions(publication.itemId);
     }
   }
 
-  function toggleExpanded(row: PromotionRow): void {
+  function toggleExpanded(publication: PromotionRow): void {
     const next = new Set(expanded);
-    if (next.has(row.itemId)) next.delete(row.itemId);
+    if (next.has(publication.itemId)) next.delete(publication.itemId);
     else {
-      next.add(row.itemId);
-      void loadOptions(row);
+      next.add(publication.itemId);
+      void loadOptions(publication);
     }
     setExpanded(next);
   }
 
-  const columns: TableColumnsType<PromotionRow> = [
-    { title: "PUBLICACIÓN", key: "publication", width: 300, render: (_, row) => <PublicationCell row={row} expanded={expanded.has(row.itemId)} onToggle={() => toggleExpanded(row)} /> },
-    { title: "", key: "selection", width: 44, render: (_, row) => <SelectionCells row={row} expanded={expanded.has(row.itemId)} cache={optionsByItem[row.itemId]} selections={selections} onToggle={toggleSelection} /> },
-    { title: "PROMOCIÓN", key: "promotion", render: (_, row) => <PromotionCells row={row} expanded={expanded.has(row.itemId)} cache={optionsByItem[row.itemId]} onRetry={() => void loadOptions(row)} /> },
-    { title: "DESCUENTO", key: "discount", render: (_, row) => <OptionCells row={row} expanded={expanded.has(row.itemId)} cache={optionsByItem[row.itemId]} renderOption={discountText} /> },
-    { title: "PRECIO FINAL", key: "price", render: (_, row) => <OptionCells row={row} expanded={expanded.has(row.itemId)} cache={optionsByItem[row.itemId]} renderOption={promotionPrice} /> },
-    { title: "RECIBÍS", key: "net", render: (_, row) => <OptionCells row={row} expanded={expanded.has(row.itemId)} cache={optionsByItem[row.itemId]} renderOption={netText} /> },
-    { title: "TAREAS Y RECOMENDACIONES", key: "tasks", width: 210, render: (_, row) => <TaskCells row={row} expanded={expanded.has(row.itemId)} cache={optionsByItem[row.itemId]} onDeactivate={() => setDeactivating(row)} onDeal={setDeal} onLegacy={() => setLegacyRow(row)} /> },
+  const rows = displayRows(page.publications, expanded, optionsByItem);
+  const columns: TableColumnsType<DisplayRow> = [
+    {
+      title: "PUBLICACIÓN", key: "publication", width: 300,
+      onCell: (row) => ({ rowSpan: row.publicationRowSpan }),
+      render: (_, row) => row.publicationRowSpan > 0
+        ? <PublicationCell publication={row.publication} expanded={expanded.has(row.publication.itemId)} onToggle={() => toggleExpanded(row.publication)} />
+        : null,
+    },
+    {
+      title: "", key: "selection", width: 44,
+      render: (_, row) => <SelectionCell row={row} selections={selections} onToggle={toggleSelection} />,
+    },
+    {
+      title: "PROMOCIÓN", key: "promotion",
+      render: (_, row) => <PromotionCell row={row} onRetry={() => void loadOptions(row.publication)} />,
+    },
+    { title: "DESCUENTO", key: "discount", render: (_, row) => row.option ? discountText(row.option) : null },
+    { title: "PRECIO FINAL", key: "price", render: (_, row) => row.option ? promotionPrice(row.option) : null },
+    { title: "RECIBÍS", key: "net", render: (_, row) => row.option ? netText(row.option) : null },
+    {
+      title: "TAREAS", key: "tasks", width: 210,
+      render: (_, row) => row.option ? <TaskAction
+        publication={row.publication}
+        option={row.option}
+        onDeactivate={() => setDeactivating(row.publication)}
+        onDeal={setDeal}
+        onLegacy={() => setLegacyRow(row.publication)}
+      /> : null,
+    },
   ];
 
   return <>
-    <Table<PromotionRow> rowKey="itemId" dataSource={[...page.publications]} columns={columns} pagination={false} size="small" />
+    <Table<DisplayRow> rowKey="key" dataSource={rows} columns={columns} pagination={false} size="small" />
     <PromotionDeactivationModal key={`deactivate:${deactivating?.itemId ?? "none"}`} row={deactivating} open={deactivating !== null} onClose={() => setDeactivating(null)} />
     <PromotionOptionsModal key={`apply:${legacyRow?.itemId ?? "none"}`} row={legacyRow} open={legacyRow !== null} onClose={() => setLegacyRow(null)} />
     {deal ? <DealPromotionModal key={deal.item.itemId} campaign={deal.campaign} item={deal.item} onClose={() => setDeal(null)} /> : null}
   </>;
 }
 
-function PublicationCell({ row, expanded, onToggle }: Readonly<{ row: PromotionRow; expanded: boolean; onToggle: () => void }>) {
+function displayRows(
+  publications: readonly PromotionRow[],
+  expanded: ReadonlySet<string>,
+  cache: ReturnType<typeof usePromotionGlobalStore.getState>["optionsByItem"],
+): DisplayRow[] {
+  return publications.flatMap((publication) => {
+    if (!expanded.has(publication.itemId)) return [placeholderRow(publication, "collapsed")];
+    const entry = cache[publication.itemId];
+    if (!entry || entry.status === "loading") return [placeholderRow(publication, "loading")];
+    if (entry.status === "error") return [placeholderRow(publication, "error")];
+    if (entry.options.length === 0) return [placeholderRow(publication, "empty")];
+    const options = [...entry.options].sort((left, right) => statusOrder(left.status) - statusOrder(right.status));
+    return options.map((option, index) => ({
+      key: promotionSelectionKey(publication.itemId, option),
+      publication,
+      option,
+      state: "option" as const,
+      publicationRowSpan: index === 0 ? options.length : 0,
+    }));
+  });
+}
+
+function placeholderRow(publication: PromotionRow, state: Exclude<DisplayState, "option">): DisplayRow {
+  return { key: `${publication.itemId}:${state}`, publication, option: null, state, publicationRowSpan: 1 };
+}
+
+function statusOrder(status: string | null): number {
+  if (status === "started") return 0;
+  if (status === "candidate") return 1;
+  if (status === "pending") return 2;
+  return 3;
+}
+
+function PublicationCell({ publication, expanded, onToggle }: Readonly<{ publication: PromotionRow; expanded: boolean; onToggle: () => void }>) {
   return <Space align="start">
-    <Button type="text" aria-label={`${expanded ? "Cerrar" : "Expandir"} ${row.itemId}`} onClick={onToggle}>{expanded ? "⌄" : "›"}</Button>
-    {row.thumbnail ? <Image alt={row.title} src={row.thumbnail} width={56} height={56} preview={false} /> : null}
+    <Button type="text" aria-label={`${expanded ? "Cerrar" : "Expandir"} ${publication.itemId}`} onClick={onToggle}>{expanded ? "⌄" : "›"}</Button>
+    {publication.thumbnail ? <Image alt={publication.title} src={publication.thumbnail} width={56} height={56} preview={false} /> : null}
     <div>
-      <Typography.Text strong>{row.title}</Typography.Text><br />
-      <Typography.Text type="secondary">{row.itemId}</Typography.Text><br />
-      {row.familyId ? <Typography.Text type="secondary">Familia {row.familyId}</Typography.Text> : null}
-      <div>{money(row.price)}</div>
+      <Typography.Text strong>{publication.title}</Typography.Text><br />
+      <Typography.Text type="secondary">{publication.itemId}</Typography.Text><br />
+      {publication.familyId ? <Typography.Text type="secondary">Familia {publication.familyId}</Typography.Text> : null}
+      <div>{money(publication.price)}</div>
     </div>
   </Space>;
 }
 
-function SelectionCells({ row, expanded, cache, selections, onToggle }: Readonly<{
-  row: PromotionRow;
-  expanded: boolean;
-  cache: CachedPromotionOptions | undefined;
+function PromotionCell({ row, onRetry }: Readonly<{ row: DisplayRow; onRetry: () => void }>) {
+  if (row.state === "collapsed") return missingValue;
+  if (row.state === "loading") return <SkeletonInput active size="small" />;
+  if (row.state === "error") return <Space orientation="vertical"><Typography.Text type="danger">No se pudieron cargar.</Typography.Text><Button size="small" onClick={onRetry}>Reintentar</Button></Space>;
+  if (row.state === "empty") return "Sin promociones disponibles";
+  const option = row.option;
+  if (!option) return null;
+  return <>
+    {option.status === "started" ? <Tag color="green">ACTIVA</Tag> : null}
+    {option.status === "pending" ? <Tag>Programada</Tag> : null}
+    <div>{optionName(option)}</div>
+  </>;
+}
+
+function SelectionCell({ row, selections, onToggle }: Readonly<{
+  row: DisplayRow;
   selections: ReturnType<typeof usePromotionGlobalStore.getState>["selections"];
   onToggle: (selection: ReturnType<typeof promotionSelection>) => void;
 }>) {
-  if (!expanded || cache?.status !== "success") return null;
-  return <>{cache.options.map((option) => {
-    const selection = promotionSelection(row, option);
-    return <div key={selection.key} style={optionStyle}>
-      {option.status === "candidate"
-        ? <Checkbox aria-label={`Seleccionar ${option.name ?? option.type ?? "promoción"}`} checked={Boolean(selections[selection.key])} disabled={!option.canApply} onChange={() => onToggle(selection)} />
-        : null}
-    </div>;
-  })}</>;
+  const option = row.option;
+  if (!option || !isSelectable(option)) return null;
+  const selection = promotionSelection(row.publication, option);
+  return <Checkbox
+    aria-label={`Seleccionar ${optionName(option)}`}
+    checked={Boolean(selections[selection.key])}
+    onChange={() => onToggle(selection)}
+  />;
 }
 
-function PromotionCells({ row, expanded, cache, onRetry }: Readonly<{
-  row: PromotionRow;
-  expanded: boolean;
-  cache: CachedPromotionOptions | undefined;
-  onRetry: () => void;
-}>) {
-  if (!expanded) return missingValue;
-  if (!cache || cache.status === "loading") return <SkeletonInput active size="small" />;
-  if (cache.status === "error") return <Space orientation="vertical"><Typography.Text type="danger">No se pudieron cargar.</Typography.Text><Button size="small" onClick={onRetry}>Reintentar</Button></Space>;
-  if (cache.options.length === 0) return "Sin promociones disponibles";
-  return <>{cache.options.map((option) => {
-    return <div key={promotionSelectionKey(row.itemId, option)} style={optionStyle}>
-      {option.status === "started" ? <Tag color="green">ACTIVA</Tag> : null}
-      {option.status === "pending" ? <Tag>Programada</Tag> : null}
-      <div>{option.name ?? "Promoción de Mercado Libre"}</div>
-    </div>;
-  })}</>;
-}
-
-function OptionCells({ row, expanded, cache, renderOption }: Readonly<{
-  row: PromotionRow;
-  expanded: boolean;
-  cache: CachedPromotionOptions | undefined;
-  renderOption: (option: PromotionOption) => ReactNode;
-}>) {
-  if (!expanded || cache?.status !== "success") return null;
-  return <>{cache.options.map((option) => <div key={promotionSelectionKey(row.itemId, option)} style={optionStyle}>{renderOption(option)}</div>)}</>;
-}
-
-function TaskCells({ row, expanded, cache, onDeactivate, onDeal, onLegacy }: Readonly<{
-  row: PromotionRow;
-  expanded: boolean;
-  cache: CachedPromotionOptions | undefined;
-  onDeactivate: () => void;
-  onDeal: (selection: DealSelection) => void;
-  onLegacy: () => void;
-}>) {
-  if (!expanded || cache?.status !== "success") return null;
-  return <>{cache.options.map((option) => (
-    <div key={promotionSelectionKey(row.itemId, option)} style={optionStyle}>
-      <TaskAction row={row} option={option} onDeactivate={onDeactivate} onDeal={onDeal} onLegacy={onLegacy} />
-    </div>
-  ))}</>;
-}
-
-function TaskAction({ row, option, onDeactivate, onDeal, onLegacy }: Readonly<{
-  row: PromotionRow;
+function TaskAction({ publication, option, onDeactivate, onDeal, onLegacy }: Readonly<{
+  publication: PromotionRow;
   option: PromotionOption;
   onDeactivate: () => void;
   onDeal: (selection: DealSelection) => void;
   onLegacy: () => void;
 }>) {
-  if (option.status === "started") return option.canRemove ? <Button size="small" onClick={onDeactivate}>Dejar de participar</Button> : null;
+  if (option.status === "started") return option.canRemove ? <Button size="small" onClick={onDeactivate}>Dejar de participar</Button> : missingValue;
   if (option.status === "pending") return "Programada";
-  if (option.status !== "candidate" || !option.canApply) return null;
+  if (option.status !== "candidate" || !option.canApply) return missingValue;
   if (option.type === "DEAL" && option.id) {
     const promotionId = option.id;
-    return <Button size="small" type="primary" onClick={() => onDeal(dealSelection(row, option, promotionId))}>Participar</Button>;
+    return <Button size="small" type="primary" onClick={() => onDeal(dealSelection(publication, option, promotionId))}>Participar</Button>;
   }
   return option.type !== "DEAL" && completeLegacyOption(option)
     ? <Button size="small" onClick={onLegacy}>Participar</Button>
-    : null;
+    : missingValue;
 }
 
-function dealSelection(row: PromotionRow, option: PromotionOption, promotionId: string): DealSelection {
+function isSelectable(option: PromotionOption): boolean {
+  return option.canApply && (option.status === "candidate" || option.status === "pending");
+}
+
+function optionName(option: PromotionOption): string {
+  return option.name ?? "Promoción de Mercado Libre";
+}
+
+function dealSelection(publication: PromotionRow, option: PromotionOption, promotionId: string): DealSelection {
   return {
     campaign: { id: promotionId, name: option.name, type: "DEAL", status: option.status ?? "candidate", startDate: option.startDate, finishDate: option.finishDate, deadlineDate: null },
-    item: { itemId: row.itemId, title: row.title, thumbnail: row.thumbnail, status: option.status, eligible: option.canApply, currentPrice: option.originalPrice ?? row.price, promotionPrice: option.promotionPrice, minPromotionPrice: option.minPromotionPrice, maxPromotionPrice: option.maxPromotionPrice, suggestedPromotionPrice: option.suggestedPromotionPrice, requiresPriceSelection: option.requiresPriceSelection, sellerDiscountAmount: option.sellerDiscountAmount, mercadoLibreBaseContributionAmount: option.mercadoLibreBaseContributionAmount, mercadoLibreBoostAmount: option.mercadoLibreBoostAmount, mercadoLibreContributionAmount: option.mercadoLibreContributionAmount, estimatedNetAmount: option.estimatedNetAmount },
+    item: { itemId: publication.itemId, title: publication.title, thumbnail: publication.thumbnail, status: option.status, eligible: option.canApply, currentPrice: option.originalPrice ?? publication.price, promotionPrice: option.promotionPrice, minPromotionPrice: option.minPromotionPrice, maxPromotionPrice: option.maxPromotionPrice, suggestedPromotionPrice: option.suggestedPromotionPrice, requiresPriceSelection: option.requiresPriceSelection, sellerDiscountAmount: option.sellerDiscountAmount, mercadoLibreBaseContributionAmount: option.mercadoLibreBaseContributionAmount, mercadoLibreBoostAmount: option.mercadoLibreBoostAmount, mercadoLibreContributionAmount: option.mercadoLibreContributionAmount, estimatedNetAmount: option.estimatedNetAmount },
   };
 }
 
