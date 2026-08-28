@@ -45,6 +45,6 @@ describe("PromotionsView", () => {
 
   it("muestra el estado vacío de campañas", () => {
     render(<PromotionsView campaigns={[]} />);
-    expect(screen.getByText("No hay promociones disponibles para este filtro.")).toBeInTheDocument();
+    expect(screen.getByText("No hay promociones disponibles actualmente.")).toBeInTheDocument();
   });
 });

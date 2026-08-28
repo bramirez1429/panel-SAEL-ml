@@ -93,7 +93,7 @@ describe("PromotionsApiRepository campaigns", () => {
     const suffix = audience ? `?audience=${audience}` : "";
     expect(http.get).toHaveBeenCalledWith(
       `/mercadolibre/direct/promociones/campaigns${suffix}`,
-      { timeoutMs: 30_000 },
+      { timeoutMs: 120_000 },
     );
   });
 });

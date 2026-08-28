@@ -56,7 +56,7 @@ export function PromotionsView({ campaigns, children }: Props) {
         onChange={(audience: string) => navigate({ audience })}
       />
     </Space>
-    {campaigns.length === 0 ? <p>No hay promociones disponibles para este filtro.</p> : null}
+    {campaigns.length === 0 ? <p>No hay promociones disponibles actualmente.</p> : null}
     {children}
   </div>;
 }
