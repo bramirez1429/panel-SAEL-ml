@@ -1,6 +1,6 @@
 export type PromotionCampaign = Readonly<{
   id: string;
-  name: string;
+  name: string | null;
   type: string;
   status: string;
   startDate: string | null;

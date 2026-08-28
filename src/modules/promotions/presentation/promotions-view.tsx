@@ -44,7 +44,7 @@ export function PromotionsView({ campaigns, children }: Props) {
         placeholder="Seleccionar promoción"
         options={campaigns.map((campaign) => ({
           value: campaign.id,
-          label: campaign.name,
+          label: campaign.name ?? "Promoción de Mercado Libre",
         }))}
         value={selectedPromotionId}
         onChange={(promotionId: string) => navigate({ promotionId })}

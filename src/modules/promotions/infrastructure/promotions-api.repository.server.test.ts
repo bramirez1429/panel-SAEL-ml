@@ -86,15 +86,44 @@ describe("PromotionsApiRepository publication operations", () => {
 });
 
 describe("PromotionsApiRepository campaigns", () => {
-  it("consulta campañas sin audiencia y con timeout normal", async () => {
+  it.each([undefined, "WOMEN", "GIRLS"] as const)("consulta campañas con audiencia %s y timeout específico", async (audience) => {
     const http = client();
     vi.mocked(http.get).mockResolvedValue({ campaigns: [] });
 
-    await new PromotionsApiRepository(http).getCampaigns();
+    await new PromotionsApiRepository(http).getCampaigns(audience);
 
+    const suffix = audience ? `?audience=${audience}` : "";
     expect(http.get).toHaveBeenCalledWith(
-      "/mercadolibre/direct/promociones/campaigns",
+      `/mercadolibre/direct/promociones/campaigns${suffix}`,
+      { timeoutMs: 120_000 },
     );
+  });
+
+  it("acepta una campaña real sin nombre", async () => {
+    const http = client();
+    vi.mocked(http.get).mockResolvedValue({
+      campaigns: [{
+        id: "P-1",
+        name: null,
+        type: "MARKETPLACE_CAMPAIGN",
+        status: "started",
+        startDate: null,
+        finishDate: null,
+        deadlineDate: null,
+      }],
+    });
+
+    await expect(new PromotionsApiRepository(http).getCampaigns()).resolves.toEqual({
+      campaigns: [{
+        id: "P-1",
+        name: null,
+        type: "MARKETPLACE_CAMPAIGN",
+        status: "started",
+        startDate: null,
+        finishDate: null,
+        deadlineDate: null,
+      }],
+    });
   });
 });
 

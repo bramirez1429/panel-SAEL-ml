@@ -17,7 +17,7 @@ export async function PromotionCampaignsSection({ searchParams }: Props) {
   const audience = readAudience(first(params.audience));
   let campaigns: PromotionCampaigns | null = null;
   try {
-    campaigns = await createPromotionsRepository().getCampaigns();
+    campaigns = await createPromotionsRepository().getCampaigns(audience);
   } catch {}
   if (!campaigns) return <PromotionCampaignsError />;
 
