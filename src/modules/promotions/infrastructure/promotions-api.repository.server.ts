@@ -21,7 +21,6 @@ import {
 } from "./promotions.schema";
 
 const PREVIEW_TIMEOUT_MS = 30_000;
-const CAMPAIGNS_TIMEOUT_MS = 120_000;
 const WRITE_TIMEOUT_MS = 120_000;
 
 export class PromotionsApiRepository implements PromotionsRepository {
@@ -55,7 +54,6 @@ export class PromotionsApiRepository implements PromotionsRepository {
     const params = audience ? `?${new URLSearchParams({ audience })}` : "";
     const response = await this.http.get(
       `/mercadolibre/direct/promociones/campaigns${params}`,
-      { timeoutMs: CAMPAIGNS_TIMEOUT_MS },
     );
     const parsed = promotionCampaignsSchema.safeParse(response);
     if (!parsed.success) {

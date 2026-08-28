@@ -39,7 +39,6 @@ describe("campaign selector repository flow", () => {
       expect(await screen.findByText(label)).toBeInTheDocument();
       expect(http.get).toHaveBeenCalledWith(
         "/mercadolibre/direct/promociones/campaigns",
-        { timeoutMs: 120_000 },
       );
     },
   );

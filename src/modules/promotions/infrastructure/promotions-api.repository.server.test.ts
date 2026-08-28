@@ -86,7 +86,7 @@ describe("PromotionsApiRepository publication operations", () => {
 });
 
 describe("PromotionsApiRepository campaigns", () => {
-  it.each([undefined, "WOMEN", "GIRLS"] as const)("consulta campañas con audiencia %s y timeout específico", async (audience) => {
+  it.each([undefined, "WOMEN", "GIRLS"] as const)("consulta campañas con audiencia %s y timeout normal", async (audience) => {
     const http = client();
     vi.mocked(http.get).mockResolvedValue({ campaigns: [] });
 
@@ -95,7 +95,6 @@ describe("PromotionsApiRepository campaigns", () => {
     const suffix = audience ? `?audience=${audience}` : "";
     expect(http.get).toHaveBeenCalledWith(
       `/mercadolibre/direct/promociones/campaigns${suffix}`,
-      { timeoutMs: 120_000 },
     );
   });
 
