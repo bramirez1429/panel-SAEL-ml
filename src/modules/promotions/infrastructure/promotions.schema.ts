@@ -91,6 +91,7 @@ export const publicationResultSchema = z.object({
   success: z.boolean(),
   status: z.enum(["SUCCESS", "PARTIAL_FAILURE", "FAILURE"]),
   errorCode: z.string().optional(),
+  providerMessage: z.string().optional(),
   totalItems: z.number().int().nonnegative(),
   successfulItems: z.number().int().nonnegative(),
   failedItems: z.number().int().nonnegative(),
@@ -100,6 +101,7 @@ export const publicationResultSchema = z.object({
       success: z.boolean(),
       stage: z.string(),
       errorCode: z.string().optional(),
+      providerMessage: z.string().optional(),
     }),
   ),
 });

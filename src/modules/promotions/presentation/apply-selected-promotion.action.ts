@@ -34,9 +34,11 @@ export async function applySelectedPromotion(input: ApplySelectedPromotionInput)
     }
     const result = await repository.apply(sourceKey, request);
     if (!result.success) {
+      const friendlyMessage = promotionErrorMessage(result.errorCode ?? "PROMOTION_APPLICATION_FAILED");
+      const providerMessage = result.providerMessage?.trim();
       return {
         ok: false,
-        message: promotionErrorMessage(result.errorCode ?? "PROMOTION_APPLICATION_FAILED"),
+        message: providerMessage ? `${friendlyMessage} Mercado Libre: ${providerMessage}` : friendlyMessage,
         ...(result.errorCode ? { diagnosticCode: result.errorCode } : {}),
       };
     }

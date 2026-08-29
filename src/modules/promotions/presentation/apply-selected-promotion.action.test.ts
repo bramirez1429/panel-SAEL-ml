@@ -72,6 +72,37 @@ describe("applySelectedPromotion", () => {
       .resolves.toEqual({ ok: false, message, diagnosticCode: errorCode });
     expect(mocks.apply).toHaveBeenCalledTimes(1);
   });
+
+  it("incluye el rechazo real de Mercado Libre sin perder el mensaje amigable", async () => {
+    mocks.preview.mockResolvedValue(preview(1, 1));
+    mocks.apply.mockResolvedValue({
+      success: false,
+      status: "FAILURE",
+      errorCode: "PROMOTION_APPLICATION_FAILED",
+      providerMessage: "invalid deal price",
+      totalItems: 1,
+      successfulItems: 0,
+      failedItems: 1,
+      results: [{
+        itemId: "MLA1",
+        success: false,
+        stage: "APPLICATION",
+        errorCode: "PROMOTION_APPLICATION_FAILED",
+        providerMessage: "invalid deal price",
+      }],
+    });
+
+    const result = await applySelectedPromotion({ itemId: "MLA1", option: dealOption(), selectedPrice: 14_449 });
+
+    expect(result).toEqual({
+      ok: false,
+      diagnosticCode: "PROMOTION_APPLICATION_FAILED",
+      message: expect.stringContaining("invalid deal price"),
+    });
+    if (result.ok) throw new Error("Se esperaba un rechazo");
+    expect(result.message).toContain("No se pudo aplicar la promoción completa.");
+    expect(result.message).toContain("Mercado Libre: invalid deal price");
+  });
 });
 
 function dealOption(): PromotionOption {

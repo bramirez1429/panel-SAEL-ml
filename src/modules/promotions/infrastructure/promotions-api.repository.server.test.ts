@@ -54,6 +54,7 @@ describe("PromotionsApiRepository publication operations", () => {
       success: false,
       status: "FAILURE",
       errorCode: "PROMOTION_APPLICATION_FAILED",
+      providerMessage: "invalid deal price",
       totalItems: 1,
       successfulItems: 0,
       failedItems: 1,
@@ -63,6 +64,7 @@ describe("PromotionsApiRepository publication operations", () => {
           success: false,
           stage: "APPLICATION",
           errorCode: "PROMOTION_APPLICATION_FAILED",
+          providerMessage: "invalid deal price",
         },
       ],
     };
