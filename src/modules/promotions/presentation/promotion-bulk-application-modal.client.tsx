@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
 import { applySelectedPromotion } from "./apply-selected-promotion.action";
+import { getPromotionOptions } from "./promotion-options.action";
 import type { SelectedPromotion } from "./promotion-global.store";
 import { usePromotionGlobalStore } from "./promotion-global.store";
 
@@ -23,6 +24,8 @@ export function PromotionBulkApplicationModal({ selections, onClose }: Props) {
   const [finished, setFinished] = useState(false);
   const removeSelections = usePromotionGlobalStore((state) => state.removeSelections);
   const invalidateOptions = usePromotionGlobalStore((state) => state.invalidateOptions);
+  const saveOptions = usePromotionGlobalStore((state) => state.saveOptions);
+  const failOptions = usePromotionGlobalStore((state) => state.failOptions);
   const valid = selections.every((selection) => validSelectionPrice(selection, prices[selection.key] ?? null));
   const processed = executions.filter((execution) => execution.status === "success" || execution.status === "error").length;
   const successes = executions.filter((execution) => execution.status === "success");
@@ -30,31 +33,86 @@ export function PromotionBulkApplicationModal({ selections, onClose }: Props) {
 
   async function start(): Promise<void> {
     if (activeRef.current || !valid) return;
+
     activeRef.current = true;
     setRunning(true);
+
     const completed: Execution[] = pendingExecutions(selections);
-    for (let index = 0; index < selections.length; index += 1) {
-      const selection = selections[index];
-      if (!selection) continue;
-      completed[index] = { selection, status: "processing", message: null };
-      setExecutions([...completed]);
-      const result = await applySelectedPromotion({
-        itemId: selection.itemId,
-        option: selection.option,
-        selectedPrice: selection.option.requiresPriceSelection === true ? prices[selection.key] ?? null : null,
-      });
-      completed[index] = result.ok
-        ? { selection, status: "success", message: null }
-        : { selection, status: "error", message: result.message };
-      setExecutions([...completed]);
+
+    try {
+      for (let index = 0; index < selections.length; index += 1) {
+        const selection = selections[index];
+        if (!selection) continue;
+
+        completed[index] = {
+          selection,
+          status: "processing",
+          message: null,
+        };
+
+        setExecutions([...completed]);
+
+        try {
+          const result = await applySelectedPromotion({
+            itemId: selection.itemId,
+            familyId: selection.familyId,
+            option: selection.option,
+            selectedPrice:
+              selection.option.requiresPriceSelection === true
+                ? prices[selection.key] ?? null
+                : null,
+          });
+
+          completed[index] = result.ok
+            ? {
+                selection,
+                status: "success",
+                message: null,
+              }
+            : {
+                selection,
+                status: "error",
+                message: result.message,
+              };
+        } catch {
+          completed[index] = {
+            selection,
+            status: "error",
+            message:
+              "No pudimos completar esta promoción. Continuamos con la siguiente.",
+          };
+        }
+
+        setExecutions([...completed]);
+      }
+
+      const successfulKeys = completed
+        .filter((execution) => execution.status === "success")
+        .map((execution) => execution.selection.key);
+
+      removeSelections(successfulKeys);
+
+      const itemIds = [
+        ...new Set(selections.map((selection) => selection.itemId)),
+      ];
+
+      invalidateOptions(itemIds);
+
+      for (const itemId of itemIds) {
+        try {
+          const options = await getPromotionOptions(itemId);
+          saveOptions(itemId, options);
+        } catch {
+          failOptions(itemId);
+        }
+      }
+
+      setFinished(true);
+      router.refresh();
+    } finally {
+      setRunning(false);
+      activeRef.current = false;
     }
-    const successfulKeys = completed.filter((execution) => execution.status === "success").map((execution) => execution.selection.key);
-    removeSelections(successfulKeys);
-    invalidateOptions([...new Set(selections.map((selection) => selection.itemId))]);
-    setRunning(false);
-    setFinished(true);
-    activeRef.current = false;
-    router.refresh();
   }
 
   return <Modal

@@ -15,6 +15,9 @@ vi.mock("./promotion-options-modal.client", () => ({
   PromotionOptionsModal: ({ open }: Readonly<{ open: boolean }>) => open ? <div role="dialog">Participar</div> : null,
 }));
 vi.mock("./deal-promotion-modal.client", () => ({ DealPromotionModal: () => <div role="dialog">Participar en DEAL</div> }));
+vi.mock("./promotion-bulk-application-modal.client", () => ({
+  PromotionBulkApplicationModal: () => <div role="dialog">Aplicación masiva</div>,
+}));
 
 class ImmediateIntersectionObserver {
   readonly root = null;

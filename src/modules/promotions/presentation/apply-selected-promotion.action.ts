@@ -11,6 +11,7 @@ import { mapPromotionError, promotionErrorMessage } from "./promotion-error.mapp
 
 export type ApplySelectedPromotionInput = Readonly<{
   itemId: string;
+  familyId: string | null;
   option: PromotionOption;
   selectedPrice: number | null;
 }>;
@@ -24,7 +25,10 @@ export async function applySelectedPromotion(input: ApplySelectedPromotionInput)
   try {
     const request = promotionOptionToApplyRequest(pricedOption);
     const repository = createPromotionsRepository();
-    const sourceKey = publicationSourceKey({ itemId: input.itemId, familyId: null });
+    const sourceKey = publicationSourceKey({
+      itemId: input.itemId,
+      familyId: input.familyId,
+    });
     const preview = await repository.preview(sourceKey, request);
     if (!previewAllowsApplication(preview)) {
       return { ok: false, message: "La publicación ya no está disponible para aplicar esta promoción." };

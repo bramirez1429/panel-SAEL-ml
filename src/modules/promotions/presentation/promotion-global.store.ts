@@ -13,6 +13,7 @@ export type CachedPromotionOptions =
 export type SelectedPromotion = Readonly<{
   key: string;
   itemId: string;
+  familyId: string | null;
   publicationTitle: string;
   option: PromotionOption;
 }>;
@@ -69,6 +70,7 @@ export function promotionSelection(
   return {
     key: promotionSelectionKey(row.itemId, option),
     itemId: row.itemId,
+    familyId: row.familyId,
     publicationTitle: row.title,
     option,
   };
