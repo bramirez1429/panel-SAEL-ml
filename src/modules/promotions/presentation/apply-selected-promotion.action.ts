@@ -27,7 +27,7 @@ export async function applySelectedPromotion(input: ApplySelectedPromotionInput)
     const repository = createPromotionsRepository();
     const sourceKey = publicationSourceKey({
       itemId: input.itemId,
-      familyId: input.familyId,
+      familyId: null,
     });
     const preview = await repository.preview(sourceKey, request);
     if (!previewAllowsApplication(preview)) {

@@ -56,7 +56,7 @@ describe("applySelectedPromotion", () => {
     mocks.revalidatePath.mockReset();
   });
 
-  it("usa family sourceKey para una publicación nueva", async () => {
+  it("aplica solamente al MLA seleccionado aunque pertenezca a una familia", async () => {
     const request = {
       type: "DEAL",
       promotionId: "P-MLA1",
@@ -64,9 +64,9 @@ describe("applySelectedPromotion", () => {
     } as const;
 
     mocks.preview.mockResolvedValue({
-      sourceKey: "family:123",
-      totalItems: 2,
-      applicableItems: 2,
+      sourceKey: "item:MLA1",
+      totalItems: 1,
+      applicableItems: 1,
       unavailableItems: 0,
       items: [],
     });
@@ -74,8 +74,8 @@ describe("applySelectedPromotion", () => {
     mocks.apply.mockResolvedValue({
       success: true,
       status: "SUCCESS",
-      totalItems: 2,
-      successfulItems: 2,
+      totalItems: 1,
+      successfulItems: 1,
       failedItems: 0,
       results: [],
     });
@@ -89,8 +89,8 @@ describe("applySelectedPromotion", () => {
       }),
     ).resolves.toEqual({ ok: true });
 
-    expect(mocks.preview).toHaveBeenCalledWith("family:123", request);
-    expect(mocks.apply).toHaveBeenCalledWith("family:123", request);
+    expect(mocks.preview).toHaveBeenCalledWith("item:MLA1", request);
+    expect(mocks.apply).toHaveBeenCalledWith("item:MLA1", request);
   });
 
   it("no aplica cuando el preflight falla", async () => {
