@@ -154,10 +154,25 @@ function PriceRange({ selection }: Readonly<{ selection: SelectedPromotion }>) {
 
 function ExecutionProgress({ executions, processed, total }: Readonly<{ executions: readonly Execution[]; processed: number; total: number }>) {
   const percent = total === 0 ? 0 : Math.round((processed / total) * 100);
+  const processingIndex = executions.findIndex(
+    (execution) => execution.status === "processing",
+  );
+
   return <Space direction="vertical" size="middle" style={{ width: "100%" }}>
     <Typography.Title level={5}>Aplicando promociones</Typography.Title>
+
     <Progress percent={percent} />
-    <Typography.Text>{processed} de {total} procesadas</Typography.Text>
+
+    {processingIndex >= 0
+      ? <Typography.Text strong>
+          Procesando {processingIndex + 1} de {total}
+        </Typography.Text>
+      : null}
+
+    <Typography.Text type="secondary">
+      {processed} de {total} procesadas
+    </Typography.Text>
+
     <ExecutionList executions={executions} />
   </Space>;
 }
@@ -172,8 +187,8 @@ function ExecutionList({ executions }: Readonly<{ executions: readonly Execution
 
 function FinalSummary({ successes, failures }: Readonly<{ successes: readonly Execution[]; failures: readonly Execution[] }>) {
   return <Space direction="vertical" size="large" style={{ width: "100%" }}>
-    <Alert type={failures.length ? "warning" : "success"} showIcon message={`${successes.length} aplicadas · ${failures.length} con error`} />
-    <ResultBlock title="APLICADAS" executions={successes} />
+    <Alert type={failures.length ? "warning" : "success"} showIcon message={`${successes.length} correctas · ${failures.length} con error`} />
+    <ResultBlock title="APLICADAS / PROGRAMADAS" executions={successes} />
     <ResultBlock title="NO SE PUDIERON APLICAR" executions={failures} />
   </Space>;
 }
@@ -220,7 +235,7 @@ function statusIcon(status: ExecutionStatus): string {
 }
 
 function statusText(status: ExecutionStatus): string {
-  if (status === "success") return "Aplicada";
+  if (status === "success") return "Participación confirmada";
   if (status === "processing") return "Aplicando...";
   return status === "pending" ? "Pendiente" : "No se pudo aplicar";
 }

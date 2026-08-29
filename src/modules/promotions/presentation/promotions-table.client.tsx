@@ -179,8 +179,17 @@ function TaskAction({ publication, option, onDeal, onLegacy }: Readonly<{
   onDeal: (selection: DealSelection) => void;
   onLegacy: () => void;
 }>) {
-  if (option.status === "started") return <Button type="link" size="small">Seguir participando</Button>;
-  if (option.status === "pending") return "Programada";
+  if (option.status === "started") {
+    return option.canRemove
+      ? <Typography.Text type="success">Participando · Activa</Typography.Text>
+      : <Typography.Text type="secondary">Activa</Typography.Text>;
+  }
+
+  if (option.status === "pending") {
+    return option.canRemove
+      ? <Typography.Text>Participando · Programada</Typography.Text>
+      : <Typography.Text type="secondary">Programada</Typography.Text>;
+  }
   if (option.status !== "candidate" || !option.canApply) return missingValue;
   if (option.type === "DEAL" && option.id) {
     const promotionId = option.id;
@@ -192,7 +201,7 @@ function TaskAction({ publication, option, onDeal, onLegacy }: Readonly<{
 }
 
 function isSelectable(option: PromotionOption): boolean {
-  return option.canApply && (option.status === "candidate" || option.status === "pending");
+  return option.canApply && option.status === "candidate";
 }
 
 function optionName(option: PromotionOption): string {

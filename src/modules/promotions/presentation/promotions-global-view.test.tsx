@@ -68,7 +68,7 @@ describe("vista global de promociones", () => {
 
   it("renderiza started, candidates y pending en filas ordenadas", async () => {
     mocks.getOptions.mockResolvedValue([
-      candidate({ id: "P-4", name: "Programada", status: "pending", canApply: false }),
+      candidate({ id: "P-4", name: "Programada", status: "pending", canApply: false, canRemove: true }),
       candidate({ id: "P-2", name: "Disponible dos" }),
       candidate({ id: "P-1", name: "Activa", status: "started", canApply: false, canRemove: true }),
       candidate({ id: "P-3", name: "Disponible tres" }),
@@ -82,7 +82,12 @@ describe("vista global de promociones", () => {
     expect(dataRows[1]).toHaveTextContent("Disponible dos");
     expect(dataRows[2]).toHaveTextContent("Disponible tres");
     expect(dataRows[3]).toHaveTextContent("Programada");
-    expect(screen.getByRole("button", { name: "Seguir participando" })).toHaveClass("ant-btn-link");
+    expect(screen.queryByRole("button", { name: "Seguir participando" })).not.toBeInTheDocument();
+    expect(screen.getByText("Participando · Activa")).toBeInTheDocument();
+    expect(screen.getByText("Participando · Programada")).toBeInTheDocument();
+
+    // Sólo los candidate pueden seleccionarse nuevamente.
+    expect(screen.getAllByRole("checkbox")).toHaveLength(2);
   });
 
   it("carga promociones para una publicación legacy", async () => {

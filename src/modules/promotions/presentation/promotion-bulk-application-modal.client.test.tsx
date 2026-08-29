@@ -58,8 +58,8 @@ describe("aplicación masiva secuencial", () => {
 
     await openAndStart(user, 3);
     expect(await screen.findByText("Proceso completado")).toBeInTheDocument();
-    expect(screen.getByText("2 aplicadas · 1 con error")).toBeInTheDocument();
-    expect(screen.getByText("APLICADAS")).toBeInTheDocument();
+    expect(screen.getByText("2 correctas · 1 con error")).toBeInTheDocument();
+    expect(screen.getByText("APLICADAS / PROGRAMADAS")).toBeInTheDocument();
     expect(screen.getByText("NO SE PUDIERON APLICAR")).toBeInTheDocument();
     expect(screen.getByText("Mercado Libre rechazó la promoción")).toBeInTheDocument();
     expect(mocks.apply).toHaveBeenCalledTimes(3);
@@ -82,14 +82,21 @@ describe("aplicación masiva secuencial", () => {
     fireEvent.click(start);
 
     await waitFor(() => expect(mocks.apply).toHaveBeenCalledTimes(1));
+    expect(screen.getByText("Procesando 1 de 3")).toBeInTheDocument();
     expect(screen.getByText("0 de 3 procesadas")).toBeInTheDocument();
     expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "0");
+
     resolvers[0]?.({ ok: true });
+
     await waitFor(() => expect(mocks.apply).toHaveBeenCalledTimes(2));
+    expect(screen.getByText("Procesando 2 de 3")).toBeInTheDocument();
     expect(screen.getByText("1 de 3 procesadas")).toBeInTheDocument();
     expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "33");
+
     resolvers[1]?.({ ok: true });
+
     await waitFor(() => expect(mocks.apply).toHaveBeenCalledTimes(3));
+    expect(screen.getByText("Procesando 3 de 3")).toBeInTheDocument();
     expect(screen.getByText("2 de 3 procesadas")).toBeInTheDocument();
     resolvers[2]?.({ ok: true });
     expect(await screen.findByText("Proceso completado")).toBeInTheDocument();
