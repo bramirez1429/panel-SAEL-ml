@@ -89,7 +89,7 @@ export const publicationPreviewSchema = z.object({
 
 export const publicationResultSchema = z.object({
   success: z.boolean(),
-  status: z.enum(["SUCCESS", "PARTIAL_FAILURE"]),
+  status: z.enum(["SUCCESS", "PARTIAL_FAILURE", "FAILURE"]),
   errorCode: z.string().optional(),
   totalItems: z.number().int().nonnegative(),
   successfulItems: z.number().int().nonnegative(),

@@ -48,6 +48,31 @@ describe("PromotionsApiRepository publication operations", () => {
     );
   });
 
+  it("acepta un failure total con el error real del MLA", async () => {
+    const http = client();
+    const failure = {
+      success: false,
+      status: "FAILURE",
+      errorCode: "PROMOTION_APPLICATION_FAILED",
+      totalItems: 1,
+      successfulItems: 0,
+      failedItems: 1,
+      results: [
+        {
+          itemId: "MLA1",
+          success: false,
+          stage: "APPLICATION",
+          errorCode: "PROMOTION_APPLICATION_FAILED",
+        },
+      ],
+    };
+    vi.mocked(http.post).mockResolvedValue(failure);
+
+    await expect(
+      new PromotionsApiRepository(http).apply("item:MLA1", request),
+    ).resolves.toEqual(failure);
+  });
+
   it("desactiva con timeout de 120 segundos", async () => {
     const http = client();
     vi.mocked(http.delete).mockResolvedValue(result(1, 1));

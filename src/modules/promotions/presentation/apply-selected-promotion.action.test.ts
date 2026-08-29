@@ -112,4 +112,51 @@ describe("applySelectedPromotion", () => {
     expect(result.ok).toBe(false);
     expect(mocks.apply).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ["PROMOTION_APPLICATION_FAILED", "No se pudo aplicar la promoción completa."],
+    [
+      "PROMOTION_VERIFICATION_FAILED",
+      "No pudimos confirmar el estado final de la promoción.",
+    ],
+    [
+      "PROMOTION_CHANGED_DURING_OPERATION",
+      "Mercado Libre modificó la disponibilidad de esta promoción. Volvé a consultar.",
+    ],
+  ])("muestra el error especifico de un failure total: %s", async (errorCode, message) => {
+    mocks.preview.mockResolvedValue({
+      sourceKey: "item:MLA1",
+      totalItems: 1,
+      applicableItems: 1,
+      unavailableItems: 0,
+      items: [],
+    });
+    mocks.apply.mockResolvedValue({
+      success: false,
+      status: "FAILURE",
+      errorCode,
+      totalItems: 1,
+      successfulItems: 0,
+      failedItems: 1,
+      results: [
+        {
+          itemId: "MLA1",
+          success: false,
+          stage: "APPLICATION",
+          errorCode,
+        },
+      ],
+    });
+
+    await expect(
+      applySelectedPromotion({
+        itemId: "MLA1",
+        familyId: "123",
+        option,
+        selectedPrice: 80,
+      }),
+    ).resolves.toEqual({ ok: false, message, diagnosticCode: errorCode });
+
+    expect(mocks.apply).toHaveBeenCalledWith("item:MLA1", expect.any(Object));
+  });
 });
