@@ -11,7 +11,6 @@ import { mapPromotionError, promotionErrorMessage } from "./promotion-error.mapp
 
 export type ApplySelectedPromotionInput = Readonly<{
   itemId: string;
-  familyId: string | null;
   option: PromotionOption;
   selectedPrice: number | null;
 }>;

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
 import { applySelectedPromotion } from "./apply-selected-promotion.action";
-import { getPromotionOptions } from "./promotion-options.action";
 import type { SelectedPromotion } from "./promotion-global.store";
 import { usePromotionGlobalStore } from "./promotion-global.store";
 
@@ -24,8 +23,6 @@ export function PromotionBulkApplicationModal({ selections, onClose }: Props) {
   const [finished, setFinished] = useState(false);
   const removeSelections = usePromotionGlobalStore((state) => state.removeSelections);
   const invalidateOptions = usePromotionGlobalStore((state) => state.invalidateOptions);
-  const saveOptions = usePromotionGlobalStore((state) => state.saveOptions);
-  const failOptions = usePromotionGlobalStore((state) => state.failOptions);
   const valid = selections.every((selection) => validSelectionPrice(selection, prices[selection.key] ?? null));
   const processed = executions.filter((execution) => execution.status === "success" || execution.status === "error").length;
   const successes = executions.filter((execution) => execution.status === "success");
@@ -55,7 +52,6 @@ export function PromotionBulkApplicationModal({ selections, onClose }: Props) {
         try {
           const result = await applySelectedPromotion({
             itemId: selection.itemId,
-            familyId: selection.familyId,
             option: selection.option,
             selectedPrice:
               selection.option.requiresPriceSelection === true
@@ -97,15 +93,6 @@ export function PromotionBulkApplicationModal({ selections, onClose }: Props) {
       ];
 
       invalidateOptions(itemIds);
-
-      for (const itemId of itemIds) {
-        try {
-          const options = await getPromotionOptions(itemId);
-          saveOptions(itemId, options);
-        } catch {
-          failOptions(itemId);
-        }
-      }
 
       setFinished(true);
       router.refresh();

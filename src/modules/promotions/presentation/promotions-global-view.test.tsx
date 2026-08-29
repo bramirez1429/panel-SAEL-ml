@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({ getOptions: vi.fn(), push: vi.fn(), searchPara
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push }), useSearchParams: () => mocks.searchParams }));
 vi.mock("./promotion-options.action", () => ({ getPromotionOptions: mocks.getOptions }));
+vi.mock("./apply-selected-promotion.action", () => ({ applySelectedPromotion: vi.fn() }));
 vi.mock("./promotion-options-modal.client", () => ({
   PromotionOptionsModal: ({ open }: Readonly<{ open: boolean }>) => open ? <div role="dialog">Participar</div> : null,
 }));
