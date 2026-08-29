@@ -24,6 +24,8 @@ type PromotionGlobalState = Readonly<{
   saveOptions: (itemId: string, options: readonly PromotionOption[]) => void;
   failOptions: (itemId: string) => void;
   toggleSelection: (selection: SelectedPromotion) => void;
+  removeSelections: (keys: readonly string[]) => void;
+  invalidateOptions: (itemIds: readonly string[]) => void;
 }>;
 
 const initialState = {
@@ -47,6 +49,16 @@ export const usePromotionGlobalStore = create<PromotionGlobalState>((set) => ({
     if (selections[selection.key]) delete selections[selection.key];
     else selections[selection.key] = selection;
     return { selections };
+  }),
+  removeSelections: (keys) => set((state) => {
+    const selections = { ...state.selections };
+    keys.forEach((key) => delete selections[key]);
+    return { selections };
+  }),
+  invalidateOptions: (itemIds) => set((state) => {
+    const optionsByItem = { ...state.optionsByItem };
+    itemIds.forEach((itemId) => delete optionsByItem[itemId]);
+    return { optionsByItem };
   }),
 }));
 
