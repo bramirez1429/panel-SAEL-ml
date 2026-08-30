@@ -5,7 +5,6 @@ import { revalidatePath } from "next/cache";
 import type { PromotionActionFailure } from "../domain/promotion-action.model";
 import {
   publicationSourceKey,
-  previewAllowsApplication,
 } from "../domain/publication-promotion.model";
 import type { PromotionApplyRequest } from "../domain/promotions.repository";
 import { createPromotionsRepository } from "../promotions.composition.server";
@@ -37,14 +36,6 @@ export async function applyDealPromotion(
 
   try {
     const repository = createPromotionsRepository();
-    const preview = await repository.preview(sourceKey, request);
-    if (!previewAllowsApplication(preview)) {
-      return {
-        ok: false,
-        message: "La publicación ya no está disponible para aplicar esta promoción.",
-      };
-    }
-
     const result = await repository.apply(sourceKey, request);
     if (!result.success) {
       return {

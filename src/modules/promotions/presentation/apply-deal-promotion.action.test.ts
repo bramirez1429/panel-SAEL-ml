@@ -24,41 +24,34 @@ describe("applyDealPromotion", () => {
     mocks.revalidatePath.mockReset();
   });
 
-  it("no llama apply cuando el preview no permite participar", async () => {
-    mocks.preview.mockResolvedValue(preview(1, 0));
+  it("no llama preview y aplica al sourceKey item:MLA", async () => {
+    mocks.apply.mockResolvedValue(successResult());
 
     const result = await applyDealPromotion(input);
 
-    expect(result).toMatchObject({ ok: false });
-    expect(mocks.preview).toHaveBeenCalledWith("item:MLA1", request);
-    expect(mocks.apply).not.toHaveBeenCalled();
+    expect(result).toEqual({ ok: true });
+    expect(mocks.preview).not.toHaveBeenCalled();
+    expect(mocks.apply).toHaveBeenCalledWith("item:MLA1", request);
   });
 
-  it("llama apply una sola vez y revalida cuando el preview es válido", async () => {
-    mocks.preview.mockResolvedValue(preview(1, 1));
-    mocks.apply.mockResolvedValue({
-      success: true,
-      status: "SUCCESS",
-      totalItems: 1,
-      successfulItems: 1,
-      failedItems: 0,
-      results: [],
-    });
+  it("llama apply una sola vez y revalida", async () => {
+    mocks.apply.mockResolvedValue(successResult());
 
     await expect(applyDealPromotion(input)).resolves.toEqual({ ok: true });
 
     expect(mocks.apply).toHaveBeenCalledTimes(1);
-    expect(mocks.apply).toHaveBeenCalledWith("item:MLA1", request);
+    expect(mocks.preview).not.toHaveBeenCalled();
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/promociones");
   });
 });
 
-function preview(totalItems: number, applicableItems: number) {
+function successResult() {
   return {
-    sourceKey: "item:MLA1",
-    totalItems,
-    applicableItems,
-    unavailableItems: totalItems - applicableItems,
-    items: [],
+    success: true,
+    status: "SUCCESS",
+    totalItems: 1,
+    successfulItems: 1,
+    failedItems: 0,
+    results: [],
   };
 }

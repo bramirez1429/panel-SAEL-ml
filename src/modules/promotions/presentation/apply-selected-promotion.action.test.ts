@@ -19,30 +19,28 @@ describe("applySelectedPromotion", () => {
     mocks.revalidatePath.mockReset();
   });
 
-  it("no llama apply cuando el preflight rechaza la selección", async () => {
-    mocks.preview.mockResolvedValue(preview(1, 0));
+  it("no llama preview y mantiene sourceKey item:MLA", async () => {
+    mocks.apply.mockResolvedValue(successResult());
 
     const result = await applySelectedPromotion({ itemId: "MLA1", option: dealOption(), selectedPrice: 14_449 });
 
-    expect(result).toMatchObject({ ok: false });
-    expect(mocks.apply).not.toHaveBeenCalled();
+    expect(result).toEqual({ ok: true });
+    expect(mocks.preview).not.toHaveBeenCalled();
+    expect(mocks.apply).toHaveBeenCalledWith("item:MLA1", expect.any(Object));
   });
 
-  it("usa el precio elegido, ejecuta preview antes de apply y revalida", async () => {
-    const order: string[] = [];
-    mocks.preview.mockImplementation(async () => { order.push("preview"); return preview(1, 1); });
-    mocks.apply.mockImplementation(async () => { order.push("apply"); return successResult(); });
+  it("usa el precio elegido, ejecuta apply una vez y revalida", async () => {
+    mocks.apply.mockResolvedValue(successResult());
 
     await expect(applySelectedPromotion({ itemId: "MLA1", option: dealOption(), selectedPrice: 14_449 })).resolves.toEqual({ ok: true });
 
     const request = { type: "DEAL", promotionId: "P-1", dealPrice: 14_449 };
-    expect(order).toEqual(["preview", "apply"]);
-    expect(mocks.preview).toHaveBeenCalledWith("item:MLA1", request);
+    expect(mocks.preview).not.toHaveBeenCalled();
     expect(mocks.apply).toHaveBeenCalledWith("item:MLA1", request);
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/promociones");
   });
 
-  it("rechaza un precio fuera del rango antes del preflight", async () => {
+  it("rechaza un precio fuera del rango antes de apply", async () => {
     const result = await applySelectedPromotion({ itemId: "MLA1", option: dealOption(), selectedPrice: 99 });
 
     expect(result).toMatchObject({ ok: false });
@@ -51,7 +49,6 @@ describe("applySelectedPromotion", () => {
   });
 
   it("usa promotionPrice real cuando la opción no requiere elegir precio", async () => {
-    mocks.preview.mockResolvedValue(preview(1, 1));
     mocks.apply.mockResolvedValue(successResult());
     const fixedPriceOption = { ...dealOption(), promotionPrice: 12_000, requiresPriceSelection: false };
 
@@ -65,7 +62,6 @@ describe("applySelectedPromotion", () => {
     ["PROMOTION_VERIFICATION_FAILED", "No pudimos confirmar el estado final de la promoción."],
     ["PROMOTION_CHANGED_DURING_OPERATION", "Mercado Libre modificó la disponibilidad de esta promoción. Volvé a consultar."],
   ])("conserva el error específico de apply: %s", async (errorCode, message) => {
-    mocks.preview.mockResolvedValue(preview(1, 1));
     mocks.apply.mockResolvedValue({ success: false, status: "FAILURE", errorCode, totalItems: 1, successfulItems: 0, failedItems: 1, results: [] });
 
     await expect(applySelectedPromotion({ itemId: "MLA1", option: dealOption(), selectedPrice: 14_449 }))
@@ -74,7 +70,6 @@ describe("applySelectedPromotion", () => {
   });
 
   it("incluye el rechazo real de Mercado Libre sin perder el mensaje amigable", async () => {
-    mocks.preview.mockResolvedValue(preview(1, 1));
     mocks.apply.mockResolvedValue({
       success: false,
       status: "FAILURE",
@@ -107,10 +102,6 @@ describe("applySelectedPromotion", () => {
 
 function dealOption(): PromotionOption {
   return { id: "P-1", offerId: null, type: "DEAL", name: "Cyber Fest", status: "candidate", originalPrice: 20_000, promotionPrice: null, minPromotionPrice: 100, maxPromotionPrice: 15_000, suggestedPromotionPrice: 14_449, requiresPriceSelection: true, discountPercent: null, sellerDiscountAmount: null, mercadoLibreBaseContributionAmount: 0, mercadoLibreBoostAmount: 0, mercadoLibreContributionAmount: 0, estimatedNetAmount: null, suggestedEstimatedNetAmount: null, startDate: null, finishDate: null, canApply: true, canRemove: false, saleEstimate: null };
-}
-
-function preview(totalItems: number, applicableItems: number) {
-  return { sourceKey: "item:MLA1", totalItems, applicableItems, unavailableItems: totalItems - applicableItems, items: [] };
 }
 
 function successResult() {

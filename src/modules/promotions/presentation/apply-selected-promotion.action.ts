@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import type { PromotionActionFailure } from "../domain/promotion-action.model";
-import { previewAllowsApplication, publicationSourceKey } from "../domain/publication-promotion.model";
+import { publicationSourceKey } from "../domain/publication-promotion.model";
 import type { PromotionOption } from "../domain/promotions.repository";
 import { createPromotionsRepository } from "../promotions.composition.server";
 import { promotionOptionToApplyRequest } from "./promotion-apply-request.mapper";
@@ -28,10 +28,6 @@ export async function applySelectedPromotion(input: ApplySelectedPromotionInput)
       itemId: input.itemId,
       familyId: null,
     });
-    const preview = await repository.preview(sourceKey, request);
-    if (!previewAllowsApplication(preview)) {
-      return { ok: false, message: "La publicación ya no está disponible para aplicar esta promoción." };
-    }
     const result = await repository.apply(sourceKey, request);
     if (!result.success) {
       const friendlyMessage = promotionErrorMessage(result.errorCode ?? "PROMOTION_APPLICATION_FAILED");

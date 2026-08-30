@@ -16,6 +16,9 @@ vi.mock("./promotion-options-modal.client", () => ({
   PromotionOptionsModal: ({ open }: Readonly<{ open: boolean }>) => open ? <div role="dialog">Participar</div> : null,
 }));
 vi.mock("./deal-promotion-modal.client", () => ({ DealPromotionModal: () => <div role="dialog">Participar en DEAL</div> }));
+vi.mock("./promotion-deactivation-modal.client", () => ({
+  PromotionDeactivationModal: ({ open }: Readonly<{ open: boolean }>) => open ? <div role="dialog">Dejar promoción</div> : null,
+}));
 vi.mock("./promotion-bulk-application-modal.client", () => ({
   PromotionBulkApplicationModal: () => <div role="dialog">Aplicación masiva</div>,
 }));
@@ -82,11 +85,9 @@ describe("vista global de promociones", () => {
     expect(dataRows[1]).toHaveTextContent("Disponible dos");
     expect(dataRows[2]).toHaveTextContent("Disponible tres");
     expect(dataRows[3]).toHaveTextContent("Programada");
-    expect(screen.queryByRole("button", { name: "Seguir participando" })).not.toBeInTheDocument();
-    expect(screen.getByText("Participando · Activa")).toBeInTheDocument();
-    expect(screen.getByText("Participando · Programada")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Dejar de participar" })).toHaveLength(2);
 
-    // Sólo los candidate pueden seleccionarse nuevamente.
+    // Sólo los candidate pueden seleccionarse; pending y started no vuelven a aplicar.
     expect(screen.getAllByRole("checkbox")).toHaveLength(2);
   });
 

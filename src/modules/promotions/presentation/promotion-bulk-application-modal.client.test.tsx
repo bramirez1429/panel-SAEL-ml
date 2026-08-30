@@ -119,6 +119,21 @@ describe("aplicación masiva secuencial", () => {
     expect(submit).toBeEnabled();
     expect(screen.queryByRole("button", { name: "Listo" })).not.toBeInTheDocument();
   });
+
+  it("procesa secuencialmente las 50 selecciones", async () => {
+    const user = userEvent.setup();
+    mocks.apply.mockResolvedValue({ ok: true });
+    select(...Array.from({ length: 50 }, (_, index) => selection(`MLA${index + 1}`)));
+    render(<PromotionSelectionSummary />);
+
+    await openAndStart(user, 50);
+
+    expect(await screen.findByText("50 correctas · 0 con error")).toBeInTheDocument();
+    expect(mocks.apply).toHaveBeenCalledTimes(50);
+    expect(mocks.apply.mock.calls.map((call) => call[0].itemId)).toEqual(
+      Array.from({ length: 50 }, (_, index) => `MLA${index + 1}`),
+    );
+  });
 });
 
 async function openAndStart(user: ReturnType<typeof userEvent.setup>, count: number): Promise<void> {

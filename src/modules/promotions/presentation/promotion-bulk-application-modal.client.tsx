@@ -4,7 +4,7 @@ import { Alert, Button, InputNumber, List, Modal, Progress, Space, Typography } 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
-import { applySelectedPromotion } from "./apply-selected-promotion.action";
+import { applySelectionWithRetry } from "./apply-selection-with-retry.client";
 import type { SelectedPromotion } from "./promotion-global.store";
 import { usePromotionGlobalStore } from "./promotion-global.store";
 
@@ -50,7 +50,7 @@ export function PromotionBulkApplicationModal({ selections, onClose }: Props) {
         setExecutions([...completed]);
 
         try {
-          const result = await applySelectedPromotion({
+          const result = await applySelectionWithRetry({
             itemId: selection.itemId,
             option: selection.option,
             selectedPrice:

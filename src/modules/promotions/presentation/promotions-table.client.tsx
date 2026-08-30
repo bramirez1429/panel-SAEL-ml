@@ -10,6 +10,7 @@ import type { PromotionCampaignItem } from "../domain/promotion-campaign-items.m
 import type { PromotionRow, PromotionsPage } from "../domain/promotion.model";
 import type { PromotionOption } from "../domain/promotions.repository";
 import { DealPromotionModal } from "./deal-promotion-modal.client";
+import { PromotionDeactivationModal } from "./promotion-deactivation-modal.client";
 import { promotionSelection, promotionSelectionKey, usePromotionGlobalStore } from "./promotion-global.store";
 import { getPromotionOptions } from "./promotion-options.action";
 import { enqueuePromotionOptionsLoad } from "./promotion-options.queue.client";
@@ -35,6 +36,7 @@ const moneyFormatter = new Intl.NumberFormat("es-AR", { style: "currency", curre
 export function PromotionsTable({ page }: Props) {
   const [deal, setDeal] = useState<DealSelection | null>(null);
   const [legacyRow, setLegacyRow] = useState<PromotionRow | null>(null);
+  const [deactivating, setDeactivating] = useState<PromotionRow | null>(null);
   const optionsByItem = usePromotionGlobalStore((state) => state.optionsByItem);
   const selections = usePromotionGlobalStore((state) => state.selections);
   const startOptionsLoad = usePromotionGlobalStore((state) => state.startOptionsLoad);
@@ -87,6 +89,7 @@ export function PromotionsTable({ page }: Props) {
       render: (_, row) => row.state === "loading" ? <FieldSkeleton label="Cargando tareas" /> : row.option ? <TaskAction
         publication={row.publication}
         option={row.option}
+        onDeactivate={() => setDeactivating(row.publication)}
         onDeal={setDeal}
         onLegacy={() => setLegacyRow(row.publication)}
       /> : null,
@@ -95,6 +98,7 @@ export function PromotionsTable({ page }: Props) {
 
   return <>
     <Table<DisplayRow> rowKey="key" dataSource={rows} columns={columns} pagination={false} size="small" />
+    <PromotionDeactivationModal key={`deactivate:${deactivating?.itemId ?? "none"}`} row={deactivating} open={deactivating !== null} onClose={() => setDeactivating(null)} />
     <PromotionOptionsModal key={`apply:${legacyRow?.itemId ?? "none"}`} row={legacyRow} open={legacyRow !== null} onClose={() => setLegacyRow(null)} />
     {deal ? <DealPromotionModal key={deal.item.itemId} campaign={deal.campaign} item={deal.item} onClose={() => setDeal(null)} /> : null}
   </>;
@@ -173,22 +177,15 @@ function SelectionCell({ row, selections, onToggle }: Readonly<{
   />;
 }
 
-function TaskAction({ publication, option, onDeal, onLegacy }: Readonly<{
+function TaskAction({ publication, option, onDeactivate, onDeal, onLegacy }: Readonly<{
   publication: PromotionRow;
   option: PromotionOption;
+  onDeactivate: () => void;
   onDeal: (selection: DealSelection) => void;
   onLegacy: () => void;
 }>) {
-  if (option.status === "started") {
-    return option.canRemove
-      ? <Typography.Text type="success">Participando · Activa</Typography.Text>
-      : <Typography.Text type="secondary">Activa</Typography.Text>;
-  }
-
-  if (option.status === "pending") {
-    return option.canRemove
-      ? <Typography.Text>Participando · Programada</Typography.Text>
-      : <Typography.Text type="secondary">Programada</Typography.Text>;
+  if (option.status === "started" || option.status === "pending") {
+    return <Button type="link" size="small" onClick={onDeactivate}>Dejar de participar</Button>;
   }
   if (option.status !== "candidate" || !option.canApply) return missingValue;
   if (option.type === "DEAL" && option.id) {
