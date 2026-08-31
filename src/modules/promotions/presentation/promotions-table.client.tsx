@@ -10,6 +10,7 @@ import type { PromotionCampaignItem } from "../domain/promotion-campaign-items.m
 import type { PromotionRow, PromotionsPage } from "../domain/promotion.model";
 import type { PromotionOption } from "../domain/promotions.repository";
 import { DealPromotionModal } from "./deal-promotion-modal.client";
+import { CopyableText } from "./copyable-text.client";
 import { PromotionDeactivationModal } from "./promotion-deactivation-modal.client";
 import { promotionSelection, promotionSelectionKey, usePromotionGlobalStore } from "./promotion-global.store";
 import { getPromotionOptions } from "./promotion-options.action";
@@ -142,8 +143,8 @@ function PublicationCell({ publication }: Readonly<{ publication: PromotionRow }
     {publication.thumbnail ? <Image alt={publication.title} src={publication.thumbnail} width={56} height={56} preview={false} /> : null}
     <div>
       <Typography.Text strong>{publication.title}</Typography.Text><br />
-      <Typography.Text type="secondary">{publication.itemId}</Typography.Text><br />
-      {publication.familyId ? <Typography.Text type="secondary">Familia {publication.familyId}</Typography.Text> : null}
+      <CopyableText value={publication.itemId} label={publication.itemId} copyLabel="MLA" successMessage="MLA copiado" />
+      {publication.familyId ? <><br /><CopyableText value={publication.familyId} label={`Familia ${publication.familyId}`} copyLabel="familia" successMessage="Familia copiada" /></> : null}
       <div>{money(publication.price)}</div>
     </div>
   </Space>;

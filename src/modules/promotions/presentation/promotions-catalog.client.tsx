@@ -7,9 +7,9 @@ import type { PromotionsPage } from "../domain/promotion.model";
 import { PromotionSelectionSummary } from "./promotion-selection-summary.client";
 import { PromotionsTable } from "./promotions-table.client";
 
-type Props = Readonly<{ page: PromotionsPage }>;
+type Props = Readonly<{ page: PromotionsPage; activeSearch?: string }>;
 
-export function PromotionsCatalogClient({ page }: Props) {
+export function PromotionsCatalogClient({ page, activeSearch = "" }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -24,7 +24,9 @@ export function PromotionsCatalogClient({ page }: Props) {
     <PromotionSelectionSummary />
     {page.publications.length > 0
       ? <PromotionsTable page={page} />
-      : <p>No se encontraron publicaciones.</p>}
+      : activeSearch
+        ? <p>No encontramos publicaciones para esta búsqueda: &quot;{activeSearch}&quot;.</p>
+        : <p>No se encontraron publicaciones.</p>}
     {!page.done && page.nextCursor
       ? <Button onClick={nextPage} style={{ marginTop: 16 }}>Siguiente</Button>
       : null}

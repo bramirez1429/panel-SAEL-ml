@@ -16,6 +16,15 @@ const request: PromotionApplyRequest = {
 };
 
 describe("PromotionsApiRepository publication operations", () => {
+  it("usa el endpoint real del catálogo para la búsqueda server-side", async () => {
+    const http = client();
+    vi.mocked(http.get).mockResolvedValue({ done: true, nextCursor: null, count: 0, publications: [] });
+
+    await new PromotionsApiRepository(http).getCatalog({ limit: 20, cursor: null, search: "123456" });
+
+    expect(http.get).toHaveBeenCalledWith("/mercadolibre/direct/promociones?limit=20&search=123456");
+  });
+
   it.each([
     [8, 8, true],
     [8, 6, false],

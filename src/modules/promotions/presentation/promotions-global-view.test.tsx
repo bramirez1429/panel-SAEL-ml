@@ -43,6 +43,7 @@ describe("vista global de promociones", () => {
     resetPromotionGlobalStore();
     mocks.getOptions.mockReset();
     mocks.push.mockReset();
+    [...mocks.searchParams.keys()].forEach((key) => mocks.searchParams.delete(key));
   });
   afterEach(cleanup);
 
@@ -97,6 +98,7 @@ describe("vista global de promociones", () => {
 
     expect(await screen.findByText("Legacy Promo")).toBeInTheDocument();
     expect(mocks.getOptions).toHaveBeenCalledWith("MLA1");
+    expect(screen.queryByText(/^Familia /)).not.toBeInTheDocument();
   });
 
   it("muestra sugerido, rango y neto sin interpretar price cero", async () => {
@@ -167,6 +169,17 @@ describe("vista global de promociones", () => {
     release();
     await waitFor(() => expect(mocks.getOptions).toHaveBeenCalledTimes(6));
     expect(maximum).toBeLessThanOrEqual(3);
+  });
+
+  it("conserva search al avanzar la paginación", async () => {
+    const user = userEvent.setup();
+    mocks.searchParams.set("search", "remera mujer");
+    mocks.getOptions.mockResolvedValue([]);
+    render(<PromotionsCatalogClient page={page([publication()], false, "next")} activeSearch="remera mujer" />);
+
+    await user.click(screen.getByRole("button", { name: "Siguiente" }));
+
+    expect(mocks.push).toHaveBeenCalledWith("/promociones?search=remera+mujer&cursor=next");
   });
 });
 
