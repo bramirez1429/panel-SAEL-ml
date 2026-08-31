@@ -95,6 +95,20 @@ describe("vista global de promociones", () => {
     expect(screen.getAllByRole("checkbox")).toHaveLength(2);
   });
 
+  it("muestra la vigencia debajo del nombre para cualquier estado", async () => {
+    mocks.getOptions.mockResolvedValue([
+      candidate({
+        name: "Cyber Fest",
+        startDate: "2026-08-31",
+        finishDate: "2026-09-14",
+      }),
+    ]);
+    render(<PromotionsCatalogClient page={page([publication()])} />);
+
+    expect(await screen.findByText("Cyber Fest")).toBeInTheDocument();
+    expect(screen.getByText("31/ago al 14/sep")).toBeInTheDocument();
+  });
+
   it("sólo ofrece baja cuando canRemove y la selección específica son válidos", async () => {
     const user = userEvent.setup();
     mocks.getOptions.mockResolvedValue([

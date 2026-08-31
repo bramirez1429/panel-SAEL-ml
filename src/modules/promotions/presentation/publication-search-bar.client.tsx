@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
 
 import { parsePublicationSearch } from "../domain/publication-search.parser";
+import styles from "./publication-search-bar.module.css";
 
 type Props = Readonly<{ initialSearch: string }>;
 
@@ -35,14 +36,14 @@ export function PublicationSearchBar({ initialSearch }: Props) {
     navigate("");
   }
 
-  return <form onSubmit={submit} style={{ marginBottom: 16 }}>
-    <Space wrap>
+  return <form className={styles.form} onSubmit={submit}>
+    <Space className={styles.controls} wrap>
       <Input
         aria-label="Buscar publicaciones"
+        className={styles.input}
         value={value}
         onChange={(event) => setValue(event.target.value)}
         placeholder="Buscar por familia, MLA o nombre"
-        style={{ width: 360 }}
       />
       <Button htmlType="submit" type="primary" loading={pending}>Buscar</Button>
       <Button htmlType="button" onClick={clear} disabled={!initialSearch && !value}>Limpiar</Button>

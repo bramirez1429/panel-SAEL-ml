@@ -20,6 +20,7 @@ import { promotionSelection, promotionSelectionKey, usePromotionGlobalStore } fr
 import { getPromotionOptions } from "./promotion-options.action";
 import { enqueuePromotionOptionsLoad } from "./promotion-options.queue.client";
 import { PromotionOptionsModal } from "./promotion-options-modal.client";
+import { formatPromotionPeriod } from "./promotion-period.formatter";
 import { PromotionViewportLoader } from "./promotion-viewport-loader.client";
 
 type Props = Readonly<{ page: PromotionsPage }>;
@@ -165,10 +166,12 @@ function PromotionCell({ row, onRetry }: Readonly<{ row: DisplayRow; onRetry: ()
   if (row.state === "empty") return "Sin promociones disponibles";
   const option = row.option;
   if (!option) return null;
+  const period = formatPromotionPeriod(option.startDate, option.finishDate);
   return <>
     {option.status === "started" ? <Tag color="green">ACTIVA</Tag> : null}
     {option.status === "pending" ? <Tag>Programada</Tag> : null}
     <div>{optionName(option)}</div>
+    {period ? <Typography.Text type="secondary" style={{ fontSize: 12 }}>{period}</Typography.Text> : null}
   </>;
 }
 

@@ -1,0 +1,11 @@
+.topbar {
+  position: sticky;
+  top: var(--dashboard-header-height, 0px);
+  z-index: 9;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+  background: var(--ant-color-bg-container, #ffffff);
+  border: 1px solid var(--ant-color-border-secondary, #e8ecf2);
+  border-radius: var(--ant-border-radius, 8px);
+  box-shadow: 0 2px 8px rgb(15 23 42 / 5%);
+}

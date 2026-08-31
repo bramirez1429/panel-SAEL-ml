@@ -1,10 +1,12 @@
 .shell {
+  --dashboard-header-height: 64px;
+
   display: grid;
   grid-template-areas:
     "sidebar header"
     "sidebar content";
   grid-template-columns: 256px minmax(0, 1fr);
-  grid-template-rows: 64px minmax(0, 1fr);
+  grid-template-rows: var(--dashboard-header-height) minmax(0, 1fr);
   min-height: 100dvh;
   color: var(--ant-color-text, #172033);
   background: var(--ant-color-bg-layout, #f6f8fb);
