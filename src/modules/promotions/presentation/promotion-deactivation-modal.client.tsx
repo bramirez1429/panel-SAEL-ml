@@ -42,9 +42,9 @@ export function PromotionDeactivationModal({ selection, open, onClose }: Props) 
     }
 
     invalidateOptions([selection.publication.itemId]);
-    message.success("La publicación dejó de participar en esta promoción.");
-    onClose();
     router.refresh();
+    onClose();
+    message.success("Dejaste de participar de la promoción.");
   }
 
   const closeSafely = () => {
@@ -63,7 +63,7 @@ export function PromotionDeactivationModal({ selection, open, onClose }: Props) 
     {submission.loading
       ? <Space direction="vertical" align="center" style={{ width: "100%" }}>
         <Spin size="large" />
-        <Typography.Text>Quitando promoción...</Typography.Text>
+        <Typography.Text>Dejando de participar...</Typography.Text>
       </Space>
       : <Space direction="vertical" size="middle" style={{ width: "100%" }}>
         <div>
@@ -90,7 +90,7 @@ export function PromotionDeactivationModal({ selection, open, onClose }: Props) 
         <Space>
           <Button onClick={onClose}>Cancelar</Button>
           <Button danger type="primary" onClick={() => void confirm()}>
-            Dejar de participar
+            {failure ? "Reintentar" : "Dejar de participar"}
           </Button>
         </Space>
       </Space>}
