@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -17,7 +17,10 @@ vi.mock("./promotion-options-modal.client", () => ({
 }));
 vi.mock("./deal-promotion-modal.client", () => ({ DealPromotionModal: () => <div role="dialog">Participar en DEAL</div> }));
 vi.mock("./promotion-deactivation-modal.client", () => ({
-  PromotionDeactivationModal: ({ open }: Readonly<{ open: boolean }>) => open ? <div role="dialog">Dejar promoción</div> : null,
+  PromotionDeactivationModal: ({ open, selection }: Readonly<{
+    open: boolean;
+    selection: Readonly<{ option: PromotionOption }> | null;
+  }>) => open ? <div role="dialog">Dejar promoción: {selection?.option.name}</div> : null,
 }));
 vi.mock("./promotion-bulk-application-modal.client", () => ({
   PromotionBulkApplicationModal: () => <div role="dialog">Aplicación masiva</div>,
@@ -90,6 +93,23 @@ describe("vista global de promociones", () => {
 
     // Sólo los candidate pueden seleccionarse; pending y started no vuelven a aplicar.
     expect(screen.getAllByRole("checkbox")).toHaveLength(2);
+  });
+
+  it("sólo ofrece baja cuando canRemove y la selección específica son válidos", async () => {
+    const user = userEvent.setup();
+    mocks.getOptions.mockResolvedValue([
+      candidate({ id: "P-1", name: "Sin permiso", status: "started", canApply: false, canRemove: false }),
+      candidate({ id: null, name: "Sin identificador", status: "pending", canApply: false, canRemove: true }),
+      candidate({ id: "P-3", name: "Baja exacta", status: "pending", canApply: false, canRemove: true }),
+    ]);
+    render(<PromotionsCatalogClient page={page([publication()])} />);
+
+    const exactRow = (await screen.findByText("Baja exacta")).closest("tr");
+    expect(exactRow).not.toBeNull();
+    expect(screen.getAllByRole("button", { name: "Dejar de participar" })).toHaveLength(1);
+    await user.click(within(exactRow!).getByRole("button", { name: "Dejar de participar" }));
+
+    expect(screen.getByRole("dialog")).toHaveTextContent("Baja exacta");
   });
 
   it("carga promociones para una publicación legacy", async () => {

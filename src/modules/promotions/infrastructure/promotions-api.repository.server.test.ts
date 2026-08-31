@@ -96,6 +96,35 @@ describe("PromotionsApiRepository publication operations", () => {
     );
   });
 
+  it.each([
+    [
+      { promotionType: "DEAL", promotionId: "P1", offerId: null } as const,
+      "promotionType=DEAL&promotionId=P1",
+    ],
+    [
+      { promotionType: "SELLER_CAMPAIGN", promotionId: "S1", offerId: null } as const,
+      "promotionType=SELLER_CAMPAIGN&promotionId=S1",
+    ],
+    [
+      { promotionType: "SMART", promotionId: "P2", offerId: "O2" } as const,
+      "promotionType=SMART&promotionId=P2&offerId=O2",
+    ],
+    [
+      { promotionType: "PRICE_DISCOUNT", promotionId: null, offerId: null } as const,
+      "promotionType=PRICE_DISCOUNT",
+    ],
+  ])("desactiva únicamente la promoción seleccionada", async (selection, query) => {
+    const http = client();
+    vi.mocked(http.delete).mockResolvedValue(result(1, 1));
+
+    await new PromotionsApiRepository(http).removeSelected("item:MLA1", selection);
+
+    expect(http.delete).toHaveBeenCalledWith(
+      `/mercadolibre/direct/promociones/publicacion/item%3AMLA1?${query}`,
+      { timeoutMs: 120_000 },
+    );
+  });
+
   it("usa 30 segundos para opciones", async () => {
     const http = client();
     vi.mocked(http.get).mockResolvedValue([]);

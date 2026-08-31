@@ -11,6 +11,7 @@ import type {
   PromotionsRepository,
   PromotionsRequest,
 } from "../domain/promotions.repository";
+import type { PromotionRemovalSelection } from "../domain/promotion-removal.model";
 import type { PromotionAudience } from "../domain/promotion-analysis.model";
 import { promotionAnalysisResponseSchema } from "./promotion-analysis.schema";
 import { promotionCampaignsSchema } from "./promotion-campaigns.schema";
@@ -111,6 +112,21 @@ export class PromotionsApiRepository implements PromotionsRepository {
     return parsed.data;
   }
 
+  async removeSelected(
+    sourceKey: string,
+    selection: PromotionRemovalSelection,
+  ) {
+    const response = await this.http.delete(
+      `${publicationPath(sourceKey)}?${removalParams(selection)}`,
+      { timeoutMs: WRITE_TIMEOUT_MS },
+    );
+    const parsed = publicationResultSchema.safeParse(response);
+    if (!parsed.success) {
+      throw invalidResponse("Resultado de promoción inválido.", parsed.error);
+    }
+    return parsed.data;
+  }
+
   async apply(sourceKey: string, request: PromotionApplyRequest) {
     const response = await this.http.post(
       `${publicationPath(sourceKey)}/aplicar`,
@@ -142,6 +158,13 @@ function applyRequestParams(request: PromotionApplyRequest): URLSearchParams {
     params.set("promotionId", request.promotionId);
     params.set("dealPrice", String(request.dealPrice));
   }
+  return params;
+}
+
+function removalParams(selection: PromotionRemovalSelection): URLSearchParams {
+  const params = new URLSearchParams({ promotionType: selection.promotionType });
+  if (selection.promotionId) params.set("promotionId", selection.promotionId);
+  if (selection.offerId) params.set("offerId", selection.offerId);
   return params;
 }
 

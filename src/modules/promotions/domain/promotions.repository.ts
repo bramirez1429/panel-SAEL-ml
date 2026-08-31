@@ -13,6 +13,7 @@ import type {
   PromotionCampaignItems,
   PromotionCampaignItemsPagingRequest,
 } from "./promotion-campaign-items.model";
+import type { PromotionRemovalSelection } from "./promotion-removal.model";
 
 export type PromotionOption = Readonly<{
   id: string | null;
@@ -94,6 +95,10 @@ export interface PromotionsRepository {
     request: PromotionApplyRequest,
   ): Promise<PublicationPromotionPreview>;
   remove(sourceKey: string): Promise<PublicationPromotionResult>;
+  removeSelected(
+    sourceKey: string,
+    selection: PromotionRemovalSelection,
+  ): Promise<PublicationPromotionResult>;
   apply(
     sourceKey: string,
     request: PromotionApplyRequest,
