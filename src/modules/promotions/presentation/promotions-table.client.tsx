@@ -1,6 +1,7 @@
 "use client";
 
 import { Button, Checkbox, Image, Space, Table, Tag, Typography } from "antd";
+import { DownOutlined, RightOutlined } from "@ant-design/icons";
 import type { TableColumnsType } from "antd";
 import SkeletonInput from "antd/es/skeleton/Input";
 import { useState, type CSSProperties, type ReactNode } from "react";
@@ -21,11 +22,10 @@ import { getPromotionOptions } from "./promotion-options.action";
 import { enqueuePromotionOptionsLoad } from "./promotion-options.queue.client";
 import { PromotionOptionsModal } from "./promotion-options-modal.client";
 import { formatPromotionPeriod } from "./promotion-period.formatter";
-import { PromotionViewportLoader } from "./promotion-viewport-loader.client";
 
 type Props = Readonly<{ page: PromotionsPage }>;
 type DealSelection = Readonly<{ campaign: PromotionCampaign; item: PromotionCampaignItem }>;
-type DisplayState = "loading" | "error" | "empty" | "option";
+type DisplayState = "collapsed" | "loading" | "error" | "empty" | "option";
 type DisplayRow = Readonly<{
   key: string;
   publication: PromotionRow;
@@ -40,6 +40,7 @@ const missingValue = "—";
 const moneyFormatter = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 
 export function PromotionsTable({ page }: Props) {
+  const [expandedItems, setExpandedItems] = useState<ReadonlySet<string>>(() => new Set());
   const [deal, setDeal] = useState<DealSelection | null>(null);
   const [legacyRow, setLegacyRow] = useState<PromotionRow | null>(null);
   const [deactivating, setDeactivating] = useState<PromotionDeactivationSelection | null>(null);
@@ -63,15 +64,28 @@ export function PromotionsTable({ page }: Props) {
     });
   }
 
-  const rows = displayRows(page.publications, optionsByItem);
+  function togglePublication(publication: PromotionRow): void {
+    const expanded = expandedItems.has(publication.itemId);
+    setExpandedItems((current) => {
+      const next = new Set(current);
+      if (expanded) next.delete(publication.itemId);
+      else next.add(publication.itemId);
+      return next;
+    });
+    if (!expanded) loadOptions(publication);
+  }
+
+  const rows = displayRows(page.publications, optionsByItem, expandedItems);
   const columns: TableColumnsType<DisplayRow> = [
     {
       title: "PUBLICACIÓN", key: "publication", width: 300,
       onCell: (row) => ({ rowSpan: row.publicationRowSpan, style: groupCellStyle(row, true) }),
       render: (_, row) => row.publicationRowSpan > 0
-        ? <PromotionViewportLoader itemId={row.publication.itemId} onVisible={() => loadOptions(row.publication)}>
-          <PublicationCell publication={row.publication} />
-        </PromotionViewportLoader>
+        ? <PublicationCell
+          expanded={expandedItems.has(row.publication.itemId)}
+          onToggle={() => togglePublication(row.publication)}
+          publication={row.publication}
+        />
         : null,
     },
     {
@@ -118,8 +132,12 @@ export function PromotionsTable({ page }: Props) {
 function displayRows(
   publications: readonly PromotionRow[],
   cache: ReturnType<typeof usePromotionGlobalStore.getState>["optionsByItem"],
+  expandedItems: ReadonlySet<string>,
 ): DisplayRow[] {
   return publications.flatMap((publication) => {
+    if (!expandedItems.has(publication.itemId)) {
+      return [placeholderRow(publication, "collapsed")];
+    }
     const entry = cache[publication.itemId];
     if (!entry || entry.status === "loading") return [placeholderRow(publication, "loading")];
     if (entry.status === "error") return [placeholderRow(publication, "error")];
@@ -148,8 +166,19 @@ function statusOrder(status: string | null): number {
   return 3;
 }
 
-function PublicationCell({ publication }: Readonly<{ publication: PromotionRow }>) {
+function PublicationCell({ publication, expanded, onToggle }: Readonly<{
+  publication: PromotionRow;
+  expanded: boolean;
+  onToggle: () => void;
+}>) {
   return <Space align="start">
+    <Button
+      aria-label={`${expanded ? "Cerrar" : "Expandir"} ${publication.title}`}
+      icon={expanded ? <DownOutlined /> : <RightOutlined />}
+      onClick={onToggle}
+      size="small"
+      type="text"
+    />
     {publication.thumbnail ? <Image alt={publication.title} src={publication.thumbnail} width={56} height={56} preview={false} /> : null}
     <div>
       <Typography.Text strong>{publication.title}</Typography.Text><br />
@@ -161,6 +190,7 @@ function PublicationCell({ publication }: Readonly<{ publication: PromotionRow }
 }
 
 function PromotionCell({ row, onRetry }: Readonly<{ row: DisplayRow; onRetry: () => void }>) {
+  if (row.state === "collapsed") return <Typography.Text type="secondary">Expandí para ver promociones</Typography.Text>;
   if (row.state === "loading") return <FieldSkeleton label="Cargando promoción" />;
   if (row.state === "error") return <Space orientation="vertical"><Typography.Text type="danger">No se pudieron cargar.</Typography.Text><Button size="small" onClick={onRetry}>Reintentar</Button></Space>;
   if (row.state === "empty") return "Sin promociones disponibles";

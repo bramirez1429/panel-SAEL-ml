@@ -9,7 +9,7 @@ type Props = Readonly<{ page: PromotionsPage; activeSearch?: string }>;
 
 export function PromotionsCatalogClient({ page, activeSearch = "" }: Props) {
   return <div className="promotions-layout">
-    <PromotionSelectionSummary />
+    <PromotionSelectionSummary reviewOnly />
     <PromotionsPagination page={page}>
       {page.publications.length > 0
         ? <PromotionsTable page={page} />
