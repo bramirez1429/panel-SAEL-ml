@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import type {
   Publication,
@@ -91,7 +92,8 @@ describe("PublicationsView", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders real domain data in the success table", () => {
+  it("renders real domain data in the success table", async () => {
+    const user = userEvent.setup();
     render(
       <PublicationsView filters={filters} page={page} state="success" />,
     );
@@ -100,6 +102,7 @@ describe("PublicationsView", () => {
     expect(screen.getByText("Publicación real")).toBeInTheDocument();
     expect(screen.getByText("Familia")).toBeInTheDocument();
     expect(screen.getByText("ARS 1.000")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Acciones de/ }));
     expect(screen.getByRole("link", { name: "Ver detalle" })).toHaveAttribute(
       "href",
       "/publicaciones/publication-id?returnTo=%2Fpublicaciones%3Fpage%3D1%26search%3D%26type%3D%26status%3D",

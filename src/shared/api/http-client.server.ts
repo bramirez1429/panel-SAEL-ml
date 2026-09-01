@@ -80,6 +80,25 @@ export class HttpClient {
     }, options.timeoutMs);
   }
 
+  async postMultipart(
+    path: string,
+    body: FormData,
+    options: HttpPostOptions = {},
+  ): Promise<unknown> {
+    const response = await this.request(path, {
+      method: "POST",
+      headers: {
+        Accept: "application/json, text/plain;q=0.9",
+        ...(options.bearerToken
+          ? { Authorization: `Bearer ${options.bearerToken}` }
+          : {}),
+        ...(options.cookieHeader ? { Cookie: options.cookieHeader } : {}),
+      },
+      body,
+    }, options.timeoutMs);
+    return response.body;
+  }
+
   async patch(path: string, body?: unknown, options: HttpPatchOptions = {}): Promise<unknown> {
     const response = await this.patchResponse(path, body, options);
     return response.body;

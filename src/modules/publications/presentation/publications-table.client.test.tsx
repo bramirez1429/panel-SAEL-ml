@@ -15,7 +15,7 @@ const navigation = vi.hoisted(() => ({
 }));
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ back: navigation.back, push: navigation.push, refresh: navigation.refresh }),
+  useRouter: () => navigation,
   useSearchParams: () => navigation.searchParams,
 }));
 
@@ -32,29 +32,27 @@ const page: PublicationsPage = {
 
 const pageWithPublication: PublicationsPage = {
   ...page,
-  publications: [
-    {
-      id: "publication/id",
-      title: "Publicación real",
-      channel: "MERCADO_LIBRE",
-      status: "active",
-      thumbnailUrl: "https://example.com/thumb.jpg",
-      permalink: null,
-      price: { from: 1000, to: 1250, currency: null },
-      stock: 4,
-      sold: 3,
-      attributes: [],
-      group: {
-        key: "item:MLA1",
-        productId: "123e4567-e89b-42d3-a456-426614174000",
-        type: "LEGACY",
-        familyId: null,
-        userProductId: null,
-        itemId: "MLA1",
-        childrenCount: 0,
-      },
+  publications: [{
+    id: "publication/id",
+    title: "Publicación real",
+    channel: "MERCADO_LIBRE",
+    status: "active",
+    thumbnailUrl: "https://example.com/thumb.jpg",
+    permalink: null,
+    price: { from: 1000, to: 1250, currency: null },
+    stock: 4,
+    sold: 3,
+    attributes: [],
+    group: {
+      key: "item:MLA1",
+      productId: "123e4567-e89b-42d3-a456-426614174000",
+      type: "LEGACY",
+      familyId: null,
+      userProductId: null,
+      itemId: "MLA1",
+      childrenCount: 0,
     },
-  ],
+  }],
   count: 1,
 };
 
@@ -68,26 +66,29 @@ describe("PublicationsTable", () => {
   it("uses the backend cursor for the next page while preserving filters", async () => {
     const user = userEvent.setup();
     render(<PublicationsTable page={pageWithPublication} />);
-
     await user.click(screen.getByRole("button", { name: "Siguiente" }));
-
     expect(navigation.push).toHaveBeenCalledWith(
       "/publicaciones?page=2&cursor=cursor-2&search=campera&type=LEGACY&status=active",
     );
   });
 
-  it("links each action to the internal publication detail", () => {
+  it("shows the three-dot actions with preserved detail and similar URLs", async () => {
+    const user = userEvent.setup();
     render(<PublicationsTable page={pageWithPublication} />);
+    await user.click(screen.getByRole("button", { name: "Acciones de Publicación real" }));
 
     expect(screen.getByRole("link", { name: "Ver detalle" })).toHaveAttribute(
       "href",
       "/publicaciones/publication%2Fid?returnTo=%2Fpublicaciones%3Fpage%3D1%26cursor%3D%26search%3Dcampera%26type%3DLEGACY%26status%3Dactive",
     );
+    expect(screen.getByRole("link", { name: "Publicar similar" })).toHaveAttribute(
+      "href",
+      "/publicaciones/similar?sourceKey=item%3AMLA1&returnTo=%2Fpublicaciones%3Fpage%3D1%26cursor%3D%26search%3Dcampera%26type%3DLEGACY%26status%3Dactive",
+    );
   });
 
   it("renders real grouped publication fields in the Ant Design table", () => {
     render(<PublicationsTable page={pageWithPublication} />);
-
     expect(screen.getByRole("region", { name: "Tabla de publicaciones" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Volver a replicar" })).not.toBeInTheDocument();
     expect(screen.getByText("Publicación real")).toBeInTheDocument();
@@ -95,23 +96,14 @@ describe("PublicationsTable", () => {
     expect(screen.getAllByText("Anterior").length).toBeGreaterThan(0);
     expect(screen.getByText("1.000 — 1.250")).toBeInTheDocument();
     expect(screen.getByText("3")).toBeInTheDocument();
-    expect(
-      screen.getByRole("img", { name: "Imagen de Publicación real" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Imagen de Publicación real" })).toBeInTheDocument();
   });
 
   it("renders a clean placeholder when thumbnail is missing", () => {
-    render(
-      <PublicationsTable
-        page={{
-          ...pageWithPublication,
-          publications: [
-            { ...pageWithPublication.publications[0]!, thumbnailUrl: null },
-          ],
-        }}
-      />,
-    );
-
+    render(<PublicationsTable page={{
+      ...pageWithPublication,
+      publications: [{ ...pageWithPublication.publications[0]!, thumbnailUrl: null }],
+    }} />);
     expect(screen.getByTitle("Imagen no disponible")).toBeInTheDocument();
   });
 
@@ -119,9 +111,7 @@ describe("PublicationsTable", () => {
     const action = vi.fn().mockResolvedValue({ ok: true, action: "created" as const });
     const user = userEvent.setup();
     render(<PublicationsTable page={pageWithPublication} replicateAction={action} />);
-
     await user.click(screen.getByRole("button", { name: "Replicar TN" }));
-
     expect(action).not.toHaveBeenCalled();
     expect(action).not.toHaveBeenCalledWith("123e4567-e89b-42d3-a456-426614174000");
   });

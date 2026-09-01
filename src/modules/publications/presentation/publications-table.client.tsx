@@ -1,8 +1,9 @@
 "use client";
 
 import { useTransition, type ReactNode } from "react";
-import { Button, Image, Space, Table, Tag } from "antd";
+import { Button, Dropdown, Image, Space, Table, Tag } from "antd";
 import type { TableColumnsType } from "antd";
+import { MoreOutlined } from "@ant-design/icons";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -154,12 +155,35 @@ function createColumns(
     title: "Acciones",
     key: "actions",
     render: (_, publication) => (
-      <Link
-        className={styles.detailLink}
-        href={createDetailHref(publication.id, searchParams)}
+      <Dropdown
+        menu={{
+          items: [
+            {
+              key: "detail",
+              label: (
+                <Link href={createDetailHref(publication.id, searchParams)}>
+                  Ver detalle
+                </Link>
+              ),
+            },
+            {
+              key: "similar",
+              label: (
+                <Link href={createSimilarHref(publication.group.key, searchParams)}>
+                  Publicar similar
+                </Link>
+              ),
+            },
+          ],
+        }}
+        trigger={["click"]}
       >
-        Ver detalle
-      </Link>
+        <Button
+          aria-label={`Acciones de ${publication.title}`}
+          icon={<MoreOutlined />}
+          type="text"
+        />
+      </Dropdown>
     ),
     width: 95,
   },
@@ -227,13 +251,23 @@ export function PublicationsTable({
   );
 }
 
-function createDetailHref(
+export function createDetailHref(
   publicationId: string,
   searchParams: URLSearchParams,
 ): string {
   const query = searchParams.toString();
   const returnTo = query ? `/publicaciones?${query}` : "/publicaciones";
   return `/publicaciones/${encodeURIComponent(publicationId)}?returnTo=${encodeURIComponent(returnTo)}`;
+}
+
+export function createSimilarHref(
+  sourceKey: string,
+  searchParams: URLSearchParams,
+): string {
+  const query = searchParams.toString();
+  const returnTo = query ? `/publicaciones?${query}` : "/publicaciones";
+  const params = new URLSearchParams({ sourceKey, returnTo });
+  return `/publicaciones/similar?${params.toString()}`;
 }
 
 function formatPrice(publication: Publication): ReactNode {
