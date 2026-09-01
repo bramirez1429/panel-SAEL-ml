@@ -15,19 +15,24 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("PublicationSearchBar", () => {
-  beforeEach(() => navigation.push.mockReset());
+  beforeEach(() => {
+    navigation.push.mockReset();
+    sessionStorage.clear();
+  });
   afterEach(cleanup);
 
   it("normaliza MLA, conserva filtros y elimina cursor", async () => {
     const user = userEvent.setup();
+    sessionStorage.setItem("promotions:cursor-history:anterior", "{\"2\":\"old\"}");
     render(<PublicationSearchBar initialSearch="" />);
 
     await user.type(screen.getByRole("textbox", { name: "Buscar publicaciones" }), "mla1947917494");
     fireEvent.submit(screen.getByRole("textbox", { name: "Buscar publicaciones" }).closest("form")!);
 
     await waitFor(() => expect(navigation.push).toHaveBeenCalledWith(
-      "/promociones?promotionStatus=AVAILABLE&search=MLA1947917494",
+      "/promociones?promotionStatus=AVAILABLE&page=1&search=MLA1947917494",
     ));
+    expect(sessionStorage.length).toBe(0);
   });
 
   it("limpia la búsqueda y vuelve al listado normal", async () => {
@@ -36,6 +41,6 @@ describe("PublicationSearchBar", () => {
 
     await user.click(screen.getByRole("button", { name: "Limpiar" }));
 
-    await waitFor(() => expect(navigation.push).toHaveBeenCalledWith("/promociones?promotionStatus=AVAILABLE"));
+    await waitFor(() => expect(navigation.push).toHaveBeenCalledWith("/promociones?promotionStatus=AVAILABLE&page=1"));
   });
 });

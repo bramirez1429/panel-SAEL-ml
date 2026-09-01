@@ -46,6 +46,7 @@ describe("vista global de promociones", () => {
     resetPromotionGlobalStore();
     mocks.getOptions.mockReset();
     mocks.push.mockReset();
+    sessionStorage.clear();
     [...mocks.searchParams.keys()].forEach((key) => mocks.searchParams.delete(key));
   });
   afterEach(cleanup);
@@ -178,8 +179,9 @@ describe("vista global de promociones", () => {
     expect(participate).toHaveClass("ant-btn-primary");
     expect(screen.queryByText("Seleccionar todas")).not.toBeInTheDocument();
     await user.click(checkbox);
-    await user.click(screen.getByRole("button", { name: "Siguiente" }));
-    expect(mocks.push).toHaveBeenCalledWith("/promociones?cursor=next");
+    expect(screen.queryByRole("button", { name: "Siguiente" })).not.toBeInTheDocument();
+    await user.click(screen.getByTitle("2"));
+    expect(mocks.push).toHaveBeenCalledWith("/promociones?page=2&cursor=next");
     rerender(<PromotionsCatalogClient page={page([publication({ itemId: "MLA2", title: "Buzo" })])} />);
     expect(screen.getByText("1 promoción seleccionada")).toBeInTheDocument();
   });
@@ -211,9 +213,9 @@ describe("vista global de promociones", () => {
     mocks.getOptions.mockResolvedValue([]);
     render(<PromotionsCatalogClient page={page([publication()], false, "next")} activeSearch="remera mujer" />);
 
-    await user.click(screen.getByRole("button", { name: "Siguiente" }));
+    await user.click(screen.getByTitle("2"));
 
-    expect(mocks.push).toHaveBeenCalledWith("/promociones?search=remera+mujer&cursor=next");
+    expect(mocks.push).toHaveBeenCalledWith("/promociones?search=remera+mujer&page=2&cursor=next");
   });
 });
 

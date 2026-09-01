@@ -14,7 +14,10 @@ describe("PromotionsSearchTopbar", () => {
   afterEach(cleanup);
 
   it("envuelve una sola instancia del buscador conservando el search SSR", () => {
-    render(<PromotionsSearchTopbar initialSearch="MLA1947917494" />);
+    render(<>
+      <p>Promociones de tus publicaciones de Mercado Libre.</p>
+      <PromotionsSearchTopbar initialSearch="MLA1947917494" />
+    </>);
 
     const topbar = screen.getByTestId("promotions-search-topbar");
     const stickyClass = styles.topbar;
@@ -23,5 +26,8 @@ describe("PromotionsSearchTopbar", () => {
     expect(topbar).toHaveClass(stickyClass);
     expect(screen.getAllByRole("form")).toHaveLength(1);
     expect(screen.getByRole("form")).toHaveAttribute("data-initial-search", "MLA1947917494");
+    expect(topbar).not.toContainElement(
+      screen.getByText("Promociones de tus publicaciones de Mercado Libre."),
+    );
   });
 });

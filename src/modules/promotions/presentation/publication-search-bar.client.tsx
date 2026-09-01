@@ -6,6 +6,7 @@ import { useState, useTransition, type FormEvent } from "react";
 
 import { parsePublicationSearch } from "../domain/publication-search.parser";
 import styles from "./publication-search-bar.module.css";
+import { resetPromotionCursorHistory } from "./promotions-cursor-history.client";
 
 type Props = Readonly<{ initialSearch: string }>;
 
@@ -19,7 +20,9 @@ export function PublicationSearchBar({ initialSearch }: Props) {
   function navigate(term: string): void {
     const parsed = parsePublicationSearch(term);
     const params = new URLSearchParams(searchParams.toString());
+    resetPromotionCursorHistory();
     params.delete("cursor");
+    params.set("page", "1");
     if (parsed) params.set("search", parsed.value);
     else params.delete("search");
     const query = params.toString();

@@ -1,0 +1,9 @@
+.tableArea {
+  scroll-margin-top: calc(var(--dashboard-header-height, 0px) + 88px);
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
