@@ -1,6 +1,6 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PromotionRow, PromotionsPage } from "../domain/promotion.model";
 import type { PromotionOption } from "../domain/promotions.repository";
@@ -26,7 +26,22 @@ vi.mock("./promotion-bulk-application-modal.client", () => ({
   PromotionBulkApplicationModal: () => <div role="dialog">Aplicación masiva</div>,
 }));
 
+class ImmediateIntersectionObserver {
+  readonly root = null;
+  readonly rootMargin = "0px";
+  readonly thresholds = [0];
+
+  constructor(private readonly callback: IntersectionObserverCallback) {}
+  disconnect(): void {}
+  unobserve(): void {}
+  takeRecords(): IntersectionObserverEntry[] { return []; }
+  observe(target: Element): void {
+    queueMicrotask(() => this.callback([{ isIntersecting: true, target } as IntersectionObserverEntry], this as unknown as IntersectionObserver));
+  }
+}
+
 describe("vista global de promociones", () => {
+  beforeAll(() => vi.stubGlobal("IntersectionObserver", ImmediateIntersectionObserver));
   beforeEach(() => {
     resetPromotionGlobalStore();
     mocks.getOptions.mockReset();
@@ -36,25 +51,21 @@ describe("vista global de promociones", () => {
   });
   afterEach(cleanup);
 
-  it("carga opciones solamente al expandir y reutiliza la caché", async () => {
+  it("carga opciones al entrar en viewport, sin desplegable, y reutiliza la caché", async () => {
     mocks.getOptions.mockResolvedValue([candidate()]);
     const { rerender } = render(<PromotionsCatalogClient page={page([publication()])} />);
 
     expect(screen.getByText("Remera")).toBeInTheDocument();
-    expect(mocks.getOptions).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Expandir Remera" }));
+    expect(screen.queryByRole("button", { name: /Expandir|Cerrar/ })).not.toBeInTheDocument();
     expect(await screen.findByText("Cyber Fest")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Cerrar Remera" }));
-    fireEvent.click(screen.getByRole("button", { name: "Expandir Remera" }));
     rerender(<PromotionsCatalogClient page={page([publication()])} />);
     await waitFor(() => expect(mocks.getOptions).toHaveBeenCalledTimes(1));
-  }, 15_000);
+  });
 
   it("muestra un skeleton independiente en cada campo mientras carga", async () => {
     let resolveOptions: (options: readonly PromotionOption[]) => void = () => undefined;
     mocks.getOptions.mockReturnValue(new Promise((resolve) => { resolveOptions = resolve; }));
     render(<PromotionsCatalogClient page={page([publication()])} />);
-    fireEvent.click(screen.getByRole("button", { name: "Expandir Remera" }));
 
     for (const label of ["Cargando selección", "Cargando promoción", "Cargando descuento", "Cargando precio final", "Cargando importe neto", "Cargando tareas"]) {
       expect(await screen.findByLabelText(label)).toBeInTheDocument();
@@ -71,7 +82,6 @@ describe("vista global de promociones", () => {
       candidate({ id: "P-3", name: "Disponible tres" }),
     ]);
     render(<PromotionsCatalogClient page={page([publication()])} />);
-    fireEvent.click(screen.getByRole("button", { name: "Expandir Remera" }));
     expect(await screen.findByText("Disponible dos")).toBeInTheDocument();
     const dataRows = screen.getAllByRole("row").slice(1);
 
@@ -95,7 +105,6 @@ describe("vista global de promociones", () => {
       }),
     ]);
     render(<PromotionsCatalogClient page={page([publication()])} />);
-    fireEvent.click(screen.getByRole("button", { name: "Expandir Remera" }));
 
     expect(await screen.findByText("Cyber Fest")).toBeInTheDocument();
     expect(screen.getByText("31/ago al 14/sep")).toBeInTheDocument();
@@ -109,7 +118,6 @@ describe("vista global de promociones", () => {
       candidate({ id: "P-3", name: "Baja exacta", status: "pending", canApply: false, canRemove: true }),
     ]);
     render(<PromotionsCatalogClient page={page([publication()])} />);
-    fireEvent.click(screen.getByRole("button", { name: "Expandir Remera" }));
 
     const exactRow = (await screen.findByText("Baja exacta")).closest("tr");
     expect(exactRow).not.toBeNull();
@@ -122,7 +130,6 @@ describe("vista global de promociones", () => {
   it("carga promociones para una publicación legacy", async () => {
     mocks.getOptions.mockResolvedValue([candidate({ name: "Legacy Promo" })]);
     render(<PromotionsCatalogClient page={page([publication({ familyId: null })])} />);
-    fireEvent.click(screen.getByRole("button", { name: "Expandir Remera" }));
 
     expect(await screen.findByText("Legacy Promo")).toBeInTheDocument();
     expect(mocks.getOptions).toHaveBeenCalledWith("MLA1");
@@ -132,7 +139,6 @@ describe("vista global de promociones", () => {
   it("muestra sugerido, rango y neto sin interpretar price cero", async () => {
     mocks.getOptions.mockResolvedValue([candidate({ promotionPrice: 0, estimatedNetAmount: 12_345 })]);
     render(<PromotionsCatalogClient page={page([publication()])} />);
-    fireEvent.click(screen.getByRole("button", { name: "Expandir Remera" }));
 
     expect(await screen.findByText(`${money(14_449)} sugerido`)).toBeInTheDocument();
     expect(screen.getByText(`Rango ${money(3_400)} - ${money(15_299)}`)).toBeInTheDocument();
@@ -143,7 +149,6 @@ describe("vista global de promociones", () => {
   it("prioriza el neto real sobre el estimado sugerido", async () => {
     mocks.getOptions.mockResolvedValue([candidate({ estimatedNetAmount: 12_345, suggestedEstimatedNetAmount: 44_344 })]);
     render(<PromotionsCatalogClient page={page([publication()])} />);
-    fireEvent.click(screen.getByRole("button", { name: "Expandir Remera" }));
 
     expect(await screen.findByText(money(12_345))).toBeInTheDocument();
     expect(screen.queryByText(/44\.344/)).not.toBeInTheDocument();
@@ -152,7 +157,6 @@ describe("vista global de promociones", () => {
   it("muestra el neto sugerido real informado por backend sin recalcularlo", async () => {
     mocks.getOptions.mockResolvedValue([candidate({ estimatedNetAmount: null, suggestedEstimatedNetAmount: 44_344 })]);
     render(<PromotionsCatalogClient page={page([publication()])} />);
-    fireEvent.click(screen.getByRole("button", { name: "Expandir Remera" }));
 
     expect(await screen.findByText(`≈ ${money(44_344)}`)).toBeInTheDocument();
     expect(screen.getByText("con precio sugerido")).toBeInTheDocument();
@@ -161,39 +165,55 @@ describe("vista global de promociones", () => {
   it("explica cuándo el neto depende de elegir precio y no hay estimación", async () => {
     mocks.getOptions.mockResolvedValue([candidate({ estimatedNetAmount: null, suggestedEstimatedNetAmount: null })]);
     render(<PromotionsCatalogClient page={page([publication()])} />);
-    fireEvent.click(screen.getByRole("button", { name: "Expandir Remera" }));
 
     expect(await screen.findByText("Se calcula al elegir precio")).toBeInTheDocument();
   });
 
   it("selecciona candidates, conserva la selección al paginar y usa botón primary", async () => {
+    const user = userEvent.setup();
     mocks.getOptions.mockResolvedValue([candidate()]);
     const { rerender } = render(<PromotionsCatalogClient page={page([publication()], false, "next")} />);
-    fireEvent.click(screen.getByRole("button", { name: "Expandir Remera" }));
     const checkbox = await screen.findByRole("checkbox", { name: "Seleccionar Cyber Fest" });
     const participate = screen.getByRole("button", { name: "Participar" });
 
     expect(participate).toHaveClass("ant-btn-primary");
     expect(screen.queryByText("Seleccionar todas")).not.toBeInTheDocument();
-    fireEvent.click(checkbox);
-    const bulkReview = screen.getByRole("button", { name: "Participar en las seleccionadas" });
-    expect(bulkReview).toBeInTheDocument();
-    fireEvent.click(checkbox);
-    expect(screen.queryByRole("button", { name: "Participar en las seleccionadas" })).not.toBeInTheDocument();
-    fireEvent.click(checkbox);
+    await user.click(checkbox);
     expect(screen.queryByRole("button", { name: "Siguiente" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTitle("2"));
+    await user.click(screen.getByTitle("2"));
     expect(mocks.push).toHaveBeenCalledWith("/promociones?page=2&cursor=next");
     rerender(<PromotionsCatalogClient page={page([publication({ itemId: "MLA2", title: "Buzo" })])} />);
     expect(screen.getByText("1 promoción seleccionada")).toBeInTheDocument();
   });
 
+  it("limita a tres las cargas simultáneas", async () => {
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    let active = 0;
+    let maximum = 0;
+    mocks.getOptions.mockImplementation(async () => {
+      active += 1;
+      maximum = Math.max(maximum, active);
+      await gate;
+      active -= 1;
+      return [];
+    });
+    render(<PromotionsCatalogClient page={page(Array.from({ length: 6 }, (_, index) => publication({ itemId: `MLA${index + 1}`, title: `Publicación ${index + 1}` })))} />);
+
+    await waitFor(() => expect(mocks.getOptions).toHaveBeenCalledTimes(3));
+    expect(maximum).toBe(3);
+    release();
+    await waitFor(() => expect(mocks.getOptions).toHaveBeenCalledTimes(6));
+    expect(maximum).toBeLessThanOrEqual(3);
+  });
+
   it("conserva search al avanzar la paginación", async () => {
+    const user = userEvent.setup();
     mocks.searchParams.set("search", "remera mujer");
     mocks.getOptions.mockResolvedValue([]);
     render(<PromotionsCatalogClient page={page([publication()], false, "next")} activeSearch="remera mujer" />);
 
-    fireEvent.click(screen.getByTitle("2"));
+    await user.click(screen.getByTitle("2"));
 
     expect(mocks.push).toHaveBeenCalledWith("/promociones?search=remera+mujer&page=2&cursor=next");
   });
