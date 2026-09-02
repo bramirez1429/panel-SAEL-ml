@@ -7,13 +7,14 @@ import {
   Checkbox,
   Form,
   Input,
+  Modal,
   Select,
   Space,
   Spin,
   Typography,
 } from "antd";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReplicationOptions, TiendanubeCategory } from "@/modules/tiendanube/domain/tiendanube-replication.model";
 import type { ReplicatePublicationAction } from "@/modules/tiendanube/presentation/tiendanube-replication-cell.client";
 import type {
@@ -68,7 +69,81 @@ export function SimilarPublicationForm({
   const [creationResult, setCreationResult] = useState<SimilarPublicationCreationResult | null>(null);
   const [tiendanube, setTiendanube] = useState<TiendanubePublishResult>({ status: "NOT_REQUESTED" });
   const replicationOptionsRef = useRef<ReplicationOptions | null>(null);
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialValues = createInitialSimilarPublicationValues(draft);
+  const storageKey = `similar-publication-draft:${draft.sourceKey}`;
+  const [savedDraft, setSavedDraft] =
+    useState<SimilarPublicationFormValues | null>(null);
+  const [restoreOpen, setRestoreOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = window.sessionStorage.getItem(storageKey);
+      if (!raw) return;
+
+      const parsed = JSON.parse(raw);
+
+      if (
+        parsed?.version === 1 &&
+        parsed?.values &&
+        typeof parsed.values === "object"
+      ) {
+        setSavedDraft(parsed.values as SimilarPublicationFormValues);
+        setRestoreOpen(true);
+      }
+    } catch {
+      window.sessionStorage.removeItem(storageKey);
+    }
+  }, [storageKey]);
+
+  useEffect(() => {
+    return () => {
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+      }
+    };
+  }, []);
+
+  const scheduleAutosave = (values: SimilarPublicationFormValues) => {
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+    }
+
+    autosaveTimerRef.current = setTimeout(() => {
+      window.sessionStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          version: 1,
+          savedAt: new Date().toISOString(),
+          values,
+        }),
+      );
+    }, 500);
+  };
+
+  const restoreSavedDraft = () => {
+    if (savedDraft) {
+      form.setFieldsValue(savedDraft);
+    }
+
+    setRestoreOpen(false);
+  };
+
+  const discardSavedDraft = () => {
+    window.sessionStorage.removeItem(storageKey);
+    setSavedDraft(null);
+    setRestoreOpen(false);
+  };
+
+  const clearSavedDraft = () => {
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
+
+    window.sessionStorage.removeItem(storageKey);
+    setSavedDraft(null);
+  };
 
   const updateUploading = (uploading: boolean) => {
     setPendingUploads((current) => Math.max(0, current + (uploading ? 1 : -1)));
@@ -115,6 +190,11 @@ export function SimilarPublicationForm({
         return;
       }
       setCreationResult(created.result);
+
+      if (created.result.status === "SUCCESS") {
+        clearSavedDraft();
+      }
+
       const categoryId = values.tiendanubeCategoryId;
       if (values.publishToTiendanube && categoryId !== undefined) {
         const options: ReplicationOptions = {
@@ -168,7 +248,28 @@ export function SimilarPublicationForm({
       form={form}
       initialValues={initialValues}
       layout="vertical"
+      onValuesChange={(_, values) => {
+        scheduleAutosave(values as SimilarPublicationFormValues);
+      }}
     >
+      <Modal
+        cancelText="Descartar"
+        closable={false}
+        maskClosable={false}
+        okText="Restaurar"
+        onCancel={discardSavedDraft}
+        onOk={restoreSavedDraft}
+        open={restoreOpen}
+        title="Borrador encontrado"
+      >
+        <Typography.Paragraph>
+          Encontramos cambios que habías hecho anteriormente en esta publicación.
+        </Typography.Paragraph>
+        <Typography.Text type="secondary">
+          Podés restaurarlos o descartarlos y empezar nuevamente.
+        </Typography.Text>
+      </Modal>
+
       <Typography.Title level={2}>Publicar similar</Typography.Title>
       <Card title="Información general">
         <div className={styles.generalGrid}>
