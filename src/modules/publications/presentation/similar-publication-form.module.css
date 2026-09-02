@@ -24,6 +24,15 @@
   margin-bottom: 24px;
 }
 
+.commonPrice {
+  max-width: 280px;
+  margin-bottom: 20px;
+}
+
+.commonPrice :global(.ant-form-item) {
+  margin-bottom: 4px;
+}
+
 .packageLayout {
   display: grid;
   grid-template-columns: minmax(280px, 0.9fr) minmax(320px, 1.1fr);

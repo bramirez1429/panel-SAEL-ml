@@ -16,6 +16,7 @@ export type SimilarPublicationFormValues = {
   buyingMode?: string;
   publishToTiendanube: boolean;
   tiendanubeCategoryId?: number;
+  commonPrice?: number | null;
   variants: Record<string, {
     price: number | null;
     stock: number | null;
@@ -38,6 +39,7 @@ export function createInitialSimilarPublicationValues(
     listingTypeId: draft.listingTypeId ?? undefined,
     buyingMode: draft.buyingMode ?? undefined,
     publishToTiendanube: false,
+    commonPrice: commonPriceForDraft(draft),
     variants: Object.fromEntries(draft.variants.map((variant) => [
       variant.sourceReference,
       { price: variant.price, stock: variant.stock, sku: "" },
@@ -81,7 +83,9 @@ export function buildSimilarPublicationInput(
       ];
       return {
         sourceReference: variant.sourceReference,
-        price: edited?.price ?? 0,
+        price: commonPriceForDraft(draft) !== null
+          ? values.commonPrice ?? 0
+          : edited?.price ?? 0,
         stock: edited?.stock ?? 0,
         sku: optional(edited?.sku),
         attributes: variant.attributes.map((attribute) => mapAttribute(
@@ -92,6 +96,29 @@ export function buildSimilarPublicationInput(
       };
     }),
   };
+}
+
+export function commonPriceForDraft(
+  draft: SimilarPublicationDraft,
+): number | null {
+  if (draft.variants.length === 0) return null;
+
+  const prices = draft.variants.map(({ price }) => price);
+
+  if (prices.some((price) => typeof price !== "number")) {
+    return null;
+  }
+
+  const first = prices[0];
+
+  if (
+    typeof first !== "number" ||
+    !prices.every((price) => price === first)
+  ) {
+    return null;
+  }
+
+  return first;
 }
 
 export function variantsWithoutPictures(

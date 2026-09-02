@@ -11,6 +11,7 @@ import { SimilarPublicationImages } from "./similar-publication-images.client";
 
 type Props = Readonly<{
   variants: readonly SimilarPublicationVariant[];
+  showPriceColumn?: boolean;
   picturesByVariant: Readonly<Record<string, readonly SimilarPublicationPicture[]>>;
   onPicturesChange: (
     sourceReference: string,
@@ -22,6 +23,7 @@ type Props = Readonly<{
 
 export function SimilarPublicationVariants({
   variants,
+  showPriceColumn = true,
   picturesByVariant,
   onPicturesChange,
   uploadAction,
@@ -53,6 +55,7 @@ export function SimilarPublicationVariants({
     {
       title: "Precio",
       key: "price",
+      hidden: !showPriceColumn,
       render: (_, variant) => (
         <Form.Item
           name={["variants", variant.sourceReference, "price"]}

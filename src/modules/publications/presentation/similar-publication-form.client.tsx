@@ -7,6 +7,7 @@ import {
   Checkbox,
   Form,
   Input,
+  InputNumber,
   Modal,
   Select,
   Space,
@@ -28,6 +29,7 @@ import type {
 } from "./similar-publication-action.types";
 import {
   buildSimilarPublicationInput,
+  commonPriceForDraft,
   createInitialSimilarPublicationValues,
   familyNameIsUnchanged,
   type SimilarPublicationFormValues,
@@ -72,6 +74,7 @@ export function SimilarPublicationForm({
   const replicationOptionsRef = useRef<ReplicationOptions | null>(null);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialValues = createInitialSimilarPublicationValues(draft);
+  const commonPrice = commonPriceForDraft(draft);
   const storageKey = `similar-publication-draft:${draft.sourceKey}`;
   const [savedDraft, setSavedDraft] =
     useState<SimilarPublicationFormValues | null>(null);
@@ -352,7 +355,36 @@ export function SimilarPublicationForm({
       </Card>
 
       <Card title="Variantes">
+        {commonPrice !== null ? (
+          <div className={styles.commonPrice}>
+            <Form.Item
+              label="Precio general"
+              name="commonPrice"
+              rules={[
+                {
+                  required: true,
+                  type: "number",
+                  min: 0.01,
+                  message: "Ingresá un precio mayor a 0.",
+                },
+              ]}
+            >
+              <InputNumber
+                min={0.01}
+                precision={2}
+                prefix="$"
+                style={{ width: "100%" }}
+              />
+            </Form.Item>
+
+            <Typography.Text type="secondary">
+              Este precio se aplicará a todas las variantes.
+            </Typography.Text>
+          </div>
+        ) : null}
+
         <SimilarPublicationVariants
+          showPriceColumn={commonPrice === null}
           onPicturesChange={(sourceReference, pictures) => setVariantPictures((current) => ({
             ...current,
             [sourceReference]: pictures,
