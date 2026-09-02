@@ -61,10 +61,18 @@ export function SimilarPublicationImages({
       onChange([...pictures, result.picture]);
       onSuccess?.({}, file);
       messageApi.success("Imagen subida.");
-    } catch {
-      const error = new Error("No se pudo subir la imagen.");
+    } catch (cause: unknown) {
+      const message =
+        cause instanceof Error && cause.message.trim()
+          ? cause.message
+          : "No se pudo subir la imagen.";
+
+      const error =
+        cause instanceof Error ? cause : new Error(message);
+
+      console.error("[Publicar similar] Error subiendo imagen:", cause);
       onError?.(error);
-      messageApi.error(error.message);
+      messageApi.error(message);
     } finally {
       setUploading(false);
       onUploadingChange(false);

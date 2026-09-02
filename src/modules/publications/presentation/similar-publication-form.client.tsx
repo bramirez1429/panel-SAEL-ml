@@ -36,7 +36,6 @@ import {
   type VariantPictures,
   variantsWithoutPictures,
 } from "./similar-publication-form.model";
-import { SimilarPublicationImages } from "./similar-publication-images.client";
 import { SimilarPublicationPackage } from "./similar-publication-package.client";
 import { SimilarPublicationResult, type TiendanubePublishResult } from "./similar-publication-result";
 import { SimilarPublicationVariants } from "./similar-publication-variants.client";
@@ -178,10 +177,10 @@ export function SimilarPublicationForm({
       form.setFieldsValue(savedDraft.values);
       setVisualValues(savedDraft.values);
 
-      commonPicturesRef.current = savedDraft.commonPictures;
+      commonPicturesRef.current = [];
       variantPicturesRef.current = savedDraft.variantPictures;
 
-      setCommonPictures(savedDraft.commonPictures);
+      setCommonPictures([]);
       setVariantPictures(savedDraft.variantPictures);
     }
 
@@ -208,18 +207,6 @@ export function SimilarPublicationForm({
     setPendingUploads((current) => Math.max(0, current + (uploading ? 1 : -1)));
   };
 
-  const updateCommonPictures = (
-    pictures: readonly SimilarPublicationPicture[],
-  ) => {
-    commonPicturesRef.current = pictures;
-    setCommonPictures(pictures);
-
-    scheduleAutosave(
-      form.getFieldsValue(true) as SimilarPublicationFormValues,
-      pictures,
-      variantPicturesRef.current,
-    );
-  };
 
   const updateVariantPictures = (
     sourceReference: string,
@@ -376,7 +363,7 @@ export function SimilarPublicationForm({
       <Modal
         cancelText="Descartar"
         closable={false}
-        maskClosable={false}
+        mask={{ closable: false }}
         okText="Restaurar"
         onCancel={discardSavedDraft}
         onOk={restoreSavedDraft}
@@ -424,11 +411,11 @@ export function SimilarPublicationForm({
             <br />
             <Typography.Text type="secondary">
               {
-                commonPictures.length +
-                Object.values(variantPictures).reduce(
-                  (total, pictures) => total + pictures.length,
-                  0,
-                )
+                new Set(
+                  Object.values(variantPictures).flatMap((pictures) =>
+                    pictures.map(({ id }) => id),
+                  ),
+                ).size
               }{" "}
               imágenes cargadas.
             </Typography.Text>
@@ -528,19 +515,7 @@ export function SimilarPublicationForm({
         <Form.Item label="Descripción" name="description"><Input.TextArea rows={5} /></Form.Item>
       </Card>
 
-      <Card title="Imágenes generales">
-        <Typography.Paragraph type="secondary">
-          Las fotos originales no se copian. Estas imágenes se aplican a todas las variantes.
-        </Typography.Paragraph>
-        <SimilarPublicationImages
-          onChange={updateCommonPictures}
-          onUploadingChange={updateUploading}
-          pictures={commonPictures}
-          uploadAction={uploadAction}
-        />
-      </Card>
-
-      <Card title="Variantes">
+      <Card title="Fotos y variantes">
         <SimilarPublicationVariants
           commonPictures={commonPictures}
           formValues={visualValues}
