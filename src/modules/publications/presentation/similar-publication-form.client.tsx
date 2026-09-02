@@ -53,6 +53,12 @@ type Props = Readonly<{
 
 type PublishStage = "IDLE" | "PUBLISHING_ML" | "REPLICATING_TN";
 
+type SavedSimilarPublicationDraft = Readonly<{
+  values: SimilarPublicationFormValues;
+  commonPictures: readonly SimilarPublicationPicture[];
+  variantPictures: VariantPictures;
+}>;
+
 export function SimilarPublicationForm({
   draft,
   returnTo,
@@ -69,6 +75,8 @@ export function SimilarPublicationForm({
   const [pendingUploads, setPendingUploads] = useState(0);
   const [commonPictures, setCommonPictures] = useState<readonly SimilarPublicationPicture[]>([]);
   const [variantPictures, setVariantPictures] = useState<VariantPictures>({});
+  const commonPicturesRef = useRef<readonly SimilarPublicationPicture[]>([]);
+  const variantPicturesRef = useRef<VariantPictures>({});
   const [creationResult, setCreationResult] = useState<SimilarPublicationCreationResult | null>(null);
   const [tiendanube, setTiendanube] = useState<TiendanubePublishResult>({ status: "NOT_REQUESTED" });
   const replicationOptionsRef = useRef<ReplicationOptions | null>(null);
@@ -77,7 +85,7 @@ export function SimilarPublicationForm({
   const commonPrice = commonPriceForDraft(draft);
   const storageKey = `similar-publication-draft:${draft.sourceKey}`;
   const [savedDraft, setSavedDraft] =
-    useState<SimilarPublicationFormValues | null>(null);
+    useState<SavedSimilarPublicationDraft | null>(null);
   const [restoreOpen, setRestoreOpen] = useState(false);
 
   useEffect(() => {
@@ -88,11 +96,35 @@ export function SimilarPublicationForm({
       const parsed = JSON.parse(raw);
 
       if (
+        parsed?.version === 2 &&
+        parsed?.values &&
+        typeof parsed.values === "object"
+      ) {
+        setSavedDraft({
+          values: parsed.values as SimilarPublicationFormValues,
+          commonPictures: Array.isArray(parsed.commonPictures)
+            ? parsed.commonPictures as readonly SimilarPublicationPicture[]
+            : [],
+          variantPictures:
+            parsed.variantPictures &&
+            typeof parsed.variantPictures === "object"
+              ? parsed.variantPictures as VariantPictures
+              : {},
+        });
+        setRestoreOpen(true);
+        return;
+      }
+
+      if (
         parsed?.version === 1 &&
         parsed?.values &&
         typeof parsed.values === "object"
       ) {
-        setSavedDraft(parsed.values as SimilarPublicationFormValues);
+        setSavedDraft({
+          values: parsed.values as SimilarPublicationFormValues,
+          commonPictures: [],
+          variantPictures: {},
+        });
         setRestoreOpen(true);
       }
     } catch {
@@ -108,7 +140,11 @@ export function SimilarPublicationForm({
     };
   }, []);
 
-  const scheduleAutosave = (values: SimilarPublicationFormValues) => {
+  const scheduleAutosave = (
+    values: SimilarPublicationFormValues,
+    nextCommonPictures = commonPicturesRef.current,
+    nextVariantPictures = variantPicturesRef.current,
+  ) => {
     if (autosaveTimerRef.current) {
       clearTimeout(autosaveTimerRef.current);
     }
@@ -117,9 +153,11 @@ export function SimilarPublicationForm({
       window.sessionStorage.setItem(
         storageKey,
         JSON.stringify({
-          version: 1,
+          version: 2,
           savedAt: new Date().toISOString(),
           values,
+          commonPictures: nextCommonPictures,
+          variantPictures: nextVariantPictures,
         }),
       );
     }, 500);
@@ -127,7 +165,13 @@ export function SimilarPublicationForm({
 
   const restoreSavedDraft = () => {
     if (savedDraft) {
-      form.setFieldsValue(savedDraft);
+      form.setFieldsValue(savedDraft.values);
+
+      commonPicturesRef.current = savedDraft.commonPictures;
+      variantPicturesRef.current = savedDraft.variantPictures;
+
+      setCommonPictures(savedDraft.commonPictures);
+      setVariantPictures(savedDraft.variantPictures);
     }
 
     setRestoreOpen(false);
@@ -151,6 +195,38 @@ export function SimilarPublicationForm({
 
   const updateUploading = (uploading: boolean) => {
     setPendingUploads((current) => Math.max(0, current + (uploading ? 1 : -1)));
+  };
+
+  const updateCommonPictures = (
+    pictures: readonly SimilarPublicationPicture[],
+  ) => {
+    commonPicturesRef.current = pictures;
+    setCommonPictures(pictures);
+
+    scheduleAutosave(
+      form.getFieldsValue(true) as SimilarPublicationFormValues,
+      pictures,
+      variantPicturesRef.current,
+    );
+  };
+
+  const updateVariantPictures = (
+    sourceReference: string,
+    pictures: readonly SimilarPublicationPicture[],
+  ) => {
+    const next = {
+      ...variantPicturesRef.current,
+      [sourceReference]: pictures,
+    };
+
+    variantPicturesRef.current = next;
+    setVariantPictures(next);
+
+    scheduleAutosave(
+      form.getFieldsValue(true) as SimilarPublicationFormValues,
+      commonPicturesRef.current,
+      next,
+    );
   };
 
   const replicateNewPublication = async (
@@ -347,7 +423,7 @@ export function SimilarPublicationForm({
           Las fotos originales no se copian. Subí archivos JPG, JPEG o PNG de hasta 10 MB.
         </Typography.Paragraph>
         <SimilarPublicationImages
-          onChange={setCommonPictures}
+          onChange={updateCommonPictures}
           onUploadingChange={updateUploading}
           pictures={commonPictures}
           uploadAction={uploadAction}
@@ -385,10 +461,7 @@ export function SimilarPublicationForm({
 
         <SimilarPublicationVariants
           showPriceColumn={commonPrice === null}
-          onPicturesChange={(sourceReference, pictures) => setVariantPictures((current) => ({
-            ...current,
-            [sourceReference]: pictures,
-          }))}
+          onPicturesChange={updateVariantPictures}
           onUploadingChange={updateUploading}
           picturesByVariant={variantPictures}
           uploadAction={uploadAction}
