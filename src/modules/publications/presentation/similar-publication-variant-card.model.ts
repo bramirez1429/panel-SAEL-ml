@@ -159,27 +159,65 @@ function readAttribute(
 ): string | null {
   if (!variant) return null;
 
-  const attribute = variant.attributes.find(
+  const candidates = variant.attributes.filter(
     (candidate) =>
-      candidate.role === attributeId ||
-      candidate.id.trim().toUpperCase() === attributeId ||
-      (
-        attributeId === "SIZE" &&
-        candidate.name?.toLocaleLowerCase().includes("talle") === true
-      ),
+      !candidate.id
+        .trim()
+        .toUpperCase()
+        .startsWith("SIZE_GRID"),
   );
+
+  const attribute =
+    attributeId === "SIZE"
+      ? (
+          candidates.find(
+            ({ id }) =>
+              id.trim().toUpperCase() === "SIZE",
+          ) ??
+          candidates.find(
+            ({ role }) => role === "SIZE",
+          ) ??
+          candidates.find(
+            ({ name }) =>
+              name
+                ?.toLocaleLowerCase()
+                .includes("talle") === true,
+          )
+        )
+      : (
+          candidates.find(
+            ({ id }) =>
+              id.trim().toUpperCase() === "COLOR",
+          ) ??
+          candidates.find(
+            ({ role }) => role === "COLOR",
+          )
+        );
 
   if (!attribute) return null;
 
   const edited =
-    values?.attributes[variant.sourceReference]?.[attribute.id];
+    values?.attributes[
+      variant.sourceReference
+    ]?.[attribute.id];
 
   const value =
-    edited === undefined
-      ? attribute.valueName
-      : edited;
+    (
+      edited ??
+      attribute.valueName ??
+      ""
+    ).trim();
 
-  return value?.trim() || null;
+  if (!value) return null;
+
+  if (
+    attributeId === "SIZE" &&
+    /^\d+(?::\d+)+$/u.test(value)
+  ) {
+    return null;
+  }
+
+  return value;
 }
 
 function hasAttribute(
@@ -187,13 +225,32 @@ function hasAttribute(
   attributeId: "COLOR" | "SIZE",
 ): boolean {
   return variant.attributes.some(
-    (candidate) =>
-      candidate.role === attributeId ||
-      candidate.id.trim().toUpperCase() === attributeId ||
-      (
+    (candidate) => {
+      const id =
+        candidate.id
+          .trim()
+          .toUpperCase();
+
+      if (
         attributeId === "SIZE" &&
-        candidate.name?.toLocaleLowerCase().includes("talle") === true
-      ),
+        id.startsWith("SIZE_GRID")
+      ) {
+        return false;
+      }
+
+      return (
+        id === attributeId ||
+        candidate.role ===
+          attributeId ||
+        (
+          attributeId === "SIZE" &&
+          candidate.name
+            ?.toLocaleLowerCase()
+            .includes("talle") ===
+            true
+        )
+      );
+    },
   );
 }
 

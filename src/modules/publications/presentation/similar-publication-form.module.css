@@ -395,3 +395,58 @@
   margin-top: 12px;
   padding-top: 12px;
 }
+
+
+/* GRUPO 2: gestor visual de colores */
+
+.colorManager {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 22px;
+  padding: 18px;
+  background: var(--ant-color-fill-quaternary, #fafafa);
+  border: 1px solid var(--ant-color-border-secondary, #f0f0f0);
+  border-radius: 12px;
+}
+
+.colorManagerHeader {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.colorManagerHeader :global(.ant-typography) {
+  margin-top: 0;
+}
+
+.colorTags {
+  min-height: 26px;
+}
+
+.colorTags :global(.ant-tag) {
+  padding: 4px 12px;
+  font-weight: 600;
+  border-radius: 999px;
+}
+
+@media (max-width: 700px) {
+  .colorManagerHeader {
+    flex-direction: column;
+  }
+}
+
+
+.colorSearch {
+  width: min(560px, 100%);
+}
+
+.colorSearch :global(.ant-select) {
+  width: 100%;
+}
+
+
+.addVariantSizeSelect {
+  width: 260px;
+  margin-top: 12px;
+}

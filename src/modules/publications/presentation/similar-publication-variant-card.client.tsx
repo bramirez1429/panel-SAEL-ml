@@ -1,10 +1,14 @@
 "use client";
 
 import {
+  DeleteOutlined,
+  PlusOutlined,
+} from "@ant-design/icons";
+import {
   Button,
   Card,
-  Dropdown,
   Form,
+  Select,
   Input,
   InputNumber,
   Space,
@@ -13,27 +17,27 @@ import {
   Typography,
   type TableProps,
 } from "antd";
-import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 
 import type { SimilarPublicationPicture } from "../domain/similar-publication.model";
 import type { UploadSimilarPublicationPictureAction } from "./similar-publication-action.types";
+import {
+  ADULT_SIZES,
+  availableVariantSizes,
+  GIRLS_SIZES,
+  type SimilarPublicationFormValues,
+} from "./similar-publication-form.model";
+import styles from "./similar-publication-form.module.css";
+import { SimilarPublicationVariantGallery } from "./similar-publication-variant-gallery.client";
 import type {
   SimilarPublicationCardVariant,
   SimilarPublicationVariantCard as SimilarPublicationVariantCardModel,
 } from "./similar-publication-variant-card.model";
-import { SimilarPublicationVariantGallery } from "./similar-publication-variant-gallery.client";
-import styles from "./similar-publication-form.module.css";
-import {
-  availableVariantSizes,
-  isAddedColorVariant,
-  isAddedSizeVariant,
-  type SimilarPublicationFormValues,
-} from "./similar-publication-form.model";
 
 type Props = Readonly<{
   card: SimilarPublicationVariantCardModel;
   formValues: SimilarPublicationFormValues;
   showPriceColumn: boolean;
+  canRemoveColor: boolean;
   picturesByVariant: Readonly<
     Record<string, readonly SimilarPublicationPicture[]>
   >;
@@ -47,7 +51,9 @@ type Props = Readonly<{
     variants: readonly SimilarPublicationCardVariant["variant"][],
     size: string,
   ) => void;
-  onRemoveVariant: (sourceReference: string) => void;
+  onRemoveVariant: (
+    sourceReference: string,
+  ) => void;
   onRemoveColor: (
     variants: readonly SimilarPublicationCardVariant["variant"][],
   ) => void;
@@ -57,6 +63,7 @@ export function SimilarPublicationVariantCard({
   card,
   formValues,
   showPriceColumn,
+  canRemoveColor,
   picturesByVariant,
   onPicturesChange,
   uploadAction,
@@ -72,17 +79,13 @@ export function SimilarPublicationVariantCard({
     formValues,
   );
 
-  const isNewColor = card.variants.some(({ sourceReference }) =>
-    isAddedColorVariant(sourceReference),
-  );
-
   const columns: NonNullable<
     TableProps<SimilarPublicationCardVariant>["columns"]
   > = [
     {
       title: "Talle",
       key: "size",
-      width: 100,
+      width: 110,
       render: (_, variant) => (
         <Typography.Text strong>
           {variant.size ?? "Sin talle"}
@@ -92,10 +95,14 @@ export function SimilarPublicationVariantCard({
     {
       title: "Stock",
       key: "stock",
-      width: 120,
+      width: 130,
       render: (_, variant) => (
         <Form.Item
-          name={["variants", variant.sourceReference, "stock"]}
+          name={[
+            "variants",
+            variant.sourceReference,
+            "stock",
+          ]}
           rules={[
             {
               required: true,
@@ -107,7 +114,9 @@ export function SimilarPublicationVariantCard({
           style={{ marginBottom: 0 }}
         >
           <InputNumber
-            aria-label={"Stock " + variant.sourceReference}
+            aria-label={
+              "Stock " + variant.sourceReference
+            }
             min={0}
             precision={0}
             style={{ width: "100%" }}
@@ -121,11 +130,18 @@ export function SimilarPublicationVariantCard({
       width: 280,
       render: (_, variant) => (
         <Form.Item
-          name={["variants", variant.sourceReference, "sku"]}
+          name={[
+            "variants",
+            variant.sourceReference,
+            "sku",
+          ]}
           style={{ marginBottom: 0 }}
         >
           <Input
-            aria-label={"SKU nuevo " + variant.sourceReference}
+            aria-label={
+              "SKU nuevo " +
+              variant.sourceReference
+            }
             placeholder="SKU nuevo"
           />
         </Form.Item>
@@ -140,19 +156,27 @@ export function SimilarPublicationVariantCard({
       width: 170,
       render: (_, variant) => (
         <Form.Item
-          name={["variants", variant.sourceReference, "price"]}
+          name={[
+            "variants",
+            variant.sourceReference,
+            "price",
+          ]}
           rules={[
             {
               required: true,
               type: "number",
               min: 0.01,
-              message: "Ingresá un precio mayor a 0.",
+              message:
+                "Ingresá un precio mayor a 0.",
             },
           ]}
           style={{ marginBottom: 0 }}
         >
           <InputNumber
-            aria-label={"Precio " + variant.sourceReference}
+            aria-label={
+              "Precio " +
+              variant.sourceReference
+            }
             min={0.01}
             precision={2}
             prefix="$"
@@ -163,26 +187,32 @@ export function SimilarPublicationVariantCard({
     });
   }
 
-  if (
-    card.variants.some(({ sourceReference }) =>
-      isAddedSizeVariant(sourceReference),
-    )
-  ) {
+  /*
+   * Si hay más de un talle, cualquiera puede quitarse.
+   * Incluso un talle heredado de la publicación original.
+   */
+  if (card.variants.length > 1) {
     columns.push({
-      title: "Acción",
+      title: "",
       key: "remove",
-      width: 72,
+      width: 64,
       align: "center",
-      render: (_, variant) =>
-        isAddedSizeVariant(variant.sourceReference) ? (
-          <Button
-            aria-label={"Eliminar talle " + (variant.size ?? "agregado")}
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => onRemoveVariant(variant.sourceReference)}
-            type="text"
-          />
-        ) : null,
+      render: (_, variant) => (
+        <Button
+          aria-label={
+            "Eliminar talle " +
+            (variant.size ?? "sin talle")
+          }
+          danger
+          icon={<DeleteOutlined />}
+          onClick={() =>
+            onRemoveVariant(
+              variant.sourceReference,
+            )
+          }
+          type="text"
+        />
+      ),
     });
   }
 
@@ -192,20 +222,28 @@ export function SimilarPublicationVariantCard({
       extra={
         <Space size="small">
           {card.complete ? (
-            <Tag color="success">✓ Completa</Tag>
+            <Tag color="success">
+              ✓ Completa
+            </Tag>
           ) : (
-            <Tag color="warning">⚠ Revisar</Tag>
+            <Tag color="warning">
+              ⚠ Revisar
+            </Tag>
           )}
 
-          {isNewColor ? (
+          {canRemoveColor ? (
             <Button
               danger
+              icon={<DeleteOutlined />}
               onClick={() =>
                 onRemoveColor(
-                  card.variants.map(({ variant }) => variant),
+                  card.variants.map(
+                    ({ variant }) => variant,
+                  ),
                 )
               }
               size="small"
+              type="text"
             >
               Eliminar color
             </Button>
@@ -213,12 +251,16 @@ export function SimilarPublicationVariantCard({
         </Space>
       }
       title={
-        <span className={styles.variantCardTitle}>
+        <span
+          className={styles.variantCardTitle}
+        >
           {color}
         </span>
       }
     >
-      <Typography.Text className={styles.variantSectionLabel}>
+      <Typography.Text
+        className={styles.variantSectionLabel}
+      >
         Fotos de {color}
       </Typography.Text>
 
@@ -233,24 +275,37 @@ export function SimilarPublicationVariantCard({
       />
 
       {card.variants.flatMap((variant) =>
-        variant.variant.attributes.map((attribute) => (
-          <Form.Item
-            hidden
-            key={variant.sourceReference + ":" + attribute.id}
-            name={[
-              "attributes",
-              variant.sourceReference,
-              attribute.id,
-            ]}
-          >
-            <Input aria-label={attribute.name ?? attribute.id} />
-          </Form.Item>
-        )),
+        variant.variant.attributes.map(
+          (attribute) => (
+            <Form.Item
+              hidden
+              key={
+                variant.sourceReference +
+                ":" +
+                attribute.id
+              }
+              name={[
+                "attributes",
+                variant.sourceReference,
+                attribute.id,
+              ]}
+            >
+              <Input
+                aria-label={
+                  attribute.name ??
+                  attribute.id
+                }
+              />
+            </Form.Item>
+          ),
+        ),
       )}
 
       <div className={styles.variantTable}>
-        <Typography.Text className={styles.variantSectionLabel}>
-          Talles y stock
+        <Typography.Text
+          className={styles.variantSectionLabel}
+        >
+          Talles, stock y SKU
         </Typography.Text>
 
         <Table<SimilarPublicationCardVariant>
@@ -258,43 +313,62 @@ export function SimilarPublicationVariantCard({
           dataSource={[...card.variants]}
           pagination={false}
           rowKey="sourceReference"
-          scroll={{ x: showPriceColumn ? 760 : 580 }}
+          scroll={{
+            x: showPriceColumn ? 760 : 580,
+          }}
           size="small"
         />
 
         {availableSizes.length > 0 ? (
-          <Dropdown
-            menu={{
-              items: availableSizes.map((size) => ({
-                key: size,
-                label: "Talle " + size,
-              })),
-              onClick: ({ key }) =>
-                onAddSize(
-                  card.variants.map(({ variant }) => variant),
-                  key,
-                ),
-            }}
-            trigger={["click"]}
-          >
-            <Button
-              className={styles.addVariantSize}
-              icon={<PlusOutlined />}
-              type="dashed"
-            >
-              Agregar talle
-            </Button>
-          </Dropdown>
-        ) : null}
-      </div>
+          <Select
+            aria-label="Agregar talle"
+            className={
+              styles.addVariantSizeSelect
+            }
+            onChange={(size) => {
+              if (!size) return;
 
-      <div className={styles.variantStockTotal}>
-        <Typography.Text type="secondary">
-          Stock total
-        </Typography.Text>
-        <Typography.Text strong>
-          {card.stockTotal === null ? "—" : card.stockTotal + " u"}
-        </Typography.Text>
+              onAddSize(
+                card.variants.map(
+                  ({ variant }) =>
+                    variant,
+                ),
+                size,
+              );
+            }}
+            options={[
+              {
+                label: "Adultos",
+                options: ADULT_SIZES
+                  .filter((size) =>
+                    availableSizes.includes(
+                      size,
+                    ),
+                  )
+                  .map((size) => ({
+                    label: size,
+                    value: size,
+                  })),
+              },
+              {
+                label: "Niñas",
+                options: GIRLS_SIZES
+                  .filter((size) =>
+                    availableSizes.includes(
+                      size,
+                    ),
+                  )
+                  .map((size) => ({
+                    label: size,
+                    value: size,
+                  })),
+              },
+            ]}
+            placeholder="Agregar talle..."
+            showSearch
+            value={undefined}
+          />
+        ) : null}
       </div>
     </Card>
   );

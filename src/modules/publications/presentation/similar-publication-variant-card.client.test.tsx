@@ -17,7 +17,9 @@ describe("SimilarPublicationVariantCard sizes", () => {
     const onAddSize = vi.fn();
     renderCard(card([original]), onAddSize);
 
-    await user.click(screen.getByRole("button", { name: /Agregar talle/i }));
+    await user.click(
+      screen.getByLabelText("Agregar talle"),
+    );
 
     expect(screen.queryByText("Talle 6")).not.toBeInTheDocument();
     expect(await screen.findByText("Talle 8")).toBeInTheDocument();
@@ -25,15 +27,21 @@ describe("SimilarPublicationVariantCard sizes", () => {
     expect(onAddSize).toHaveBeenCalledWith([original], "8");
   });
 
-  it("allows removing only an added size", async () => {
+  it("allows removing any size when another size remains", async () => {
     const user = userEvent.setup();
     const added = variant("added-size:variant%3A6:8", "8");
     const onRemoveVariant = vi.fn();
     renderCard(card([original, added]), vi.fn(), onRemoveVariant);
 
-    expect(screen.queryByRole("button", { name: "Eliminar talle 6" })).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Eliminar talle 8" }));
-    expect(onRemoveVariant).toHaveBeenCalledWith(added.sourceReference);
+    await user.click(
+      screen.getByRole("button", {
+        name: "Eliminar talle 6",
+      }),
+    );
+
+    expect(onRemoveVariant).toHaveBeenCalledWith(
+      original.sourceReference,
+    );
   });
 });
 
@@ -61,6 +69,7 @@ function renderCard(
       ),
     }}>
       <SimilarPublicationVariantCard
+      canRemoveColor={false}
       card={model}
       formValues={{
         publishToTiendanube: false,

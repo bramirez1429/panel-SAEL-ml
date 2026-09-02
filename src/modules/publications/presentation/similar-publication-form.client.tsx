@@ -66,6 +66,7 @@ type SavedSimilarPublicationDraft = Readonly<{
 }>;
 
 export function SimilarPublicationForm({
+
   draft,
   returnTo,
   categories,
@@ -300,47 +301,115 @@ export function SimilarPublicationForm({
   const addColor = (
     option: SimilarPublicationAttributeOption,
   ) => {
-    const template = activeVariants[0];
-    if (!template) return;
+    /*
+     * Tomamos un template por talle.
+     * Si actualmente existen S / M / L,
+     * el nuevo color nace automáticamente con S / M / L.
+     */
+    const seenSizes = new Set<string>();
 
-    const added = createAddedColorVariant(template, option);
+    const templates = activeVariants.filter((variant) => {
+      const sizeAttribute =
+        variant.attributes.find(
+          (attribute) => {
+            const id =
+              attribute.id
+                .trim()
+                .toUpperCase();
 
-    if (
-      activeVariants.some(
-        ({ sourceReference }) =>
-          sourceReference === added.sourceReference,
+            if (
+              id.startsWith(
+                "SIZE_GRID",
+              )
+            ) {
+              return false;
+            }
+
+            return (
+              id === "SIZE" ||
+              attribute.role ===
+                "SIZE" ||
+              attribute.name
+                ?.toLocaleLowerCase()
+                .includes("talle") ===
+                true
+            );
+          },
+        );
+
+      const rawSize =
+        sizeAttribute?.valueName ??
+        sizeAttribute?.values.flatMap(({ name }) => name ?? [])[0] ??
+        "";
+
+      const sizeKey =
+        rawSize.trim().toLocaleUpperCase("es-AR") || "__SIN_TALLE__";
+
+      if (seenSizes.has(sizeKey)) {
+        return false;
+      }
+
+      seenSizes.add(sizeKey);
+      return true;
+    });
+
+    if (templates.length === 0) return;
+
+    const addedVariants = templates
+      .map((template) =>
+        createAddedColorVariant(template, option),
       )
-    ) {
-      return;
-    }
+      .filter(
+        (candidate) =>
+          !activeVariants.some(
+            ({ sourceReference }) =>
+              sourceReference === candidate.sourceReference,
+          ),
+      );
+
+    if (addedVariants.length === 0) return;
 
     const current =
       form.getFieldsValue(true) as SimilarPublicationFormValues;
 
-    const values: SimilarPublicationFormValues = {
-      ...current,
-      variants: {
-        ...current.variants,
-        [added.sourceReference]: {
-          price: added.price,
-          stock: 0,
-          sku: "",
-        },
-      },
-      attributes: {
-        ...current.attributes,
-        [added.sourceReference]: Object.fromEntries(
+    const nextVariantValues = {
+      ...current.variants,
+    };
+
+    const nextAttributes = {
+      ...current.attributes,
+    };
+
+    const nextPictures = {
+      ...variantPicturesRef.current,
+    };
+
+    for (const added of addedVariants) {
+      nextVariantValues[added.sourceReference] = {
+        price: added.price,
+        stock: 0,
+        sku: "",
+      };
+
+      nextAttributes[added.sourceReference] =
+        Object.fromEntries(
           added.attributes.map((attribute) => [
             attribute.id,
             attribute.valueName ?? "",
           ]),
-        ),
-      },
-    };
+        );
 
-    const pictures = {
-      ...variantPicturesRef.current,
-      [added.sourceReference]: [],
+      /*
+       * Un color nuevo comienza SIN fotos.
+       * Cada color tendrá su propia galería.
+       */
+      nextPictures[added.sourceReference] = [];
+    }
+
+    const values: SimilarPublicationFormValues = {
+      ...current,
+      variants: nextVariantValues,
+      attributes: nextAttributes,
     };
 
     form.setFieldsValue(values);
@@ -348,16 +417,16 @@ export function SimilarPublicationForm({
 
     setActiveVariants((currentVariants) => [
       ...currentVariants,
-      added,
+      ...addedVariants,
     ]);
 
-    variantPicturesRef.current = pictures;
-    setVariantPictures(pictures);
+    variantPicturesRef.current = nextPictures;
+    setVariantPictures(nextPictures);
 
     scheduleAutosave(
       values,
       commonPicturesRef.current,
-      pictures,
+      nextPictures,
     );
   };
 
@@ -630,7 +699,7 @@ export function SimilarPublicationForm({
         <div className={styles.generalGrid}>
           {draft.sourceType === "USER_PRODUCT" ? (
             <Form.Item
-              label="Nombre de familia"
+              label="Nombre del producto / familia"
               name="familyName"
               rules={[
                 { required: true, message: "Ingresá un nombre de familia nuevo." },
@@ -655,6 +724,16 @@ export function SimilarPublicationForm({
             <Input />
           </Form.Item>
 
+          <div className={styles.readOnlyField}>
+            <Typography.Text type="secondary">
+              Categoría de Mercado Libre
+            </Typography.Text>
+
+            <Typography.Text strong>
+              {draft.categoryName ?? draft.categoryId ?? "—"}
+            </Typography.Text>
+          </div>
+
           <Form.Item name="currencyId" hidden rules={[{ required: true }]}>
             <Input />
           </Form.Item>
@@ -662,15 +741,6 @@ export function SimilarPublicationForm({
           <Form.Item name="listingTypeId" hidden rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-
-          <div className={styles.readOnlyField}>
-            <Typography.Text type="secondary">
-              Tipo de publicación
-            </Typography.Text>
-            <Typography.Text strong>
-              {draft.sourceType === "USER_PRODUCT" ? "User Products" : "Legacy"}
-            </Typography.Text>
-          </div>
 
           <Form.Item name="buyingMode" hidden rules={[{ required: true }]}>
             <Input />

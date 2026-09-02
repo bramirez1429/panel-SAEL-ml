@@ -39,30 +39,35 @@ export type VariantPictures = Readonly<
   Record<string, readonly SimilarPublicationPicture[]>
 >;
 
-export const CHILDREN_SIZES = ["6", "8", "10", "12", "14"] as const;
-export const WOMEN_SIZES = ["S", "M", "L", "XL", "2XL", "3XL"] as const;
+export const ADULT_SIZES = ["S", "M", "L", "XL", "2XL"] as const;
+export const GIRLS_SIZES = ["6", "8", "10", "12", "14"] as const;
 
 export function availableVariantSizes(
   variants: readonly SimilarPublicationVariant[],
   values: Pick<SimilarPublicationFormValues, "attributes"> | undefined,
 ): readonly string[] {
-  const existing = variants
-    .map((variant) => readVariantValue(variant, values, "SIZE"))
-    .filter((value): value is string => Boolean(value))
-    .map(normalizeValue);
+  const existing = new Set(
+    variants
+      .map((variant) =>
+        readVariantValue(
+          variant,
+          values,
+          "SIZE",
+        ),
+      )
+      .filter(
+        (value): value is string =>
+          Boolean(value),
+      )
+      .map(normalizeValue),
+  );
 
-  const sizeAttribute = variants
-    .map(findSizeAttribute)
-    .find((attribute) => (attribute?.options?.length ?? 0) > 0);
-
-  const mlSizes = uniqueNames(sizeAttribute?.options);
-
-  const scale = mlSizes.length > 0
-    ? mlSizes
-    : fallbackSizeScale(existing);
-
-  return scale.filter(
-    (size) => !existing.includes(normalizeValue(size)),
+  return [
+    ...ADULT_SIZES,
+    ...GIRLS_SIZES,
+  ].filter(
+    (size) =>
+      !existing.has(normalizeValue(size)),
   );
 }
 
@@ -102,48 +107,66 @@ export function createAddedSizeVariant(
   template: SimilarPublicationVariant,
   size: string,
 ): SimilarPublicationVariant {
-  const sizeAttribute = findSizeAttribute(template);
-
-  if (!sizeAttribute) {
-    throw new Error("La publicación no tiene atributo de talle.");
-  }
-
-  const option = sizeAttribute.options?.find(
-    ({ name }) => name && normalizeValue(name) === normalizeValue(size),
-  );
-
-  const fallback = fallbackSizeScale([
-    normalizeValue(sizeAttribute.valueName ?? ""),
+  const validSizes = new Set<string>([
+    ...ADULT_SIZES,
+    ...GIRLS_SIZES,
   ]);
 
-  const canonical =
-    option?.name ??
-    fallback.find(
-      (candidate) => normalizeValue(candidate) === normalizeValue(size),
+  if (!validSizes.has(size)) {
+    throw new Error(
+      "El talle seleccionado no es válido.",
     );
-
-  if (!canonical) {
-    throw new Error("El talle seleccionado no es válido.");
   }
+
+  const sizeAttribute =
+    findSizeAttribute(template);
+
+  const attributes =
+    sizeAttribute
+      ? template.attributes.map(
+          (attribute) => {
+            if (
+              attribute === sizeAttribute
+            ) {
+              return {
+                ...attribute,
+                valueId: null,
+                valueName: size,
+                values: [],
+              };
+            }
+
+            return clearIdentifier(
+              attribute,
+            );
+          },
+        )
+      : [
+          ...template.attributes.map(
+            clearIdentifier,
+          ),
+          {
+            id: "SIZE",
+            name: "Talle",
+            valueId: null,
+            valueName: size,
+            values: [],
+            role: "SIZE" as const,
+            editable: true,
+          },
+        ];
 
   return {
     ...template,
-    sourceReference: addedSizeReference(template.sourceReference, canonical),
+    sourceReference:
+      addedSizeReference(
+        template.sourceReference,
+        size,
+      ),
     stock: 0,
     sku: null,
     pictureIds: [],
-    attributes: template.attributes.map((attribute) => {
-      if (attribute === sizeAttribute) {
-        return {
-          ...attribute,
-          valueId: option?.id ?? null,
-          valueName: canonical,
-          values: [],
-        };
-      }
-
-      return clearIdentifier(attribute);
-    }),
+    attributes,
   };
 }
 
@@ -196,11 +219,31 @@ export function isAddedColorVariant(sourceReference: string): boolean {
 function findSizeAttribute(
   variant: SimilarPublicationVariant,
 ): SimilarPublicationAttribute | undefined {
-  return variant.attributes.find(
+  const candidates = variant.attributes.filter(
     (attribute) =>
-      attribute.role === "SIZE" ||
-      attribute.id.trim().toUpperCase() === "SIZE" ||
-      attribute.name?.toLocaleLowerCase().includes("talle") === true,
+      !attribute.id
+        .trim()
+        .toUpperCase()
+        .startsWith("SIZE_GRID"),
+  );
+
+  return (
+    candidates.find(
+      (attribute) =>
+        attribute.id
+          .trim()
+          .toUpperCase() === "SIZE",
+    ) ??
+    candidates.find(
+      (attribute) =>
+        attribute.role === "SIZE",
+    ) ??
+    candidates.find(
+      (attribute) =>
+        attribute.name
+          ?.toLocaleLowerCase()
+          .includes("talle") === true,
+    )
   );
 }
 
@@ -227,9 +270,26 @@ function readVariantValue(
   if (!attribute) return null;
 
   const edited =
-    values?.attributes[variant.sourceReference]?.[attribute.id];
+    values?.attributes[
+      variant.sourceReference
+    ]?.[attribute.id];
 
-  return (edited ?? attribute.valueName ?? "").trim() || null;
+  const value =
+    (edited ??
+      attribute.valueName ??
+      "")
+      .trim();
+
+  if (!value) return null;
+
+  if (
+    role === "SIZE" &&
+    /^\d+:\d+$/u.test(value)
+  ) {
+    return null;
+  }
+
+  return value;
 }
 
 function uniqueNames(
@@ -250,28 +310,7 @@ function uniqueNames(
   });
 }
 
-function fallbackSizeScale(existing: readonly string[]): readonly string[] {
-  const sample = existing.find(Boolean);
-  if (!sample) return [];
 
-  if (
-    CHILDREN_SIZES.some(
-      (size) => normalizeValue(size) === sample,
-    )
-  ) {
-    return CHILDREN_SIZES;
-  }
-
-  if (
-    WOMEN_SIZES.some(
-      (size) => normalizeValue(size) === sample,
-    )
-  ) {
-    return WOMEN_SIZES;
-  }
-
-  return [];
-}
 
 function clearIdentifier(
   attribute: SimilarPublicationAttribute,
