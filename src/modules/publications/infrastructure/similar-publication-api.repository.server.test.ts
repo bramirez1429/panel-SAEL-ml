@@ -47,9 +47,9 @@ describe("SimilarPublicationApiRepository", () => {
     );
   });
 
-  it("uploads a new picture through the backend multipart endpoint", async () => {
+  it("uploads a new picture as authenticated Base64 JSON", async () => {
     const client = createClient();
-    client.postMultipart.mockResolvedValue({ id: "NEW-1", secureUrl: "https://new.example/picture.jpg" });
+    client.post.mockResolvedValue({ id: "NEW-1", secureUrl: "https://new.example/picture.jpg" });
     const repository = new SimilarPublicationApiRepository(client);
     const file = new File(["new"], "new.jpg", { type: "image/jpeg" });
 
@@ -58,10 +58,57 @@ describe("SimilarPublicationApiRepository", () => {
       secureUrl: "https://new.example/picture.jpg",
     });
 
-    const [path, body] = client.postMultipart.mock.calls[0] ?? [];
-    expect(path).toBe("/mercadolibre/direct/publicar-similar/pictures");
-    expect(body).toBeInstanceOf(FormData);
-    expect((body as FormData).get("file")).toBeInstanceOf(File);
+    expect(client.post).toHaveBeenCalledWith(
+      "/mercadolibre/direct/publicar-similar/pictures/base64",
+      {
+        fileName: "new.jpg",
+        mimeType: "image/jpeg",
+        base64: "bmV3",
+      },
+      { timeoutMs: 120_000 },
+    );
+    expect(client.postMultipart).not.toHaveBeenCalled();
+  });
+
+  it("rejects unsupported files before calling the backend", async () => {
+    const client = createClient();
+    const repository = new SimilarPublicationApiRepository(client);
+
+    await expect(
+      repository.uploadPicture(new File(["text"], "file.txt", { type: "text/plain" })),
+    ).rejects.toMatchObject({
+      code: "SIMILAR_PUBLICATION_PICTURE_INVALID_TYPE",
+      message: "La imagen debe ser JPG, JPEG o PNG.",
+    });
+    expect(client.post).not.toHaveBeenCalled();
+  });
+
+  it("rejects pictures larger than 3 MB before encoding", async () => {
+    const client = createClient();
+    const repository = new SimilarPublicationApiRepository(client);
+    const file = new File(
+      [new Uint8Array(3 * 1024 * 1024 + 1)],
+      "large.png",
+      { type: "image/png" },
+    );
+
+    await expect(repository.uploadPicture(file)).rejects.toMatchObject({
+      code: "SIMILAR_PUBLICATION_PICTURE_INVALID_SIZE",
+      message: "La imagen debe pesar como máximo 3 MB.",
+    });
+    expect(client.post).not.toHaveBeenCalled();
+  });
+
+  it("keeps validating the Base64 endpoint response", async () => {
+    const client = createClient();
+    client.post.mockResolvedValue({ id: "NEW-1", secureUrl: null });
+    const repository = new SimilarPublicationApiRepository(client);
+
+    await expect(
+      repository.uploadPicture(
+        new File(["image"], "image.png", { type: "image/png" }),
+      ),
+    ).rejects.toMatchObject({ code: "API_INVALID_RESPONSE" });
   });
 
   it("normalizes the backend sourceKey as the newly created sourceKey", async () => {

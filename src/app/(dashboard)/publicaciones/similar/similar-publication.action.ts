@@ -11,6 +11,7 @@ import type {
   UploadSimilarPublicationPictureAction,
 } from "@/modules/publications/presentation/similar-publication-action.types";
 import { AppError } from "@/shared/errors/app-error";
+import { ApiError } from "@/shared/api/api-error";
 
 export const createSimilarPublicationAction: CreateSimilarPublicationAction = async (
   input: SimilarPublicationCreateInput,
@@ -35,6 +36,17 @@ export const uploadSimilarPublicationPictureAction: UploadSimilarPublicationPict
     const picture = await createUploadSimilarPublicationPictureCommand().execute(file);
     return { ok: true, picture };
   } catch (error: unknown) {
+    if (error instanceof ApiError) {
+      console.error("[UPLOAD ML]", {
+        code: error.code,
+        status: error.status,
+        message: error.message,
+        responseBody: error.responseBody,
+      });
+    } else {
+      console.error("[UPLOAD ML]", error);
+    }
+
     return { ok: false, message: safeMessage(error, "No se pudo subir la imagen.") };
   }
 };

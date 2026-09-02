@@ -13,7 +13,6 @@ import { CreateSimilarPublicationCommand } from "./application/create-similar-pu
 import { GetSimilarPublicationDraftQuery } from "./application/get-similar-publication-draft.query";
 import { UploadSimilarPublicationPictureCommand } from "./application/upload-similar-publication-picture.command";
 import { SimilarPublicationApiRepository } from "./infrastructure/similar-publication-api.repository.server";
-import { createAuthenticatedMultipartHttpClient } from "@/shared/api/authenticated-multipart-http-client.server";
 
 /**
  * Punto de composición server-only: conecta el caso de uso con infraestructura
@@ -45,11 +44,9 @@ export function createUpdatePublicationCommand(): UpdatePublicationCommand {
 function createSimilarPublicationRepository(): SimilarPublicationApiRepository {
   const httpClient = new HttpClient(getApiConfig());
   const authenticated = createAuthenticatedHttpClient(httpClient);
-  const multipart = createAuthenticatedMultipartHttpClient(httpClient);
   return new SimilarPublicationApiRepository({
     get: authenticated.get,
     post: authenticated.post,
-    postMultipart: multipart.postMultipart,
   });
 }
 

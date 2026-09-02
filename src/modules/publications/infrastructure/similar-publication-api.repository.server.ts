@@ -2,7 +2,7 @@ import "server-only";
 
 import { ApiError } from "@/shared/api/api-error";
 import type { AuthenticatedHttpClient } from "@/shared/api/authenticated-http-client.server";
-import type { AuthenticatedMultipartHttpClient } from "@/shared/api/authenticated-multipart-http-client.server";
+import { AppError } from "@/shared/errors/app-error";
 import type { SimilarPublicationCreateInput } from "../domain/similar-publication.model";
 import type { SimilarPublicationRepository } from "../domain/similar-publication.repository";
 import {
@@ -13,9 +13,10 @@ import {
 
 const BASE_PATH = "/mercadolibre/direct/publicar-similar";
 const WRITE_TIMEOUT_MS = 120_000;
+const MAX_BASE64_PICTURE_SIZE = 3 * 1024 * 1024;
+const ALLOWED_PICTURE_MIME_TYPES = new Set(["image/jpeg", "image/png"]);
 
-type SimilarPublicationHttpClient = Pick<AuthenticatedHttpClient, "get" | "post"> &
-  AuthenticatedMultipartHttpClient;
+type SimilarPublicationHttpClient = Pick<AuthenticatedHttpClient, "get" | "post">;
 
 export class SimilarPublicationApiRepository implements SimilarPublicationRepository {
   constructor(private readonly httpClient: SimilarPublicationHttpClient) {}
@@ -30,12 +31,18 @@ export class SimilarPublicationApiRepository implements SimilarPublicationReposi
   }
 
   async uploadPicture(file: File) {
-    const formData = new FormData();
-    formData.append("file", file, file.name);
+    validatePicture(file);
+    const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
     const parsed = similarPublicationPictureSchema.safeParse(
-      await this.httpClient.postMultipart(`${BASE_PATH}/pictures`, formData, {
-        timeoutMs: WRITE_TIMEOUT_MS,
-      }),
+      await this.httpClient.post(
+        `${BASE_PATH}/pictures/base64`,
+        {
+          fileName: file.name,
+          mimeType: file.type,
+          base64,
+        },
+        { timeoutMs: WRITE_TIMEOUT_MS },
+      ),
     );
     if (!parsed.success) throw invalidResponse("imagen", parsed.error);
     return parsed.data;
@@ -51,6 +58,21 @@ export class SimilarPublicationApiRepository implements SimilarPublicationReposi
       items: parsed.data.items,
       newSourceKey: parsed.data.sourceKey,
     };
+  }
+}
+
+function validatePicture(file: File): void {
+  if (!ALLOWED_PICTURE_MIME_TYPES.has(file.type.toLowerCase())) {
+    throw new AppError(
+      "La imagen debe ser JPG, JPEG o PNG.",
+      "SIMILAR_PUBLICATION_PICTURE_INVALID_TYPE",
+    );
+  }
+  if (file.size <= 0 || file.size > MAX_BASE64_PICTURE_SIZE) {
+    throw new AppError(
+      "La imagen debe pesar como máximo 3 MB.",
+      "SIMILAR_PUBLICATION_PICTURE_INVALID_SIZE",
+    );
   }
 }
 
