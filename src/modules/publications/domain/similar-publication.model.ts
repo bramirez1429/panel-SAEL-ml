@@ -101,13 +101,23 @@ export type SimilarPublicationCreateVariant = Readonly<{
   pictureIds: readonly string[];
 }>;
 
+export type SimilarPublicationErrorCause = Readonly<{
+  code: string | null;
+  message: string | null;
+  department: string | null;
+}>;
+
 export type SimilarPublicationCreatedItem = Readonly<{
   variantKey: string;
   status: "CREATED" | "ERROR";
   itemId: string | null;
   userProductId: string | null;
   familyId: string | null;
-  error: Readonly<{ message: string; errorCode?: string }> | null;
+  error: Readonly<{
+    message: string;
+    errorCode?: string;
+    causes?: readonly SimilarPublicationErrorCause[];
+  }> | null;
 }>;
 
 export type SimilarPublicationCreationResult = Readonly<{

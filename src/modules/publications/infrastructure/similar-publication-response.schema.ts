@@ -69,6 +69,12 @@ export const similarPublicationDraftSchema = z.object({
   pictures: z.tuple([]),
 });
 
+const errorCauseSchema = z.object({
+  code: nullableText,
+  message: nullableText,
+  department: nullableText,
+});
+
 const createdItemSchema = z.object({
   variantKey: z.string(),
   status: z.enum(["CREATED", "ERROR"]),
@@ -78,6 +84,7 @@ const createdItemSchema = z.object({
   error: z.object({
     message: z.string(),
     errorCode: z.string().optional(),
+    causes: z.array(errorCauseSchema).optional(),
   }).nullable(),
 });
 

@@ -96,10 +96,35 @@ export function SimilarPublicationResult({
                 ) : null}
 
                 {item.error ? (
-                  <Typography.Text type="danger">
-                    {item.error.message}
-                    {item.error.errorCode ? ` (${item.error.errorCode})` : ""}
-                  </Typography.Text>
+                  <>
+                    <Typography.Text type="danger">
+                      {item.error.message}
+                      {item.error.errorCode
+                        ? ` (${item.error.errorCode})`
+                        : ""}
+                    </Typography.Text>
+
+                    {item.error.causes?.length ? (
+                      <Space orientation="vertical" size={2}>
+                        <Typography.Text strong>
+                          Motivo de Mercado Libre:
+                        </Typography.Text>
+
+                        {item.error.causes.map((cause, index) => (
+                          <Typography.Text
+                            key={`${cause.code ?? "cause"}-${index}`}
+                            type="danger"
+                          >
+                            • {cause.message ?? "Sin detalle"}
+                            {cause.code ? ` [${cause.code}]` : ""}
+                            {cause.department
+                              ? ` · ${cause.department}`
+                              : ""}
+                          </Typography.Text>
+                        ))}
+                      </Space>
+                    ) : null}
+                  </>
                 ) : null}
               </Space>
             </List.Item>
