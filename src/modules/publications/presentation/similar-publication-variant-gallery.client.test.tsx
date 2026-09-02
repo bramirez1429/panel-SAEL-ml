@@ -1,5 +1,4 @@
 import { cleanup, render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SimilarPublicationVariantGallery } from "./similar-publication-variant-gallery.client";
@@ -7,8 +6,7 @@ import { SimilarPublicationVariantGallery } from "./similar-publication-variant-
 describe("SimilarPublicationVariantGallery", () => {
   afterEach(cleanup);
 
-  it("changes the main image when a thumbnail is selected", async () => {
-    const user = userEvent.setup();
+  it("renders the Ant Design picture wall for one color", () => {
     render(
       <SimilarPublicationVariantGallery
         color="Rosa"
@@ -18,35 +16,30 @@ describe("SimilarPublicationVariantGallery", () => {
           {
             key: "rose-6:ROSE-1",
             sourceReference: "rose-6",
-            picture: { id: "ROSE-1", secureUrl: "https://example.com/rose-1.jpg" },
-          },
-          {
-            key: "rose-8:ROSE-2",
-            sourceReference: "rose-8",
-            picture: { id: "ROSE-2", secureUrl: "https://example.com/rose-2.jpg" },
+            picture: {
+              id: "ROSE-1",
+              secureUrl: "https://example.com/rose-1.jpg",
+            },
           },
         ]}
         picturesByVariant={{
-          "rose-6": [{ id: "ROSE-1", secureUrl: "https://example.com/rose-1.jpg" }],
-          "rose-8": [{ id: "ROSE-2", secureUrl: "https://example.com/rose-2.jpg" }],
+          "rose-6": [
+            {
+              id: "ROSE-1",
+              secureUrl: "https://example.com/rose-1.jpg",
+            },
+          ],
         }}
         uploadAction={vi.fn()}
-        variants={[
-          createVariant("rose-6", "6"),
-          createVariant("rose-8", "8"),
-        ]}
+        variants={[createVariant("rose-6", "6")]}
       />,
     );
 
-    const mainPicture = screen.getByAltText("Rosa, imagen principal");
-    expect(mainPicture).toHaveAttribute("src", "https://example.com/rose-1.jpg");
-
-    await user.click(screen.getByRole("button", { name: "Ver imagen 2 de Rosa" }));
-
-    expect(mainPicture).toHaveAttribute("src", "https://example.com/rose-2.jpg");
+    expect(screen.getByLabelText("Agregar foto nueva")).toBeInTheDocument();
+    expect(screen.getByText(/máximo 10 MB por imagen/i)).toBeInTheDocument();
   });
 
-  it("renders an explicit empty state without inventing images", () => {
+  it("allows adding the first picture when the color has no pictures", () => {
     render(
       <SimilarPublicationVariantGallery
         color="Negro"
@@ -59,7 +52,8 @@ describe("SimilarPublicationVariantGallery", () => {
       />,
     );
 
-    expect(screen.getByLabelText("Sin imágenes para Negro")).toBeInTheDocument();
+    expect(screen.getByLabelText("Agregar foto nueva")).toBeInTheDocument();
+    expect(screen.getByText(/0 fotos/i)).toBeInTheDocument();
   });
 });
 

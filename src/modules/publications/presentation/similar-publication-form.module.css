@@ -46,7 +46,7 @@
 
 .variantCards {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 20px;
 }
 
@@ -319,4 +319,25 @@
   .variantEditorFields {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+.variantGallery {
+  display: block;
+}
+
+.variantGallery :global(.ant-upload-wrapper) {
+  width: 100%;
+}
+
+.variantTable {
+  margin-top: 24px;
+}
+
+.variantStockTotal {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--ant-color-border-secondary, #f0f0f0);
 }

@@ -115,7 +115,13 @@ describe("SimilarPublicationForm", () => {
     expect(current.createAction).toHaveBeenCalledWith(expect.objectContaining({
       sourceKey: "family:123",
       familyName: "Familia nueva",
-      pictures: ["NEW-1"],
+      pictures: [],
+      variants: [
+        expect.objectContaining({
+          sourceReference: "variant:1",
+          pictureIds: ["NEW-1"],
+        }),
+      ],
     }));
   });
 

@@ -51,7 +51,7 @@ export function SimilarPublicationVariants({
   return (
     <>
       <Typography.Paragraph type="secondary">
-        Cada color conserva sus imágenes, atributos, stock y SKU por talle.
+        Cada color tiene sus propias fotos, talles, stock y SKU.
       </Typography.Paragraph>
       <SimilarPublicationSummary summary={summary} />
       <div className={styles.variantCards}>
