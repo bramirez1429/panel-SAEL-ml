@@ -58,7 +58,7 @@ export function SimilarPublicationVariantGallery({
       <Typography.Text type="secondary">
         {colorPictures.length}{" "}
         {colorPictures.length === 1 ? "foto" : "fotos"} · JPG o PNG · máximo
-        10 MB por imagen · se aplican a todos los talles de {color}.
+        3 MB por imagen · se aplican a todos los talles de {color}.
       </Typography.Text>
     </div>
   );

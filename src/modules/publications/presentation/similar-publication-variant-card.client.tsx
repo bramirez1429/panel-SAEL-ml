@@ -23,7 +23,7 @@ import type {
 import { SimilarPublicationVariantGallery } from "./similar-publication-variant-gallery.client";
 import styles from "./similar-publication-form.module.css";
 import {
-  availableChildrenSizes,
+  availableVariantSizes,
   isAddedSizeVariant,
   type SimilarPublicationFormValues,
 } from "./similar-publication-form.model";
@@ -60,7 +60,7 @@ export function SimilarPublicationVariantCard({
   onRemoveVariant,
 }: Props) {
   const color = card.color ?? "Sin color";
-  const availableSizes = availableChildrenSizes(
+  const availableSizes = availableVariantSizes(
     card.variants.map(({ variant }) => variant),
     formValues,
   );
@@ -71,7 +71,7 @@ export function SimilarPublicationVariantCard({
     {
       title: "Talle",
       key: "size",
-      width: 120,
+      width: 100,
       render: (_, variant) => (
         <Typography.Text strong>
           {variant.size ?? "Sin talle"}
@@ -81,7 +81,7 @@ export function SimilarPublicationVariantCard({
     {
       title: "Stock",
       key: "stock",
-      width: 150,
+      width: 120,
       render: (_, variant) => (
         <Form.Item
           name={["variants", variant.sourceReference, "stock"]}
@@ -107,6 +107,7 @@ export function SimilarPublicationVariantCard({
     {
       title: "SKU",
       key: "sku",
+      width: 280,
       render: (_, variant) => (
         <Form.Item
           name={["variants", variant.sourceReference, "sku"]}
@@ -151,12 +152,13 @@ export function SimilarPublicationVariantCard({
     });
   }
 
-  if (card.variants.some(({ sourceReference }) => isAddedSizeVariant(sourceReference))) {
-    columns.push({
-      title: "",
-      key: "remove",
-      width: 52,
-      render: (_, variant) => isAddedSizeVariant(variant.sourceReference) ? (
+  columns.push({
+    title: "Acción",
+    key: "remove",
+    width: 72,
+    align: "center",
+    render: (_, variant) =>
+      isAddedSizeVariant(variant.sourceReference) ? (
         <Button
           aria-label={`Eliminar talle ${variant.size ?? "agregado"}`}
           danger
@@ -165,8 +167,7 @@ export function SimilarPublicationVariantCard({
           type="text"
         />
       ) : null,
-    });
-  }
+  });
 
   return (
     <Card
@@ -224,7 +225,7 @@ export function SimilarPublicationVariantCard({
           dataSource={[...card.variants]}
           pagination={false}
           rowKey="sourceReference"
-          scroll={{ x: showPriceColumn ? 650 : 500 }}
+          scroll={{ x: showPriceColumn ? 760 : 580 }}
           size="small"
         />
         {availableSizes.length > 0 ? (
@@ -238,7 +239,11 @@ export function SimilarPublicationVariantCard({
             }}
             trigger={["click"]}
           >
-            <Button className={styles.addVariantSize} icon={<PlusOutlined />}>
+            <Button
+              className={styles.addVariantSize}
+              icon={<PlusOutlined />}
+              type="dashed"
+            >
               Agregar talle
             </Button>
           </Dropdown>

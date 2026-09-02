@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { SimilarPublicationDraft } from "../domain/similar-publication.model";
 import {
-  availableChildrenSizes,
+  availableVariantSizes,
   buildSimilarPublicationInput,
   createAddedSizeVariant,
   createInitialSimilarPublicationValues,
@@ -77,7 +77,7 @@ describe("similar publication form model", () => {
     };
     const added = createAddedSizeVariant(template, "8");
 
-    expect(availableChildrenSizes([template], undefined)).toEqual(["8", "10", "12", "14"]);
+    expect(availableVariantSizes([template], undefined)).toEqual(["8", "10", "12", "14"]);
     expect(added).toMatchObject({ stock: 0, sku: null, pictureIds: [] });
     expect(added.attributes.find(({ id }) => id === "SIZE")).toMatchObject({
       valueId: null,
@@ -86,6 +86,36 @@ describe("similar publication form model", () => {
     expect(added.attributes.find(({ id }) => id === "TECHNICAL")).toEqual(
       template.attributes.find(({ id }) => id === "TECHNICAL"),
     );
+  });
+
+  it("supports women sizes without mixing children sizes", () => {
+    const template = {
+      ...draft.variants[0]!,
+      attributes: [
+        ...draft.variants[0]!.attributes,
+        {
+          id: "SIZE",
+          name: "Talle",
+          valueId: "SIZE-S",
+          valueName: "S",
+          values: [],
+        },
+      ],
+    };
+
+    expect(availableVariantSizes([template], undefined)).toEqual([
+      "M",
+      "L",
+      "XL",
+      "2XL",
+      "3XL",
+    ]);
+
+    const added = createAddedSizeVariant(template, "M");
+
+    expect(
+      added.attributes.find(({ id }) => id === "SIZE")?.valueName,
+    ).toBe("M");
   });
 
   it("includes an added size in the create payload", () => {

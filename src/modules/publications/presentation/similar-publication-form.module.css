@@ -345,3 +345,53 @@
   padding-top: 14px;
   border-top: 1px solid var(--ant-color-border-secondary, #f0f0f0);
 }
+
+
+/* Publicar similar: editor compacto de fotos y variantes */
+.variantCard :global(.ant-card-body) {
+  padding: 18px 24px;
+}
+
+.variantGallery {
+  margin-bottom: 0;
+}
+
+.variantGallery :global(.ant-upload-list-picture-card) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.variantGallery :global(.ant-upload-list-item-container),
+.variantGallery :global(.ant-upload-select) {
+  width: 96px !important;
+  height: 96px !important;
+  margin: 0 !important;
+}
+
+.variantGallery :global(.ant-upload-list-item) {
+  padding: 4px;
+}
+
+.variantTable {
+  margin-top: 18px;
+}
+
+.variantTable :global(.ant-table-cell) {
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
+
+.variantTable :global(.ant-input),
+.variantTable :global(.ant-input-number) {
+  max-width: 280px;
+}
+
+.addVariantSize {
+  margin-top: 10px;
+}
+
+.variantStockTotal {
+  margin-top: 12px;
+  padding-top: 12px;
+}

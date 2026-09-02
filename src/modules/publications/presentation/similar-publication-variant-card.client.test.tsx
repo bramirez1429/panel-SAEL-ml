@@ -39,8 +39,11 @@ describe("SimilarPublicationVariantCard sizes", () => {
 
 function renderCard(
   model: CardModel,
-  onAddSize: ReturnType<typeof vi.fn>,
-  onRemoveVariant: ReturnType<typeof vi.fn> = vi.fn(),
+  onAddSize: (
+    variants: readonly SimilarPublicationVariant[],
+    size: string,
+  ) => void,
+  onRemoveVariant: (sourceReference: string) => void = vi.fn(),
 ) {
   render(
     <Form initialValues={{

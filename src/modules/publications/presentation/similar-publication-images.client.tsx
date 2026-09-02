@@ -6,7 +6,7 @@ import { useState } from "react";
 import type { SimilarPublicationPicture } from "../domain/similar-publication.model";
 import type { UploadSimilarPublicationPictureAction } from "./similar-publication-action.types";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_FILE_SIZE = 3 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png"]);
 
 type Props = Readonly<{
@@ -113,7 +113,7 @@ function validateFile(
     return Upload.LIST_IGNORE;
   }
   if (file.size <= 0 || file.size > MAX_FILE_SIZE) {
-    messageApi.error("La imagen debe pesar como máximo 10 MB.");
+    messageApi.error("La imagen debe pesar como máximo 3 MB.");
     return Upload.LIST_IGNORE;
   }
   return true;

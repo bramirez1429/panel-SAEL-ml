@@ -36,7 +36,7 @@ describe("SimilarPublicationVariantGallery", () => {
     );
 
     expect(screen.getByLabelText("Agregar foto nueva")).toBeInTheDocument();
-    expect(screen.getByText(/máximo 10 MB por imagen/i)).toBeInTheDocument();
+    expect(screen.getByText(/máximo 3 MB por imagen/i)).toBeInTheDocument();
   });
 
   it("allows adding the first picture when the color has no pictures", () => {

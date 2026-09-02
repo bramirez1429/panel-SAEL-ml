@@ -3,6 +3,7 @@ import type {
   SimilarPublicationCreateInput,
   SimilarPublicationDraft,
   SimilarPublicationPicture,
+  SimilarPublicationVariant,
 } from "../domain/similar-publication.model";
 import { isProductIdentifierAttribute } from "../domain/similar-publication.model";
 
@@ -28,22 +29,22 @@ export type SimilarPublicationFormValues = {
 export type VariantPictures = Readonly<Record<string, readonly SimilarPublicationPicture[]>>;
 
 export const CHILDREN_SIZES = ["6", "8", "10", "12", "14"] as const;
+export const WOMEN_SIZES = ["S", "M", "L", "XL", "2XL", "3XL"] as const;
 
-export function availableChildrenSizes(
+export function availableVariantSizes(
   variants: readonly SimilarPublicationVariant[],
   values: Pick<SimilarPublicationFormValues, "attributes"> | undefined,
 ): readonly string[] {
-  const existing = new Set(
-    variants.flatMap((variant) => {
-      const size = variant.attributes.find(
-        ({ id }) => id.trim().toUpperCase() === "SIZE",
-      );
-      if (!size) return [];
-      const edited = values?.attributes[variant.sourceReference]?.[size.id];
-      return [(edited ?? size.valueName ?? "").trim()];
-    }),
+  const existing = variants
+    .map((variant) => readVariantSize(variant, values))
+    .filter((size): size is string => Boolean(size))
+    .map(normalizeSize);
+
+  const scale = sizeScaleFor(existing);
+
+  return scale.filter(
+    (size) => !existing.includes(normalizeSize(size)),
   );
-  return CHILDREN_SIZES.filter((size) => !existing.has(size));
 }
 
 export function createAddedSizeVariant(
@@ -53,21 +54,86 @@ export function createAddedSizeVariant(
   const sizeAttribute = template.attributes.find(
     ({ id }) => id.trim().toUpperCase() === "SIZE",
   );
-  if (!sizeAttribute || !CHILDREN_SIZES.includes(size as typeof CHILDREN_SIZES[number])) {
-    throw new Error("El talle seleccionado no es válido.");
+
+  if (!sizeAttribute) {
+    throw new Error("La publicación no tiene un atributo de talle.");
   }
+
+  const currentSize = normalizeSize(sizeAttribute.valueName ?? "");
+  const scale = sizeScaleFor([currentSize]);
+
+  const canonicalSize = scale.find(
+    (candidate) => normalizeSize(candidate) === normalizeSize(size),
+  );
+
+  if (!canonicalSize) {
+    throw new Error("El talle seleccionado no es válido para esta publicación.");
+  }
+
   return {
     ...template,
-    sourceReference: addedVariantReference(template.sourceReference, size),
+    sourceReference: addedVariantReference(
+      template.sourceReference,
+      canonicalSize,
+    ),
     stock: 0,
     sku: null,
     pictureIds: [],
     attributes: template.attributes.map((attribute) =>
       attribute === sizeAttribute
-        ? { ...attribute, valueId: null, valueName: size, values: [] }
+        ? {
+            ...attribute,
+            valueId: null,
+            valueName: canonicalSize,
+            values: [],
+          }
         : attribute,
     ),
   };
+}
+
+function readVariantSize(
+  variant: SimilarPublicationVariant,
+  values: Pick<SimilarPublicationFormValues, "attributes"> | undefined,
+): string | null {
+  const attribute = variant.attributes.find(
+    ({ id }) => id.trim().toUpperCase() === "SIZE",
+  );
+
+  if (!attribute) return null;
+
+  const edited =
+    values?.attributes[variant.sourceReference]?.[attribute.id];
+
+  return (edited ?? attribute.valueName ?? "").trim() || null;
+}
+
+function sizeScaleFor(existing: readonly string[]): readonly string[] {
+  const sample = existing.map(normalizeSize).find(Boolean);
+
+  if (!sample) return [];
+
+  if (
+    CHILDREN_SIZES.some(
+      (size) => normalizeSize(size) === sample,
+    )
+  ) {
+    return CHILDREN_SIZES;
+  }
+
+  if (
+    WOMEN_SIZES.some(
+      (size) => normalizeSize(size) === sample,
+    )
+  ) {
+    return WOMEN_SIZES;
+  }
+
+  return [];
+}
+
+function normalizeSize(value: string): string {
+  return value.trim().toUpperCase().replace(/\s+/g, "");
 }
 
 export function isAddedSizeVariant(sourceReference: string): boolean {
