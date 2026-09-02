@@ -33,6 +33,28 @@ describe("publicationDetailResponseSchema", () => {
     );
   });
 
+  it("parses all real pictures and keeps secure URL data", () => {
+    const parsed = familyDetailResponseSchema.parse(familyDetailResponse);
+
+    expect(parsed.variants[0]?.pictures).toEqual([
+      {
+        id: "BLUE-1",
+        url: "http://example.com/blue-1.jpg",
+        secure_url: "https://example.com/blue-1.jpg",
+      },
+      { id: "BLUE-2", url: "https://example.com/blue-2.jpg" },
+    ]);
+  });
+
+  it("falls back to an empty pictures collection when the field is absent", () => {
+    const withoutPictures: { pictures?: unknown } & Record<string, unknown> = {
+      ...legacyPublicationDetailResponse,
+    };
+    delete withoutPictures.pictures;
+
+    expect(publicationDetailResponseSchema.parse(withoutPictures).pictures).toEqual([]);
+  });
+
   it("rejects an invalid stock quantity", () => {
     const invalidResponse = {
       ...legacyPublicationDetailResponse,

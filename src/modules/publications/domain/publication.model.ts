@@ -39,6 +39,11 @@ export type PublicationAttribute = Readonly<{
   value: string | null;
 }>;
 
+export type PublicationPicture = Readonly<{
+  id: string;
+  url: string;
+}>;
+
 export type PublicationVariant = Readonly<{
   id: string;
   itemId: string | null;
@@ -46,6 +51,7 @@ export type PublicationVariant = Readonly<{
   label: string | null;
   title: string | null;
   thumbnailUrl: string | null;
+  pictures: readonly PublicationPicture[];
   status: string | null;
   price: Readonly<{
     amount: number;
@@ -64,6 +70,7 @@ export type PublicationVariant = Readonly<{
  */
 export type PublicationDetail = Publication &
   Readonly<{
+    pictures: readonly PublicationPicture[];
     variants: readonly PublicationVariant[];
   }>;
 

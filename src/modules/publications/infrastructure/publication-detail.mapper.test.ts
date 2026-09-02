@@ -21,6 +21,9 @@ describe("mapPublicationDetail", () => {
       }),
     );
     expect(detail.variants).toEqual([]);
+    expect(detail.pictures).toEqual([
+      { id: "LEGACY-1", url: "https://example.com/legacy-1.jpg" },
+    ]);
   });
 
   it("maps the active VARIANT_PRICING response", () => {
@@ -49,5 +52,9 @@ describe("mapPublicationDetail", () => {
       { id: "COLOR", value: "Azul" },
     ]);
     expect(detail.variants[0]?.sku).toBe("SKU-FAMILY");
+    expect(detail.variants[0]?.pictures).toEqual([
+      { id: "BLUE-1", url: "https://example.com/blue-1.jpg" },
+      { id: "BLUE-2", url: "https://example.com/blue-2.jpg" },
+    ]);
   });
 });

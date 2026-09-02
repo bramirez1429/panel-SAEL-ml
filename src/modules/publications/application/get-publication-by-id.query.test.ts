@@ -12,6 +12,7 @@ const publication: PublicationDetail = {
   channel: "MERCADO_LIBRE",
   status: "active",
   thumbnailUrl: null,
+  pictures: [],
   permalink: null,
   price: { from: 1000, to: 1000, currency: "ARS" },
   stock: 5,

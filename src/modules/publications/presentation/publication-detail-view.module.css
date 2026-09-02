@@ -57,49 +57,177 @@
   margin-top: 28px;
 }
 
-.variants {
-  position: relative;
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.summaryCard :global(.ant-card-body) {
+  padding: 16px;
+}
+
+.visualVariants {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  padding-left: 22px;
+  gap: 20px;
 }
 
-.variants::before {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 5px;
-  width: 2px;
-  content: "";
-  background: var(--ant-color-primary-border, #91caff);
-  border-radius: 2px;
+.visualVariantCard {
+  min-width: 0;
+  overflow: hidden;
+  border-color: var(--ant-color-border-secondary, #f0f0f0);
+  box-shadow: 0 8px 28px rgb(15 23 42 / 6%);
 }
 
-.variantCard {
+.variantTitle {
+  text-transform: uppercase;
+  letter-spacing: 0.035em;
+}
+
+.variantStatuses {
+  margin-bottom: 16px;
+}
+
+.sectionLabel {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gallery {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 76px;
+  gap: 10px;
+}
+
+.mainPicture {
   position: relative;
   min-width: 0;
+  overflow: hidden;
+  background: #f7f8fa;
+  border: 1px solid var(--ant-color-border-secondary, #f0f0f0);
+  border-radius: 12px;
 }
 
-.variantCard::before {
+.mainPicture :global(.ant-image),
+.mainPicture :global(.ant-image-img) {
+  display: block;
+  width: 100%;
+  object-fit: contain;
+}
+
+.mainPictureBadge {
   position: absolute;
-  top: 24px;
-  right: 100%;
-  width: 17px;
-  height: 2px;
-  content: "";
-  background: var(--ant-color-primary-border, #91caff);
+  right: 10px;
+  bottom: 10px;
+  padding: 3px 9px;
+  color: #fff;
+  font-size: 0.75rem;
+  background: rgb(15 23 42 / 72%);
+  border-radius: 999px;
 }
 
-.variantContent {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
+.thumbnails {
+  display: grid;
+  align-content: start;
+  gap: 7px;
 }
 
-.variantDescriptions {
+.thumbnailButton {
+  width: 76px;
+  height: 76px;
+  padding: 1px;
+  overflow: hidden;
+  cursor: pointer;
+  background: #fff;
+  border: 1px solid var(--ant-color-border, #d9d9d9);
+  border-radius: 9px;
+}
+
+.thumbnailButton :global(.ant-image-img) {
+  object-fit: cover;
+  border-radius: 7px;
+}
+
+.thumbnailButton:hover,
+.thumbnailSelected {
+  border-color: var(--ant-color-primary, #1677ff);
+  box-shadow: 0 0 0 2px var(--ant-color-primary-border, #91caff);
+}
+
+.morePictures {
+  display: grid;
+  width: 76px;
+  min-height: 36px;
+  place-items: center;
+  color: var(--ant-color-text-secondary, #667085);
+  font-weight: 600;
+  background: var(--ant-color-fill-quaternary, #f5f5f5);
+  border-radius: 8px;
+}
+
+.galleryEmpty {
+  display: grid;
+  min-height: 210px;
+  place-items: center;
+  color: var(--ant-color-text-secondary, #667085);
+  background: var(--ant-color-fill-quaternary, #f7f8fa);
+  border: 1px dashed var(--ant-color-border, #d9d9d9);
+  border-radius: 12px;
+}
+
+.imageCount {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.78rem;
+}
+
+.sizesSection {
+  margin-top: 22px;
+}
+
+.sizeTag {
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.variantFacts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 22px 0 6px;
+}
+
+.variantFacts div {
   min-width: 0;
-  flex: 1;
+}
+
+.variantFacts dt {
+  color: var(--ant-color-text-secondary, #667085);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.variantFacts dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+
+.editLink {
+  display: block;
+  height: auto;
+  margin: 12px 0 0 auto;
+  padding-right: 0;
+}
+
+.advancedEditing {
+  display: grid;
+  gap: 16px;
 }
 
 .emptyRelation {
@@ -122,14 +250,34 @@
 }
 
 @media (max-width: 900px) {
-  .variants {
+  .visualVariants {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .summaryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 575px) {
-  .productHeader,
-  .variantContent {
+  .productHeader {
     flex-direction: column;
+  }
+
+  .summaryGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gallery {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .thumbnails {
+    grid-template-columns: repeat(auto-fit, minmax(64px, 72px));
+  }
+
+  .thumbnailButton,
+  .morePictures {
+    width: 72px;
   }
 }

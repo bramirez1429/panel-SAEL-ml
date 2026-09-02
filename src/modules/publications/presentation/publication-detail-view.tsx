@@ -1,10 +1,16 @@
 import type { ReactNode } from "react";
-import { Button, Card, Descriptions, Image, Space, Tag, type DescriptionsProps } from "antd";
+import { Button, Card, Collapse, Descriptions, Image, Space, Tag, Typography, type DescriptionsProps } from "antd";
 
 import type { PublicationDetail, SalesChannel } from "../domain/publication.model";
 import { BackToPublicationsLink } from "./publication-back-link";
 import { PublicationStatus } from "./publication-status";
+import { PublicationVariantCard } from "./publication-variant-card";
+import {
+  createPublicationVariantCards,
+  createPublicationVariantSummary,
+} from "./publication-variant-card.model";
 import { createPublicationVariantRows } from "./publication-variant-row";
+import { PublicationVariantSummary } from "./publication-variant-summary";
 import { PublicationVariantsTable } from "./publication-variants-table.client";
 import styles from "./publication-detail-view.module.css";
 import type { PublicationStatusAction, PublicationUpdateAction } from "./publication-variants-table.client";
@@ -31,6 +37,8 @@ export function PublicationDetailView({
 }: PublicationDetailViewProps) {
   const isFamily = publication.group.type === "USER_PRODUCT";
   const rows = createPublicationVariantRows(publication);
+  const visualVariants = createPublicationVariantCards(publication);
+  const summary = createPublicationVariantSummary(visualVariants);
 
   return (
     <div className={styles.view}>
@@ -80,10 +88,39 @@ export function PublicationDetailView({
         />
       </Card>
 
-      <Card title={isFamily ? "Familia" : "Variaciones Anterior"}>
-        {isFamily ? <FamilySummary publication={publication} /> : null}
-        <PublicationVariantsTable rows={rows} updateAction={updateAction} statusAction={statusAction} />
-      </Card>
+      <PublicationVariantSummary summary={summary} />
+
+      <section aria-labelledby="visual-variants-title">
+        <Typography.Title id="visual-variants-title" level={3}>
+          Variantes por color
+        </Typography.Title>
+        <div className={styles.visualVariants}>
+          {visualVariants.map((variant) => (
+            <PublicationVariantCard key={variant.key} variant={variant} />
+          ))}
+        </div>
+      </section>
+
+      <section id="edicion-avanzada">
+        <Collapse
+          items={[
+            {
+              key: "advanced-editing",
+              label: "Edición avanzada",
+              children: (
+                <div className={styles.advancedEditing}>
+                  {isFamily ? <FamilySummary publication={publication} /> : null}
+                  <PublicationVariantsTable
+                    rows={rows}
+                    statusAction={statusAction}
+                    updateAction={updateAction}
+                  />
+                </div>
+              ),
+            },
+          ]}
+        />
+      </section>
     </div>
   );
 }
