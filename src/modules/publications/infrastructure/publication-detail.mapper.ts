@@ -1,11 +1,7 @@
-import type {
-  PublicationDetail,
-  PublicationPicture,
-} from "../domain/publication.model";
+import type { PublicationDetail } from "../domain/publication.model";
 import type {
   FamilyDetailResponseDto,
   PublicationDetailResponseDto,
-  PublicationPictureDto,
 } from "./publication-detail-response.schema";
 
 /** Traduce el detalle real de NestJS al modelo de dominio del frontend. */
@@ -14,7 +10,6 @@ export function mapPublicationDetail(
   familyDto?: FamilyDetailResponseDto,
 ): PublicationDetail {
   const currentPrice = dto.price.current;
-  const pictures = mapPictures(dto.pictures);
 
   return {
     id: dto.itemId,
@@ -22,7 +17,6 @@ export function mapPublicationDetail(
     channel: "MERCADO_LIBRE",
     status: dto.status,
     thumbnailUrl: dto.thumbnail,
-    pictures,
     permalink: dto.permalink,
     price:
       currentPrice === null
@@ -49,7 +43,7 @@ export function mapPublicationDetail(
     },
     variants: familyDto
       ? familyDto.variants.map(mapFamilyVariant)
-      : mapVariations(dto.variations, pictures),
+      : mapVariations(dto.variations),
   };
 }
 
@@ -63,7 +57,6 @@ function mapFamilyVariant(
     label: null,
     title: variant.title,
     thumbnailUrl: variant.thumbnail,
-    pictures: mapPictures(variant.pictures),
     status: variant.status,
     price:
       variant.price.current === null
@@ -85,10 +78,7 @@ function mapFamilyVariant(
   };
 }
 
-function mapVariations(
-  variations: readonly unknown[],
-  publicationPictures: readonly PublicationPicture[],
-): PublicationDetail["variants"] {
+function mapVariations(variations: readonly unknown[]): PublicationDetail["variants"] {
   return variations.flatMap((variation) => {
     if (!isRecord(variation)) return [];
 
@@ -104,7 +94,6 @@ function mapVariations(
             : [];
         });
     const price = readNumber(variation.price);
-    const pictures = resolveVariationPictures(variation, publicationPictures);
 
     return [
       {
@@ -113,8 +102,7 @@ function mapVariations(
         userProductId: null,
         label: null,
         title: null,
-        thumbnailUrl: pictures[0]?.url ?? null,
-        pictures,
+        thumbnailUrl: null,
         status: null,
         price: price === null ? null : { amount: price, currency: null },
         stock: readNumber(variation.available_quantity),
@@ -124,35 +112,6 @@ function mapVariations(
         permalink: null,
       },
     ];
-  });
-}
-
-function mapPictures(
-  pictures: readonly PublicationPictureDto[],
-): readonly PublicationPicture[] {
-  return pictures.flatMap((picture) => {
-    const url = picture.secure_url?.trim() || picture.url?.trim();
-    return url ? [{ id: picture.id, url }] : [];
-  });
-}
-
-function resolveVariationPictures(
-  variation: Record<string, unknown>,
-  publicationPictures: readonly PublicationPicture[],
-): readonly PublicationPicture[] {
-  const ids = Array.isArray(variation.picture_ids)
-    ? variation.picture_ids.flatMap((value) => {
-        const id = readString(value);
-        return id ? [id] : [];
-      })
-    : [];
-  if (ids.length === 0) return [];
-  const picturesById = new Map(
-    publicationPictures.map((picture) => [picture.id, picture]),
-  );
-  return ids.flatMap((id) => {
-    const picture = picturesById.get(id);
-    return picture ? [picture] : [];
   });
 }
 

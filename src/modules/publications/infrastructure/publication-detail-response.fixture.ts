@@ -19,14 +19,6 @@ export const familyDetailResponse = {
       stock: { available: 4, sold: 2 },
       price: { current: 1200, currency: "ARS" },
       thumbnail: "https://example.com/blue.jpg",
-      pictures: [
-        {
-          id: "BLUE-1",
-          url: "http://example.com/blue-1.jpg",
-          secure_url: "https://example.com/blue-1.jpg",
-        },
-        { id: "BLUE-2", url: "https://example.com/blue-2.jpg" },
-      ],
       attributes: [{ id: "COLOR", value_name: "Azul" }],
       permalink: "https://example.com/MLA201",
       sku: { sellerCustomField: "SKU-FAMILY", inventoryId: "INV-1" },
@@ -39,7 +31,6 @@ export const familyDetailResponse = {
       stock: { available: 1, sold: 5 },
       price: { current: 1300, currency: "ARS" },
       thumbnail: null,
-      pictures: [],
       attributes: [{ id: "SIZE", value_name: "M" }],
       permalink: null,
     },
@@ -61,12 +52,6 @@ export const legacyPublicationDetailResponse = {
     currency: "ARS",
   },
   thumbnail: "https://example.com/legacy.jpg",
-  pictures: [
-    {
-      id: "LEGACY-1",
-      secure_url: "https://example.com/legacy-1.jpg",
-    },
-  ],
   permalink: "https://example.com/MLA100",
   attributes: [],
   variations: [],

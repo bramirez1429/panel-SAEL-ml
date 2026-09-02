@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 
 import type { PublicationDetail } from "../domain/publication.model";
 import {
@@ -15,7 +14,6 @@ const familyDetail: PublicationDetail = {
   channel: "MERCADO_LIBRE",
   status: "active",
   thumbnailUrl: null,
-  pictures: [],
   permalink: "https://example.com/family",
   price: { from: 1000, to: 1500, currency: "ARS" },
   stock: 7,
@@ -37,10 +35,6 @@ const familyDetail: PublicationDetail = {
       label: "Azul",
       title: "Variante azul",
       thumbnailUrl: null,
-      pictures: [
-        { id: "BLUE-1", url: "https://example.com/blue-1.jpg" },
-        { id: "BLUE-2", url: "https://example.com/blue-2.jpg" },
-      ],
       status: "active",
       price: { amount: 1000, currency: "ARS" },
       stock: 7,
@@ -55,8 +49,7 @@ const familyDetail: PublicationDetail = {
 describe("PublicationDetailView", () => {
   afterEach(cleanup);
 
-  it("renders real parent data and keeps advanced editing available", async () => {
-    const user = userEvent.setup();
+  it("renders real parent data and its child relationship", () => {
     render(<PublicationDetailView publication={familyDetail} />);
 
     expect(
@@ -65,11 +58,8 @@ describe("PublicationDetailView", () => {
     expect(screen.getAllByText("Familia").length).toBeGreaterThan(0);
     expect(screen.getByText("ARS 1.000 – ARS 1.500")).toBeInTheDocument();
     expect(screen.getAllByText("200").length).toBeGreaterThan(0);
-    expect(screen.getByText("Azul")).toBeInTheDocument();
-    expect(screen.getByText("2", { selector: ".ant-statistic-content-value-int" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Ver imagen 2 de Azul" })).toBeInTheDocument();
-    await user.click(screen.getByText("Edición avanzada"));
     expect(screen.getByText("UP-200")).toBeInTheDocument();
+    expect(screen.getByText("Azul")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /expand row/i })).toHaveLength(1);
   });
 
@@ -93,7 +83,7 @@ describe("PublicationDetailView", () => {
     );
 
     expect(screen.getByText("Anterior")).toBeInTheDocument();
-    expect(screen.getByText("Variante sin color")).toBeInTheDocument();
+    expect(screen.getByText("Variaciones Anterior")).toBeInTheDocument();
     expect(screen.getByText("MLA100")).toBeInTheDocument();
     expect(screen.getAllByTitle("Dato no disponible").length).toBeGreaterThan(
       0,

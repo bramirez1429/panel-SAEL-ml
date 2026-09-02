@@ -10,7 +10,6 @@ const base: PublicationDetail = {
   channel: "MERCADO_LIBRE",
   status: "active",
   thumbnailUrl: null,
-  pictures: [],
   permalink: null,
   price: { from: 1000, to: 1000, currency: "ARS" },
   stock: 3,
@@ -48,8 +47,8 @@ describe("publication variant rows", () => {
     const rows = createPublicationVariantRows({
       ...base,
       variants: [
-        { id: "MLA1", itemId: "MLA1", userProductId: "MLAU1", label: null, title: null, thumbnailUrl: null, pictures: [], status: "active", price: { amount: 50, currency: null }, stock: 2, sold: 1, sku: "SKU", attributes: [{ id: "COLOR", value: "Negro" }, { id: "SIZE", value: "38" }], permalink: null },
-        { id: "MLA2", itemId: "MLA2", userProductId: "MLAU1", label: null, title: null, thumbnailUrl: null, pictures: [], status: "active", price: { amount: 38, currency: null }, stock: 2, sold: 1, sku: "SKU", attributes: [{ id: "COLOR", value: "Negro" }, { id: "SIZE", value: "38" }], permalink: null },
+        { id: "MLA1", itemId: "MLA1", userProductId: "MLAU1", label: null, title: null, thumbnailUrl: null, status: "active", price: { amount: 50, currency: null }, stock: 2, sold: 1, sku: "SKU", attributes: [{ id: "COLOR", value: "Negro" }, { id: "SIZE", value: "38" }], permalink: null },
+        { id: "MLA2", itemId: "MLA2", userProductId: "MLAU1", label: null, title: null, thumbnailUrl: null, status: "active", price: { amount: 38, currency: null }, stock: 2, sold: 1, sku: "SKU", attributes: [{ id: "COLOR", value: "Negro" }, { id: "SIZE", value: "38" }], permalink: null },
       ],
     });
     expect(groupFamilyRows(rows)).toHaveLength(1);

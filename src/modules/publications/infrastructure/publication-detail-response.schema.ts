@@ -7,12 +7,6 @@ const attributeDtoSchema = z.object({
   values: z.array(z.unknown()).optional(),
 });
 
-const pictureDtoSchema = z.object({
-  id: z.string().min(1),
-  url: z.string().nullable().optional(),
-  secure_url: z.string().nullable().optional(),
-});
-
 /** Campos reales consumidos por la pantalla de detalle del endpoint activo. */
 export const publicationDetailResponseSchema = z.object({
   model: z.enum(["SHARED", "VARIANT_PRICING"]),
@@ -33,7 +27,6 @@ export const publicationDetailResponseSchema = z.object({
     currency: z.string().nullable(),
   }),
   thumbnail: z.string().nullable(),
-  pictures: z.array(pictureDtoSchema).default([]),
   permalink: z.string().nullable(),
   attributes: z.array(attributeDtoSchema),
   variations: z.array(z.unknown()),
@@ -55,7 +48,6 @@ const familyVariantDtoSchema = z.object({
     currency: z.string().nullable().optional(),
   }),
   thumbnail: z.string().nullable(),
-  pictures: z.array(pictureDtoSchema).default([]),
   attributes: z.array(attributeDtoSchema),
   permalink: z.string().nullable(),
   sku: z.object({
@@ -79,5 +71,4 @@ export type PublicationDetailResponseDto = z.infer<
   typeof publicationDetailResponseSchema
 >;
 export type PublicationAttributeDto = z.infer<typeof attributeDtoSchema>;
-export type PublicationPictureDto = z.infer<typeof pictureDtoSchema>;
 export type FamilyDetailResponseDto = z.infer<typeof familyDetailResponseSchema>;
