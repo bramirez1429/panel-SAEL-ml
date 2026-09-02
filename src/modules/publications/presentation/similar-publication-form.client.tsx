@@ -297,10 +297,44 @@ export function SimilarPublicationForm({
           {draft.sourceType === "USER_PRODUCT" ? (
             <Typography.Text type="secondary">Mercado Libre generará el título final.</Typography.Text>
           ) : null}
-          <Form.Item label="Categoría" name="categoryId" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item label="Moneda" name="currencyId" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item label="Tipo de publicación" name="listingTypeId" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item label="Modo de compra" name="buyingMode" rules={[{ required: true }]}><Input /></Form.Item>
+          <Form.Item name="categoryId" hidden rules={[{ required: true }]}>
+            <Input />
+          </Form.Item>
+
+          <div className={styles.readOnlyField}>
+            <Typography.Text type="secondary">Categoría</Typography.Text>
+            <Typography.Text strong>
+              {draft.categoryId ?? "Sin categoría"}
+            </Typography.Text>
+          </div>
+
+          <Form.Item name="currencyId" hidden rules={[{ required: true }]}>
+            <Input />
+          </Form.Item>
+
+          <div className={styles.readOnlyField}>
+            <Typography.Text type="secondary">Moneda</Typography.Text>
+            <Typography.Text strong>
+              {currencyLabel(draft.currencyId)}
+            </Typography.Text>
+          </div>
+
+          <Form.Item name="listingTypeId" hidden rules={[{ required: true }]}>
+            <Input />
+          </Form.Item>
+
+          <div className={styles.readOnlyField}>
+            <Typography.Text type="secondary">
+              Tipo de publicación
+            </Typography.Text>
+            <Typography.Text strong>
+              {listingTypeLabel(draft.listingTypeId)}
+            </Typography.Text>
+          </div>
+
+          <Form.Item name="buyingMode" hidden rules={[{ required: true }]}>
+            <Input />
+          </Form.Item>
         </div>
         <Form.Item label="Descripción" name="description"><Input.TextArea rows={5} /></Form.Item>
       </Card>
@@ -369,6 +403,31 @@ export function SimilarPublicationForm({
       </div>
     </Form>
   );
+}
+
+function currencyLabel(currencyId: string | null): string {
+  if (currencyId === "ARS") return "ARS - Peso argentino";
+  if (currencyId === "USD") return "USD - Dólar estadounidense";
+
+  return currencyId ?? "Sin moneda";
+}
+
+function listingTypeLabel(listingTypeId: string | null): string {
+  const labels: Readonly<Record<string, string>> = {
+    gold_pro: "Premium",
+    gold_special: "Clásica",
+    gold_premium: "Premium",
+    gold: "Oro",
+    silver: "Plata",
+    bronze: "Bronce",
+    free: "Gratuita",
+  };
+
+  if (!listingTypeId) {
+    return "Sin tipo de publicación";
+  }
+
+  return labels[listingTypeId] ?? listingTypeId;
 }
 
 function stageLabel(stage: PublishStage): string {
