@@ -1,12 +1,13 @@
 "use client";
 
 import {
-  Card,
   Button,
+  Card,
   Dropdown,
   Form,
   Input,
   InputNumber,
+  Space,
   Table,
   Tag,
   Typography,
@@ -24,6 +25,7 @@ import { SimilarPublicationVariantGallery } from "./similar-publication-variant-
 import styles from "./similar-publication-form.module.css";
 import {
   availableVariantSizes,
+  isAddedColorVariant,
   isAddedSizeVariant,
   type SimilarPublicationFormValues,
 } from "./similar-publication-form.model";
@@ -46,6 +48,9 @@ type Props = Readonly<{
     size: string,
   ) => void;
   onRemoveVariant: (sourceReference: string) => void;
+  onRemoveColor: (
+    variants: readonly SimilarPublicationCardVariant["variant"][],
+  ) => void;
 }>;
 
 export function SimilarPublicationVariantCard({
@@ -58,11 +63,17 @@ export function SimilarPublicationVariantCard({
   onUploadingChange,
   onAddSize,
   onRemoveVariant,
+  onRemoveColor,
 }: Props) {
   const color = card.color ?? "Sin color";
+
   const availableSizes = availableVariantSizes(
     card.variants.map(({ variant }) => variant),
     formValues,
+  );
+
+  const isNewColor = card.variants.some(({ sourceReference }) =>
+    isAddedColorVariant(sourceReference),
   );
 
   const columns: NonNullable<
@@ -96,7 +107,7 @@ export function SimilarPublicationVariantCard({
           style={{ marginBottom: 0 }}
         >
           <InputNumber
-            aria-label={`Stock ${variant.sourceReference}`}
+            aria-label={"Stock " + variant.sourceReference}
             min={0}
             precision={0}
             style={{ width: "100%" }}
@@ -114,7 +125,7 @@ export function SimilarPublicationVariantCard({
           style={{ marginBottom: 0 }}
         >
           <Input
-            aria-label={`SKU nuevo ${variant.sourceReference}`}
+            aria-label={"SKU nuevo " + variant.sourceReference}
             placeholder="SKU nuevo"
           />
         </Form.Item>
@@ -141,7 +152,7 @@ export function SimilarPublicationVariantCard({
           style={{ marginBottom: 0 }}
         >
           <InputNumber
-            aria-label={`Precio ${variant.sourceReference}`}
+            aria-label={"Precio " + variant.sourceReference}
             min={0.01}
             precision={2}
             prefix="$"
@@ -152,32 +163,54 @@ export function SimilarPublicationVariantCard({
     });
   }
 
-  columns.push({
-    title: "Acción",
-    key: "remove",
-    width: 72,
-    align: "center",
-    render: (_, variant) =>
-      isAddedSizeVariant(variant.sourceReference) ? (
-        <Button
-          aria-label={`Eliminar talle ${variant.size ?? "agregado"}`}
-          danger
-          icon={<DeleteOutlined />}
-          onClick={() => onRemoveVariant(variant.sourceReference)}
-          type="text"
-        />
-      ) : null,
-  });
+  if (
+    card.variants.some(({ sourceReference }) =>
+      isAddedSizeVariant(sourceReference),
+    )
+  ) {
+    columns.push({
+      title: "Acción",
+      key: "remove",
+      width: 72,
+      align: "center",
+      render: (_, variant) =>
+        isAddedSizeVariant(variant.sourceReference) ? (
+          <Button
+            aria-label={"Eliminar talle " + (variant.size ?? "agregado")}
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => onRemoveVariant(variant.sourceReference)}
+            type="text"
+          />
+        ) : null,
+    });
+  }
 
   return (
     <Card
       className={styles.variantCard}
       extra={
-        card.complete ? (
-          <Tag color="success">✓ Completa</Tag>
-        ) : (
-          <Tag color="warning">⚠ Revisar</Tag>
-        )
+        <Space size="small">
+          {card.complete ? (
+            <Tag color="success">✓ Completa</Tag>
+          ) : (
+            <Tag color="warning">⚠ Revisar</Tag>
+          )}
+
+          {isNewColor ? (
+            <Button
+              danger
+              onClick={() =>
+                onRemoveColor(
+                  card.variants.map(({ variant }) => variant),
+                )
+              }
+              size="small"
+            >
+              Eliminar color
+            </Button>
+          ) : null}
+        </Space>
       }
       title={
         <span className={styles.variantCardTitle}>
@@ -203,7 +236,7 @@ export function SimilarPublicationVariantCard({
         variant.variant.attributes.map((attribute) => (
           <Form.Item
             hidden
-            key={`${variant.sourceReference}:${attribute.id}`}
+            key={variant.sourceReference + ":" + attribute.id}
             name={[
               "attributes",
               variant.sourceReference,
@@ -228,14 +261,19 @@ export function SimilarPublicationVariantCard({
           scroll={{ x: showPriceColumn ? 760 : 580 }}
           size="small"
         />
+
         {availableSizes.length > 0 ? (
           <Dropdown
             menu={{
-              items: availableSizes.map((size) => ({ key: size, label: `Talle ${size}` })),
-              onClick: ({ key }) => onAddSize(
-                card.variants.map(({ variant }) => variant),
-                key,
-              ),
+              items: availableSizes.map((size) => ({
+                key: size,
+                label: "Talle " + size,
+              })),
+              onClick: ({ key }) =>
+                onAddSize(
+                  card.variants.map(({ variant }) => variant),
+                  key,
+                ),
             }}
             trigger={["click"]}
           >
@@ -251,9 +289,11 @@ export function SimilarPublicationVariantCard({
       </div>
 
       <div className={styles.variantStockTotal}>
-        <Typography.Text type="secondary">Stock total</Typography.Text>
+        <Typography.Text type="secondary">
+          Stock total
+        </Typography.Text>
         <Typography.Text strong>
-          {card.stockTotal === null ? "—" : `${card.stockTotal} u`}
+          {card.stockTotal === null ? "—" : card.stockTotal + " u"}
         </Typography.Text>
       </div>
     </Card>

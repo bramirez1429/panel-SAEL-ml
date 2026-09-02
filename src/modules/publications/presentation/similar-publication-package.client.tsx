@@ -1,9 +1,6 @@
 "use client";
 
-import { InputNumber, Typography } from "antd";
-import Image from "next/image";
-
-import packageDimensionsReference from "@/images/package-dimensions-reference.png";
+import { Form, InputNumber, Typography } from "antd";
 
 import styles from "./similar-publication-form.module.css";
 
@@ -11,58 +8,72 @@ export function SimilarPublicationPackage() {
   return (
     <>
       <Typography.Paragraph type="secondary">
-        Usá esta referencia para identificar correctamente el ancho, alto,
-        profundidad y peso del paquete.
+        Ingresá las medidas del paquete listo para despachar. Se enviarán a
+        Mercado Libre cuando la categoría permita esos atributos.
       </Typography.Paragraph>
 
-      <div className={styles.packageLayout}>
-        <div className={styles.packageReference}>
-          <Image
-            alt="Referencia para medir ancho, alto y profundidad del paquete"
-            className={styles.packageImage}
-            height={720}
-            src={packageDimensionsReference}
-            width={720}
+      <div className={styles.packageFields}>
+        <Form.Item
+          label="Ancho (cm)"
+          name={["package", "widthCm"]}
+          rules={[
+            {
+              type: "number",
+              min: 1,
+              message: "Ingresá un ancho mayor a 0.",
+            },
+          ]}
+        >
+          <InputNumber min={1} precision={0} style={{ width: "100%" }} />
+        </Form.Item>
+
+        <Form.Item
+          label="Alto (cm)"
+          name={["package", "heightCm"]}
+          rules={[
+            {
+              type: "number",
+              min: 1,
+              message: "Ingresá un alto mayor a 0.",
+            },
+          ]}
+        >
+          <InputNumber min={1} precision={0} style={{ width: "100%" }} />
+        </Form.Item>
+
+        <Form.Item
+          label="Profundidad (cm)"
+          name={["package", "lengthCm"]}
+          rules={[
+            {
+              type: "number",
+              min: 1,
+              message: "Ingresá una profundidad mayor a 0.",
+            },
+          ]}
+        >
+          <InputNumber min={1} precision={0} style={{ width: "100%" }} />
+        </Form.Item>
+
+        <Form.Item
+          label="Peso (kg)"
+          name={["package", "weightKg"]}
+          rules={[
+            {
+              type: "number",
+              min: 0.001,
+              message: "Ingresá un peso mayor a 0.",
+            },
+          ]}
+        >
+          <InputNumber
+            min={0.001}
+            precision={3}
+            step={0.1}
+            style={{ width: "100%" }}
           />
-        </div>
-
-        <div className={styles.packageFields}>
-          <PackageField label="Ancho" unit="cm" />
-          <PackageField label="Alto" unit="cm" />
-          <PackageField label="Profundidad" unit="cm" />
-          <PackageField label="Peso" unit="g" />
-        </div>
+        </Form.Item>
       </div>
-
-      <Typography.Paragraph
-        className={styles.packageNotice}
-        type="secondary"
-      >
-        Estos campos se habilitarán cuando conectemos las reglas reales de
-        Mercado Libre para la categoría. Por ahora son una referencia visual
-        y no se envían al publicar.
-      </Typography.Paragraph>
     </>
-  );
-}
-
-function PackageField({
-  label,
-  unit,
-}: Readonly<{
-  label: string;
-  unit: string;
-}>) {
-  return (
-    <div className={styles.packageField}>
-      <Typography.Text strong>{label}</Typography.Text>
-
-      <InputNumber
-        addonAfter={unit}
-        disabled
-        placeholder="—"
-        style={{ width: "100%" }}
-      />
-    </div>
   );
 }

@@ -7,12 +7,34 @@ const attributeValueSchema = z.object({
   name: nullableText,
 });
 
+const attributeOptionSchema = z.object({
+  id: nullableText,
+  name: nullableText,
+  colorHex: nullableText.optional(),
+});
+
 const attributeSchema = z.object({
   id: z.string().min(1),
   name: nullableText,
   valueId: nullableText,
   valueName: nullableText,
   values: z.array(attributeValueSchema),
+  required: z.boolean().optional(),
+  editable: z.boolean().optional(),
+  inputType: z.enum(["TEXT", "NUMBER", "SELECT", "TAGS"]).optional(),
+  role: z.enum(["MAIN", "VARIANT", "IDENTIFIER", "SIZE", "COLOR", "OTHER"]).optional(),
+  options: z.array(attributeOptionSchema).optional(),
+  display: z.object({
+    colorHex: nullableText,
+  }).optional(),
+});
+
+const packageSchema = z.object({
+  hasFactoryPackaging: z.boolean().nullable(),
+  widthCm: z.number().finite().nullable(),
+  heightCm: z.number().finite().nullable(),
+  lengthCm: z.number().finite().nullable(),
+  weightKg: z.number().finite().nullable(),
 });
 
 const variantSchema = z.object({
@@ -28,6 +50,7 @@ export const similarPublicationDraftSchema = z.object({
   sourceKey: z.string().min(1),
   sourceType: z.enum(["LEGACY", "USER_PRODUCT"]),
   categoryId: nullableText,
+  categoryName: nullableText.optional(),
   familyName: nullableText,
   titleTemplate: nullableText,
   description: nullableText,
@@ -41,6 +64,7 @@ export const similarPublicationDraftSchema = z.object({
   })),
   shipping: z.object({ freeShipping: z.boolean() }).nullable(),
   channels: z.array(z.string()),
+  package: packageSchema.optional(),
   variants: z.array(variantSchema),
   pictures: z.tuple([]),
 });

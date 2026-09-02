@@ -5,12 +5,40 @@ export type SimilarPublicationAttributeValue = Readonly<{
   name: string | null;
 }>;
 
+export type SimilarPublicationAttributeOption = Readonly<{
+  id: string | null;
+  name: string | null;
+  colorHex?: string | null;
+}>;
+
+export type SimilarPublicationAttributeRole =
+  | "MAIN"
+  | "VARIANT"
+  | "IDENTIFIER"
+  | "SIZE"
+  | "COLOR"
+  | "OTHER";
+
 export type SimilarPublicationAttribute = Readonly<{
   id: string;
   name: string | null;
   valueId: string | null;
   valueName: string | null;
   values: readonly SimilarPublicationAttributeValue[];
+  required?: boolean;
+  editable?: boolean;
+  inputType?: "TEXT" | "NUMBER" | "SELECT" | "TAGS";
+  role?: SimilarPublicationAttributeRole;
+  options?: readonly SimilarPublicationAttributeOption[];
+  display?: Readonly<{ colorHex: string | null }>;
+}>;
+
+export type SimilarPublicationPackage = Readonly<{
+  hasFactoryPackaging: boolean | null;
+  widthCm: number | null;
+  heightCm: number | null;
+  lengthCm: number | null;
+  weightKg: number | null;
 }>;
 
 export type SimilarPublicationSaleTerm = Readonly<{
@@ -32,6 +60,7 @@ export type SimilarPublicationDraft = Readonly<{
   sourceKey: string;
   sourceType: SimilarPublicationSourceType;
   categoryId: string | null;
+  categoryName?: string | null;
   familyName: string | null;
   titleTemplate: string | null;
   description: string | null;
@@ -41,6 +70,7 @@ export type SimilarPublicationDraft = Readonly<{
   saleTerms: readonly SimilarPublicationSaleTerm[];
   shipping: Readonly<{ freeShipping: boolean }> | null;
   channels: readonly string[];
+  package?: SimilarPublicationPackage;
   variants: readonly SimilarPublicationVariant[];
   pictures: readonly [];
 }>;
@@ -57,6 +87,7 @@ export type SimilarPublicationCreateInput = Readonly<{
   saleTerms: readonly SimilarPublicationSaleTerm[];
   shipping: Readonly<{ freeShipping: boolean }> | null;
   channels: readonly string[];
+  package?: SimilarPublicationPackage;
   pictures: readonly string[];
   variants: readonly SimilarPublicationCreateVariant[];
 }>;

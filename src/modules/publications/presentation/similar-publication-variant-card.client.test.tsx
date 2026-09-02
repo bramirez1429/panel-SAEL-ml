@@ -79,6 +79,7 @@ function renderCard(
       }}
       onAddSize={onAddSize}
       onPicturesChange={vi.fn()}
+      onRemoveColor={vi.fn()}
       onRemoveVariant={onRemoveVariant}
       onUploadingChange={vi.fn()}
       picturesByVariant={{}}

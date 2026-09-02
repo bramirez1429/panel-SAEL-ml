@@ -158,12 +158,27 @@ function readAttribute(
   attributeId: "COLOR" | "SIZE",
 ): string | null {
   if (!variant) return null;
+
   const attribute = variant.attributes.find(
-    ({ id }) => id.trim().toUpperCase() === attributeId,
+    (candidate) =>
+      candidate.role === attributeId ||
+      candidate.id.trim().toUpperCase() === attributeId ||
+      (
+        attributeId === "SIZE" &&
+        candidate.name?.toLocaleLowerCase().includes("talle") === true
+      ),
   );
+
   if (!attribute) return null;
-  const edited = values?.attributes[variant.sourceReference]?.[attribute.id];
-  const value = edited === undefined ? attribute.valueName : edited;
+
+  const edited =
+    values?.attributes[variant.sourceReference]?.[attribute.id];
+
+  const value =
+    edited === undefined
+      ? attribute.valueName
+      : edited;
+
   return value?.trim() || null;
 }
 
@@ -172,7 +187,13 @@ function hasAttribute(
   attributeId: "COLOR" | "SIZE",
 ): boolean {
   return variant.attributes.some(
-    ({ id }) => id.trim().toUpperCase() === attributeId,
+    (candidate) =>
+      candidate.role === attributeId ||
+      candidate.id.trim().toUpperCase() === attributeId ||
+      (
+        attributeId === "SIZE" &&
+        candidate.name?.toLocaleLowerCase().includes("talle") === true
+      ),
   );
 }
 

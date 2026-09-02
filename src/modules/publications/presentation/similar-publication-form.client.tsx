@@ -1,5 +1,7 @@
 "use client";
 
+import type { SimilarPublicationAttributeOption } from "../domain/similar-publication.model";
+
 import {
   Alert,
   Button,
@@ -16,7 +18,9 @@ import {
 } from "antd";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import type { ReplicationOptions, TiendanubeCategory } from "@/modules/tiendanube/domain/tiendanube-replication.model";
+import type {
+  ReplicationOptions,
+  TiendanubeCategory } from "@/modules/tiendanube/domain/tiendanube-replication.model";
 import type { ReplicatePublicationAction } from "@/modules/tiendanube/presentation/tiendanube-replication-cell.client";
 import type {
   SimilarPublicationCreationResult,
@@ -31,6 +35,7 @@ import type {
 import {
   buildSimilarPublicationInput,
   commonPriceForDraft,
+  createAddedColorVariant,
   createAddedSizeVariant,
   createInitialSimilarPublicationValues,
   familyNameIsUnchanged,
@@ -290,6 +295,116 @@ export function SimilarPublicationForm({
     variantPicturesRef.current = pictures;
     setVariantPictures(pictures);
     scheduleAutosave(values, commonPicturesRef.current, pictures);
+  };
+
+  const addColor = (
+    option: SimilarPublicationAttributeOption,
+  ) => {
+    const template = activeVariants[0];
+    if (!template) return;
+
+    const added = createAddedColorVariant(template, option);
+
+    if (
+      activeVariants.some(
+        ({ sourceReference }) =>
+          sourceReference === added.sourceReference,
+      )
+    ) {
+      return;
+    }
+
+    const current =
+      form.getFieldsValue(true) as SimilarPublicationFormValues;
+
+    const values: SimilarPublicationFormValues = {
+      ...current,
+      variants: {
+        ...current.variants,
+        [added.sourceReference]: {
+          price: added.price,
+          stock: 0,
+          sku: "",
+        },
+      },
+      attributes: {
+        ...current.attributes,
+        [added.sourceReference]: Object.fromEntries(
+          added.attributes.map((attribute) => [
+            attribute.id,
+            attribute.valueName ?? "",
+          ]),
+        ),
+      },
+    };
+
+    const pictures = {
+      ...variantPicturesRef.current,
+      [added.sourceReference]: [],
+    };
+
+    form.setFieldsValue(values);
+    setVisualValues(values);
+
+    setActiveVariants((currentVariants) => [
+      ...currentVariants,
+      added,
+    ]);
+
+    variantPicturesRef.current = pictures;
+    setVariantPictures(pictures);
+
+    scheduleAutosave(
+      values,
+      commonPicturesRef.current,
+      pictures,
+    );
+  };
+
+  const removeAddedColor = (
+    colorVariants: readonly SimilarPublicationVariant[],
+  ) => {
+    const references = new Set(
+      colorVariants.map(({ sourceReference }) => sourceReference),
+    );
+
+    const current =
+      form.getFieldsValue(true) as SimilarPublicationFormValues;
+
+    const variants = { ...current.variants };
+    const attributes = { ...current.attributes };
+    const pictures = { ...variantPicturesRef.current };
+
+    for (const sourceReference of references) {
+      delete variants[sourceReference];
+      delete attributes[sourceReference];
+      delete pictures[sourceReference];
+    }
+
+    const values: SimilarPublicationFormValues = {
+      ...current,
+      variants,
+      attributes,
+    };
+
+    form.setFieldsValue(values);
+    setVisualValues(values);
+
+    setActiveVariants((currentVariants) =>
+      currentVariants.filter(
+        ({ sourceReference }) =>
+          !references.has(sourceReference),
+      ),
+    );
+
+    variantPicturesRef.current = pictures;
+    setVariantPictures(pictures);
+
+    scheduleAutosave(
+      values,
+      commonPicturesRef.current,
+      pictures,
+    );
   };
 
   const replicateNewPublication = async (
@@ -599,7 +714,9 @@ export function SimilarPublicationForm({
           showPriceColumn={commonPrice === null}
           onPicturesChange={updateVariantPictures}
           onUploadingChange={updateUploading}
+          onAddColor={addColor}
           onAddSize={addSize}
+          onRemoveColor={removeAddedColor}
           onRemoveVariant={removeAddedVariant}
           picturesByVariant={variantPictures}
           uploadAction={uploadAction}
