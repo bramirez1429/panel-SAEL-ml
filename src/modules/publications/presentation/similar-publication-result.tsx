@@ -22,7 +22,6 @@ export function SimilarPublicationResult({
   returnTo,
   onRetryTiendanube,
 }: Props) {
-  const created = result.items.filter(({ status }) => status === "CREATED");
   const failed = result.items.filter(({ status }) => status === "ERROR");
 
   return (
@@ -46,13 +45,56 @@ export function SimilarPublicationResult({
           dataSource={[...result.items]}
           renderItem={(item) => (
             <List.Item>
-              <Space orientation="vertical" size={2}>
-                <Space>
+              <Space orientation="vertical" size={4}>
+                <Space wrap>
                   <Tag color={item.status === "CREATED" ? "green" : "red"}>
                     {item.status === "CREATED" ? "Creada" : "Error"}
                   </Tag>
-                  <span>{item.itemId ?? item.variantKey}</span>
+
+                  {item.itemId ? (
+                    <Typography.Text
+                      copyable={{ text: item.itemId }}
+                      strong
+                    >
+                      {item.itemId}
+                    </Typography.Text>
+                  ) : (
+                    <Typography.Text>{item.variantKey}</Typography.Text>
+                  )}
+
+                  {item.status === "CREATED" && item.itemId ? (
+                    <Button
+                      href={mercadoLibreItemUrl(item.itemId)}
+                      size="small"
+                      target="_blank"
+                    >
+                      Ver en Mercado Libre
+                    </Button>
+                  ) : null}
                 </Space>
+
+                <Typography.Text type="secondary">
+                  Variante: {item.variantKey}
+                </Typography.Text>
+
+                {item.userProductId ? (
+                  <Typography.Text type="secondary">
+                    User Product:{" "}
+                    <Typography.Text copyable={{ text: item.userProductId }}>
+                      {item.userProductId}
+                    </Typography.Text>
+                  </Typography.Text>
+                ) : null}
+
+                {item.familyId ? (
+                  <Typography.Text type="secondary">
+                    Familia:{" "}
+                    <Typography.Text copyable={{ text: item.familyId }}>
+                      {item.familyId}
+                    </Typography.Text>
+                  </Typography.Text>
+                ) : null}
+
                 {item.error ? (
                   <Typography.Text type="danger">
                     {item.error.message}
@@ -63,11 +105,6 @@ export function SimilarPublicationResult({
             </List.Item>
           )}
         />
-        {created[0]?.itemId ? (
-          <Button href={mercadoLibreItemUrl(created[0].itemId)} target="_blank">
-            Ver en Mercado Libre
-          </Button>
-        ) : null}
       </Card>
 
       {tiendanube.status !== "NOT_REQUESTED" ? (
