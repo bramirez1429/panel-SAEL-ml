@@ -476,23 +476,9 @@ export function SimilarPublicationForm({
             <Input />
           </Form.Item>
 
-          <div className={styles.readOnlyField}>
-            <Typography.Text type="secondary">Categoría</Typography.Text>
-            <Typography.Text strong>
-              {draft.categoryId ?? "Sin categoría"}
-            </Typography.Text>
-          </div>
-
           <Form.Item name="currencyId" hidden rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-
-          <div className={styles.readOnlyField}>
-            <Typography.Text type="secondary">Moneda</Typography.Text>
-            <Typography.Text strong>
-              {currencyLabel(draft.currencyId)}
-            </Typography.Text>
-          </div>
 
           <Form.Item name="listingTypeId" hidden rules={[{ required: true }]}>
             <Input />
@@ -503,7 +489,7 @@ export function SimilarPublicationForm({
               Tipo de publicación
             </Typography.Text>
             <Typography.Text strong>
-              {listingTypeLabel(draft.listingTypeId)}
+              {draft.sourceType === "USER_PRODUCT" ? "User Products" : "Legacy"}
             </Typography.Text>
           </div>
 
@@ -511,22 +497,6 @@ export function SimilarPublicationForm({
             <Input />
           </Form.Item>
         </div>
-        <Form.Item label="Descripción" name="description"><Input.TextArea rows={5} /></Form.Item>
-      </Card>
-
-      <Card title="Imágenes generales">
-        <Typography.Paragraph type="secondary">
-          Las fotos originales no se copian. Estas imágenes se aplican a todas las variantes.
-        </Typography.Paragraph>
-        <SimilarPublicationImages
-          onChange={updateCommonPictures}
-          onUploadingChange={updateUploading}
-          pictures={commonPictures}
-          uploadAction={uploadAction}
-        />
-      </Card>
-
-      <Card title="Variantes">
         {commonPrice !== null ? (
           <div className={styles.commonPrice}>
             <Form.Item
@@ -555,6 +525,22 @@ export function SimilarPublicationForm({
           </div>
         ) : null}
 
+        <Form.Item label="Descripción" name="description"><Input.TextArea rows={5} /></Form.Item>
+      </Card>
+
+      <Card title="Imágenes generales">
+        <Typography.Paragraph type="secondary">
+          Las fotos originales no se copian. Estas imágenes se aplican a todas las variantes.
+        </Typography.Paragraph>
+        <SimilarPublicationImages
+          onChange={updateCommonPictures}
+          onUploadingChange={updateUploading}
+          pictures={commonPictures}
+          uploadAction={uploadAction}
+        />
+      </Card>
+
+      <Card title="Variantes">
         <SimilarPublicationVariants
           commonPictures={commonPictures}
           formValues={visualValues}
@@ -611,31 +597,6 @@ export function SimilarPublicationForm({
       </div>
     </Form>
   );
-}
-
-function currencyLabel(currencyId: string | null): string {
-  if (currencyId === "ARS") return "ARS - Peso argentino";
-  if (currencyId === "USD") return "USD - Dólar estadounidense";
-
-  return currencyId ?? "Sin moneda";
-}
-
-function listingTypeLabel(listingTypeId: string | null): string {
-  const labels: Readonly<Record<string, string>> = {
-    gold_pro: "Premium",
-    gold_special: "Clásica",
-    gold_premium: "Premium",
-    gold: "Oro",
-    silver: "Plata",
-    bronze: "Bronce",
-    free: "Gratuita",
-  };
-
-  if (!listingTypeId) {
-    return "Sin tipo de publicación";
-  }
-
-  return labels[listingTypeId] ?? listingTypeId;
 }
 
 function stageLabel(stage: PublishStage): string {
