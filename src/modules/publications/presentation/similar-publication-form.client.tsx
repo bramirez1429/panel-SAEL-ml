@@ -35,6 +35,7 @@ import {
   variantsWithoutPictures,
 } from "./similar-publication-form.model";
 import { SimilarPublicationImages } from "./similar-publication-images.client";
+import { SimilarPublicationPackage } from "./similar-publication-package.client";
 import { SimilarPublicationResult, type TiendanubePublishResult } from "./similar-publication-result";
 import { SimilarPublicationVariants } from "./similar-publication-variants.client";
 import styles from "./similar-publication-form.module.css";
@@ -327,6 +328,10 @@ export function SimilarPublicationForm({
           uploadAction={uploadAction}
           variants={draft.variants}
         />
+      </Card>
+
+      <Card title="Medidas del paquete">
+        <SimilarPublicationPackage />
       </Card>
 
       <Card title="Publicar en">

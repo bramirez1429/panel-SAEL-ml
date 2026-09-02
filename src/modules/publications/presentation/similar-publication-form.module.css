@@ -14,6 +14,41 @@
   gap: 0 16px;
 }
 
+.packageLayout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(320px, 1.1fr);
+  gap: 24px;
+  align-items: center;
+}
+
+.packageReference {
+  min-width: 0;
+}
+
+.packageImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 360px;
+  object-fit: contain;
+}
+
+.packageFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.packageField {
+  display: grid;
+  gap: 8px;
+}
+
+.packageNotice {
+  margin-top: 16px !important;
+  margin-bottom: 0 !important;
+}
+
 .actions {
   display: flex;
   justify-content: flex-end;
@@ -30,6 +65,11 @@
 
 @media (max-width: 700px) {
   .generalGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .packageLayout,
+  .packageFields {
     grid-template-columns: minmax(0, 1fr);
   }
 }
