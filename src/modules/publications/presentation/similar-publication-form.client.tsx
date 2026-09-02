@@ -87,6 +87,10 @@ export function SimilarPublicationForm({
   const [savedDraft, setSavedDraft] =
     useState<SavedSimilarPublicationDraft | null>(null);
   const [restoreOpen, setRestoreOpen] = useState(false);
+  const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
+
+  const publishToTiendanube =
+    Form.useWatch("publishToTiendanube", form) ?? false;
 
   useEffect(() => {
     try {
@@ -242,6 +246,34 @@ export function SimilarPublicationForm({
     setStage("IDLE");
   };
 
+  const requestPublishConfirmation = async () => {
+    setError(null);
+
+    try {
+      await form.validateFields();
+    } catch {
+      return;
+    }
+
+    if (pendingUploads > 0) {
+      setError("Esperá a que terminen de subirse todas las imágenes.");
+      return;
+    }
+
+    if (
+      variantsWithoutPictures(
+        draft,
+        commonPictures,
+        variantPictures,
+      ).length > 0
+    ) {
+      setError("Asigná al menos una foto nueva a cada variante.");
+      return;
+    }
+
+    setPublishConfirmOpen(true);
+  };
+
   const publish = async () => {
     if (submittingRef.current) return;
     setError(null);
@@ -348,6 +380,61 @@ export function SimilarPublicationForm({
         <Typography.Text type="secondary">
           Podés restaurarlos o descartarlos y empezar nuevamente.
         </Typography.Text>
+      </Modal>
+
+      <Modal
+        cancelText="Volver a editar"
+        okText="Crear publicación nueva"
+        onCancel={() => setPublishConfirmOpen(false)}
+        onOk={async () => {
+          setPublishConfirmOpen(false);
+          await publish();
+        }}
+        open={publishConfirmOpen}
+        title="Confirmar publicación"
+      >
+        <Space orientation="vertical" size="middle">
+          <Alert
+            message="Se creará una publicación NUEVA"
+            description="La publicación original no será modificada."
+            showIcon
+            type="info"
+          />
+
+          <div>
+            <Typography.Text strong>Mercado Libre</Typography.Text>
+            <br />
+            <Typography.Text type="secondary">
+              Se crearán {draft.variants.length}{" "}
+              {draft.variants.length === 1 ? "variante" : "variantes"}.
+            </Typography.Text>
+          </div>
+
+          <div>
+            <Typography.Text strong>Fotos nuevas</Typography.Text>
+            <br />
+            <Typography.Text type="secondary">
+              {
+                commonPictures.length +
+                Object.values(variantPictures).reduce(
+                  (total, pictures) => total + pictures.length,
+                  0,
+                )
+              }{" "}
+              imágenes cargadas.
+            </Typography.Text>
+          </div>
+
+          <div>
+            <Typography.Text strong>Tienda Nube</Typography.Text>
+            <br />
+            <Typography.Text type="secondary">
+              {publishToTiendanube
+                ? "También se replicará después de crear correctamente en Mercado Libre."
+                : "No se replicará en Tienda Nube."}
+            </Typography.Text>
+          </div>
+        </Space>
       </Modal>
 
       <Typography.Title level={2}>Publicar similar</Typography.Title>
@@ -502,7 +589,12 @@ export function SimilarPublicationForm({
       ) : null}
       <div className={styles.actions}>
         <Button disabled={loading} onClick={() => router.push(returnTo)}>Cancelar</Button>
-        <Button disabled={pendingUploads > 0} loading={loading} onClick={publish} type="primary">
+        <Button
+          disabled={pendingUploads > 0}
+          loading={loading}
+          onClick={requestPublishConfirmation}
+          type="primary"
+        >
           Publicar
         </Button>
       </div>
