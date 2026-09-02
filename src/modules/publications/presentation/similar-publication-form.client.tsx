@@ -82,6 +82,8 @@ export function SimilarPublicationForm({
   const replicationOptionsRef = useRef<ReplicationOptions | null>(null);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialValues = createInitialSimilarPublicationValues(draft);
+  const [visualValues, setVisualValues] =
+    useState<SimilarPublicationFormValues>(initialValues);
   const commonPrice = commonPriceForDraft(draft);
   const storageKey = `similar-publication-draft:${draft.sourceKey}`;
   const [savedDraft, setSavedDraft] =
@@ -93,6 +95,7 @@ export function SimilarPublicationForm({
     Form.useWatch("publishToTiendanube", form) ?? false;
 
   useEffect(() => {
+    let saved: SavedSimilarPublicationDraft | null = null;
     try {
       const raw = window.sessionStorage.getItem(storageKey);
       if (!raw) return;
@@ -104,7 +107,7 @@ export function SimilarPublicationForm({
         parsed?.values &&
         typeof parsed.values === "object"
       ) {
-        setSavedDraft({
+        saved = {
           values: parsed.values as SimilarPublicationFormValues,
           commonPictures: Array.isArray(parsed.commonPictures)
             ? parsed.commonPictures as readonly SimilarPublicationPicture[]
@@ -114,26 +117,29 @@ export function SimilarPublicationForm({
             typeof parsed.variantPictures === "object"
               ? parsed.variantPictures as VariantPictures
               : {},
-        });
-        setRestoreOpen(true);
-        return;
-      }
-
-      if (
+        };
+      } else if (
         parsed?.version === 1 &&
         parsed?.values &&
         typeof parsed.values === "object"
       ) {
-        setSavedDraft({
+        saved = {
           values: parsed.values as SimilarPublicationFormValues,
           commonPictures: [],
           variantPictures: {},
-        });
-        setRestoreOpen(true);
+        };
       }
     } catch {
       window.sessionStorage.removeItem(storageKey);
     }
+
+    if (!saved) return;
+    const timer = window.setTimeout(() => {
+      setSavedDraft(saved);
+      setRestoreOpen(true);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [storageKey]);
 
   useEffect(() => {
@@ -170,6 +176,7 @@ export function SimilarPublicationForm({
   const restoreSavedDraft = () => {
     if (savedDraft) {
       form.setFieldsValue(savedDraft.values);
+      setVisualValues(savedDraft.values);
 
       commonPicturesRef.current = savedDraft.commonPictures;
       variantPicturesRef.current = savedDraft.variantPictures;
@@ -361,7 +368,9 @@ export function SimilarPublicationForm({
       initialValues={initialValues}
       layout="vertical"
       onValuesChange={(_, values) => {
-        scheduleAutosave(values as SimilarPublicationFormValues);
+        const nextValues = values as SimilarPublicationFormValues;
+        setVisualValues(nextValues);
+        scheduleAutosave(nextValues);
       }}
     >
       <Modal
@@ -505,9 +514,9 @@ export function SimilarPublicationForm({
         <Form.Item label="Descripción" name="description"><Input.TextArea rows={5} /></Form.Item>
       </Card>
 
-      <Card title="Fotos nuevas">
+      <Card title="Imágenes generales">
         <Typography.Paragraph type="secondary">
-          Las fotos originales no se copian. Subí archivos JPG, JPEG o PNG de hasta 10 MB.
+          Las fotos originales no se copian. Estas imágenes se aplican a todas las variantes.
         </Typography.Paragraph>
         <SimilarPublicationImages
           onChange={updateCommonPictures}
@@ -547,6 +556,8 @@ export function SimilarPublicationForm({
         ) : null}
 
         <SimilarPublicationVariants
+          commonPictures={commonPictures}
+          formValues={visualValues}
           showPriceColumn={commonPrice === null}
           onPicturesChange={updateVariantPictures}
           onUploadingChange={updateUploading}

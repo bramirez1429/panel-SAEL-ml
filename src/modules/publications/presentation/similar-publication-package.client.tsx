@@ -20,7 +20,9 @@ export function SimilarPublicationPackage() {
           <Image
             alt="Referencia para medir ancho, alto y profundidad del paquete"
             className={styles.packageImage}
+            height={720}
             src={packageDimensionsReference}
+            width={720}
           />
         </div>
 

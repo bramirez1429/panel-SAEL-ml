@@ -80,6 +80,12 @@ async function prepareRequiredFields(user: ReturnType<typeof userEvent.setup>) {
   await waitFor(() => expect(screen.getByText("Imagen subida.")).toBeInTheDocument());
 }
 
+async function confirmPublication(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(
+    await screen.findByRole("button", { name: "Crear publicación nueva" }),
+  );
+}
+
 describe("SimilarPublicationForm", () => {
   afterEach(() => {
     cleanup();
@@ -102,6 +108,7 @@ describe("SimilarPublicationForm", () => {
     await prepareRequiredFields(user);
 
     await user.click(screen.getByRole("button", { name: "Publicar" }));
+    await confirmPublication(user);
 
     await waitFor(() => expect(current.createAction).toHaveBeenCalledTimes(1));
     expect(current.uploadAction).toHaveBeenCalledTimes(1);
@@ -122,6 +129,7 @@ describe("SimilarPublicationForm", () => {
     await user.click(await screen.findByText("Remeras"));
 
     await user.click(screen.getByRole("button", { name: "Publicar" }));
+    await confirmPublication(user);
 
     await waitFor(() => expect(current.replicateAction).toHaveBeenCalledTimes(1));
     expect(current.createAction.mock.invocationCallOrder[0]).toBeLessThan(
@@ -156,6 +164,7 @@ describe("SimilarPublicationForm", () => {
 
     fireEvent.click(publish);
     fireEvent.click(publish);
+    await confirmPublication(user);
     await waitFor(() => expect(current.createAction).toHaveBeenCalledTimes(1));
     finish?.({
       ok: true,
@@ -176,6 +185,7 @@ describe("SimilarPublicationForm", () => {
     fireEvent.mouseDown(category);
     await user.click(await screen.findByText("Remeras"));
     await user.click(screen.getByRole("button", { name: "Publicar" }));
+    await confirmPublication(user);
 
     expect(await screen.findByText("Tienda Nube no respondió.")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Reintentar Tienda Nube" }));

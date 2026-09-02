@@ -1,16 +1,25 @@
 "use client";
 
-import { Form, Input, InputNumber, Space, Table, Typography } from "antd";
-import type { TableColumnsType } from "antd";
+import { Typography } from "antd";
+
 import type {
   SimilarPublicationPicture,
   SimilarPublicationVariant,
 } from "../domain/similar-publication.model";
 import type { UploadSimilarPublicationPictureAction } from "./similar-publication-action.types";
-import { SimilarPublicationImages } from "./similar-publication-images.client";
+import {
+  createSimilarPublicationVariantCards,
+  createSimilarPublicationVariantSummary,
+} from "./similar-publication-variant-card.model";
+import { SimilarPublicationVariantCard } from "./similar-publication-variant-card.client";
+import type { SimilarPublicationFormValues } from "./similar-publication-form.model";
+import { SimilarPublicationSummary } from "./similar-publication-summary";
+import styles from "./similar-publication-form.module.css";
 
 type Props = Readonly<{
   variants: readonly SimilarPublicationVariant[];
+  formValues: SimilarPublicationFormValues;
+  commonPictures: readonly SimilarPublicationPicture[];
   showPriceColumn?: boolean;
   picturesByVariant: Readonly<Record<string, readonly SimilarPublicationPicture[]>>;
   onPicturesChange: (
@@ -23,104 +32,41 @@ type Props = Readonly<{
 
 export function SimilarPublicationVariants({
   variants,
+  formValues,
+  commonPictures,
   showPriceColumn = true,
   picturesByVariant,
   onPicturesChange,
   uploadAction,
   onUploadingChange,
 }: Props) {
-  const columns: TableColumnsType<SimilarPublicationVariant> = [
-    {
-      title: "Atributos",
-      key: "attributes",
-      render: (_, variant) => variant.attributes.length > 0 ? (
-        <Space orientation="vertical" size="small">
-          {variant.attributes.map((attribute) => (
-            <Form.Item
-              key={attribute.id}
-              label={attribute.name ?? attribute.id}
-              name={["attributes", variant.sourceReference, attribute.id]}
-              style={{ marginBottom: 4 }}
-            >
-              <Input
-                aria-label={attribute.name ?? attribute.id}
-                placeholder={`Nuevo ${attribute.name ?? attribute.id}`}
-              />
-            </Form.Item>
-          ))}
-        </Space>
-      ) : "—",
-      width: 260,
-    },
-    {
-      title: "Precio",
-      key: "price",
-      hidden: !showPriceColumn,
-      render: (_, variant) => (
-        <Form.Item
-          name={["variants", variant.sourceReference, "price"]}
-          rules={[{ required: true, type: "number", min: 0.01, message: "Ingresá un precio mayor a 0." }]}
-          style={{ marginBottom: 0 }}
-        >
-          <InputNumber aria-label={`Precio ${variant.sourceReference}`} min={0.01} precision={2} prefix="$" />
-        </Form.Item>
-      ),
-      width: 145,
-    },
-    {
-      title: "Stock",
-      key: "stock",
-      render: (_, variant) => (
-        <Form.Item
-          name={["variants", variant.sourceReference, "stock"]}
-          rules={[{ required: true, type: "number", min: 0, message: "Ingresá un stock válido." }]}
-          style={{ marginBottom: 0 }}
-        >
-          <InputNumber aria-label={`Stock ${variant.sourceReference}`} min={0} precision={0} />
-        </Form.Item>
-      ),
-      width: 100,
-    },
-    {
-      title: "SKU nuevo",
-      key: "sku",
-      render: (_, variant) => (
-        <Form.Item name={["variants", variant.sourceReference, "sku"]} style={{ marginBottom: 0 }}>
-          <Input aria-label={`SKU nuevo ${variant.sourceReference}`} placeholder="Usá un SKU nuevo" />
-        </Form.Item>
-      ),
-      width: 180,
-    },
-    {
-      title: "Fotos",
-      key: "pictures",
-      render: (_, variant) => (
-        <SimilarPublicationImages
-          compact
-          onChange={(pictures) => onPicturesChange(variant.sourceReference, pictures)}
-          onUploadingChange={onUploadingChange}
-          pictures={picturesByVariant[variant.sourceReference] ?? []}
-          uploadAction={uploadAction}
-        />
-      ),
-      width: 150,
-    },
-  ];
+  const cards = createSimilarPublicationVariantCards(
+    variants,
+    formValues,
+    picturesByVariant,
+    commonPictures,
+  );
+  const summary = createSimilarPublicationVariantSummary(cards, commonPictures);
 
   return (
     <>
       <Typography.Paragraph type="secondary">
-        Los atributos son genéricos y se pueden ajustar para cada variante.
-        Los SKU e identificadores de producto comienzan vacíos.
+        Cada color conserva sus imágenes, atributos, stock y SKU por talle.
       </Typography.Paragraph>
-      <Table
-        columns={columns}
-        dataSource={[...variants]}
-        pagination={false}
-        rowKey="sourceReference"
-        scroll={{ x: "max-content" }}
-        size="small"
-      />
+      <SimilarPublicationSummary summary={summary} />
+      <div className={styles.variantCards}>
+        {cards.map((card) => (
+          <SimilarPublicationVariantCard
+            card={card}
+            key={card.key}
+            onPicturesChange={onPicturesChange}
+            onUploadingChange={onUploadingChange}
+            picturesByVariant={picturesByVariant}
+            showPriceColumn={showPriceColumn}
+            uploadAction={uploadAction}
+          />
+        ))}
+      </div>
     </>
   );
 }

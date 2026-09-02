@@ -15,6 +15,8 @@ type Props = Readonly<{
   uploadAction: UploadSimilarPublicationPictureAction;
   onUploadingChange: (uploading: boolean) => void;
   compact?: boolean;
+  display?: "picture-card" | "upload-only";
+  uploadButtonLabel?: string;
 }>;
 
 export function SimilarPublicationImages({
@@ -23,6 +25,8 @@ export function SimilarPublicationImages({
   uploadAction,
   onUploadingChange,
   compact = false,
+  display = "picture-card",
+  uploadButtonLabel = "Agregar",
 }: Props) {
   const [messageApi, contextHolder] = message.useMessage();
   const [uploading, setUploading] = useState(false);
@@ -76,6 +80,7 @@ export function SimilarPublicationImages({
         customRequest={customRequest}
         fileList={fileList}
         listType="picture-card"
+        showUploadList={display === "picture-card"}
         onRemove={(file) => {
           onChange(pictures.filter(({ id }) => id !== file.uid));
           return true;
@@ -83,7 +88,7 @@ export function SimilarPublicationImages({
       >
         <span aria-label="Agregar foto nueva">
           <PlusOutlined />
-          {!compact ? <span style={{ display: "block", marginTop: 6 }}>Agregar</span> : null}
+          {!compact ? <span style={{ display: "block", marginTop: 6 }}>{uploadButtonLabel}</span> : null}
         </span>
       </Upload>
       {uploading ? <span>Subiendo imagen...</span> : null}

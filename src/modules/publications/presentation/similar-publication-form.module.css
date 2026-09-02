@@ -33,6 +33,214 @@
   margin-bottom: 4px;
 }
 
+.variantSummary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.variantSummaryCard :global(.ant-card-body) {
+  padding: 16px;
+}
+
+.variantCards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.variantCard {
+  min-width: 0;
+  overflow: hidden;
+  border-color: var(--ant-color-border-secondary, #f0f0f0);
+  box-shadow: 0 8px 28px rgb(15 23 42 / 6%);
+}
+
+.variantCardTitle {
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.variantSectionLabel {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.variantGallery {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 82px;
+  gap: 10px;
+}
+
+.variantMainPicture {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--ant-color-fill-quaternary, #f7f8fa);
+  border: 1px solid var(--ant-color-border-secondary, #f0f0f0);
+  border-radius: 12px;
+}
+
+.variantMainPicture :global(.ant-image),
+.variantMainPicture :global(.ant-image-img) {
+  display: block;
+  width: 100%;
+  object-fit: contain;
+}
+
+.variantMainPictureBadge {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  padding: 3px 9px;
+  color: #fff;
+  font-size: 0.75rem;
+  background: rgb(15 23 42 / 72%);
+  border-radius: 999px;
+}
+
+.variantGalleryEmpty {
+  display: grid;
+  min-height: 220px;
+  place-items: center;
+  color: var(--ant-color-text-secondary, #667085);
+  background: var(--ant-color-fill-quaternary, #f7f8fa);
+  border: 1px dashed var(--ant-color-border, #d9d9d9);
+  border-radius: 12px;
+}
+
+.variantGalleryControls {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.variantThumbnails {
+  display: grid;
+  gap: 8px;
+}
+
+.variantThumbnail {
+  position: relative;
+  width: 76px;
+  height: 76px;
+}
+
+.variantThumbnail > button {
+  width: 76px;
+  height: 76px;
+  padding: 1px;
+  overflow: hidden;
+  cursor: pointer;
+  background: #fff;
+  border: 1px solid var(--ant-color-border, #d9d9d9);
+  border-radius: 9px;
+}
+
+.variantThumbnail :global(.ant-image-img) {
+  object-fit: cover;
+  border-radius: 7px;
+}
+
+.variantThumbnail > button:hover,
+.variantThumbnailSelected {
+  border-color: var(--ant-color-primary, #1677ff) !important;
+  box-shadow: 0 0 0 2px var(--ant-color-primary-border, #91caff);
+}
+
+.variantPictureRemove {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0;
+  color: #fff;
+  background: rgb(15 23 42 / 68%);
+  border-radius: 50%;
+}
+
+.variantPicturesMore {
+  display: grid;
+  width: 76px;
+  min-height: 38px;
+  place-items: center;
+  color: var(--ant-color-text-secondary, #667085);
+  font-weight: 600;
+  background: var(--ant-color-fill-quaternary, #f5f5f5);
+  border-radius: 8px;
+}
+
+.variantGalleryUpload :global(.ant-select),
+.variantGalleryUpload :global(.ant-upload-wrapper) {
+  width: 100%;
+}
+
+.variantGalleryUpload :global(.ant-upload-select) {
+  width: 76px !important;
+  height: 76px !important;
+  margin: 0 !important;
+}
+
+.variantGalleryHint,
+.variantImageCount {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.78rem;
+}
+
+.variantSizes {
+  margin-top: 22px;
+}
+
+.variantSizeTag {
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.variantFacts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 22px 0;
+}
+
+.variantFacts dt {
+  color: var(--ant-color-text-secondary, #667085);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.variantFacts dd {
+  margin: 4px 0 0;
+  font-weight: 600;
+}
+
+.variantEditors {
+  display: grid;
+  gap: 12px;
+}
+
+.variantEditor {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  background: var(--ant-color-fill-quaternary, #fafafa);
+  border: 1px solid var(--ant-color-border-secondary, #f0f0f0);
+  border-radius: 10px;
+}
+
+.variantEditorFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .packageLayout {
   display: grid;
   grid-template-columns: minmax(280px, 0.9fr) minmax(320px, 1.1fr);
@@ -89,6 +297,26 @@
 
   .packageLayout,
   .packageFields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .variantCards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .variantSummary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .variantGallery {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .variantThumbnails {
+    grid-template-columns: repeat(auto-fit, minmax(64px, 76px));
+  }
+
+  .variantEditorFields {
     grid-template-columns: minmax(0, 1fr);
   }
 }
