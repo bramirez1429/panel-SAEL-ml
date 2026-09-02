@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { SimilarPublicationDraft } from "../domain/similar-publication.model";
 import {
+  availableChildrenSizes,
   buildSimilarPublicationInput,
+  createAddedSizeVariant,
   createInitialSimilarPublicationValues,
   familyNameIsUnchanged,
 } from "./similar-publication-form.model";
@@ -62,5 +64,54 @@ describe("similar publication form model", () => {
   it("rejects the original USER_PRODUCT family name case-insensitively", () => {
     expect(familyNameIsUnchanged(" familia ORIGINAL ", "Familia original")).toBe(true);
     expect(familyNameIsUnchanged("Familia nueva", "Familia original")).toBe(false);
+  });
+
+  it("adds only a missing children size and preserves technical attributes", () => {
+    const template = {
+      ...draft.variants[0]!,
+      attributes: [
+        ...draft.variants[0]!.attributes,
+        { id: "SIZE", name: "Talle", valueId: "SIZE-6", valueName: "6", values: [] },
+        { id: "TECHNICAL", name: "Ficha", valueId: "T-1", valueName: "Original", values: [] },
+      ],
+    };
+    const added = createAddedSizeVariant(template, "8");
+
+    expect(availableChildrenSizes([template], undefined)).toEqual(["8", "10", "12", "14"]);
+    expect(added).toMatchObject({ stock: 0, sku: null, pictureIds: [] });
+    expect(added.attributes.find(({ id }) => id === "SIZE")).toMatchObject({
+      valueId: null,
+      valueName: "8",
+    });
+    expect(added.attributes.find(({ id }) => id === "TECHNICAL")).toEqual(
+      template.attributes.find(({ id }) => id === "TECHNICAL"),
+    );
+  });
+
+  it("includes an added size in the create payload", () => {
+    const template = {
+      ...draft.variants[0]!,
+      attributes: [
+        ...draft.variants[0]!.attributes,
+        { id: "SIZE", name: "Talle", valueId: "SIZE-6", valueName: "6", values: [] },
+      ],
+    };
+    const added = createAddedSizeVariant(template, "8");
+    const values = createInitialSimilarPublicationValues({ ...draft, variants: [template] });
+    values.variants[added.sourceReference] = { price: 100, stock: 4, sku: "NEW-8" };
+    values.attributes[added.sourceReference] = Object.fromEntries(
+      added.attributes.map((attribute) => [attribute.id, attribute.valueName ?? ""]),
+    );
+
+    const input = buildSimilarPublicationInput(
+      { ...draft, variants: [template] },
+      values,
+      [],
+      { [added.sourceReference]: [{ id: "COLOR-1", secureUrl: "https://new/1.jpg" }] },
+      [template, added],
+    );
+
+    expect(input.variants).toHaveLength(2);
+    expect(input.variants[1]).toMatchObject({ stock: 4, sku: "NEW-8", pictureIds: ["COLOR-1"] });
   });
 });

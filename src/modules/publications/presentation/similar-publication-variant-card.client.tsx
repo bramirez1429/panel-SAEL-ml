@@ -2,6 +2,8 @@
 
 import {
   Card,
+  Button,
+  Dropdown,
   Form,
   Input,
   InputNumber,
@@ -10,6 +12,7 @@ import {
   Typography,
   type TableProps,
 } from "antd";
+import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 
 import type { SimilarPublicationPicture } from "../domain/similar-publication.model";
 import type { UploadSimilarPublicationPictureAction } from "./similar-publication-action.types";
@@ -19,9 +22,15 @@ import type {
 } from "./similar-publication-variant-card.model";
 import { SimilarPublicationVariantGallery } from "./similar-publication-variant-gallery.client";
 import styles from "./similar-publication-form.module.css";
+import {
+  availableChildrenSizes,
+  isAddedSizeVariant,
+  type SimilarPublicationFormValues,
+} from "./similar-publication-form.model";
 
 type Props = Readonly<{
   card: SimilarPublicationVariantCardModel;
+  formValues: SimilarPublicationFormValues;
   showPriceColumn: boolean;
   picturesByVariant: Readonly<
     Record<string, readonly SimilarPublicationPicture[]>
@@ -32,17 +41,29 @@ type Props = Readonly<{
   ) => void;
   uploadAction: UploadSimilarPublicationPictureAction;
   onUploadingChange: (uploading: boolean) => void;
+  onAddSize: (
+    variants: readonly SimilarPublicationCardVariant["variant"][],
+    size: string,
+  ) => void;
+  onRemoveVariant: (sourceReference: string) => void;
 }>;
 
 export function SimilarPublicationVariantCard({
   card,
+  formValues,
   showPriceColumn,
   picturesByVariant,
   onPicturesChange,
   uploadAction,
   onUploadingChange,
+  onAddSize,
+  onRemoveVariant,
 }: Props) {
   const color = card.color ?? "Sin color";
+  const availableSizes = availableChildrenSizes(
+    card.variants.map(({ variant }) => variant),
+    formValues,
+  );
 
   const columns: NonNullable<
     TableProps<SimilarPublicationCardVariant>["columns"]
@@ -130,6 +151,23 @@ export function SimilarPublicationVariantCard({
     });
   }
 
+  if (card.variants.some(({ sourceReference }) => isAddedSizeVariant(sourceReference))) {
+    columns.push({
+      title: "",
+      key: "remove",
+      width: 52,
+      render: (_, variant) => isAddedSizeVariant(variant.sourceReference) ? (
+        <Button
+          aria-label={`Eliminar talle ${variant.size ?? "agregado"}`}
+          danger
+          icon={<DeleteOutlined />}
+          onClick={() => onRemoveVariant(variant.sourceReference)}
+          type="text"
+        />
+      ) : null,
+    });
+  }
+
   return (
     <Card
       className={styles.variantCard}
@@ -189,6 +227,22 @@ export function SimilarPublicationVariantCard({
           scroll={{ x: showPriceColumn ? 650 : 500 }}
           size="small"
         />
+        {availableSizes.length > 0 ? (
+          <Dropdown
+            menu={{
+              items: availableSizes.map((size) => ({ key: size, label: `Talle ${size}` })),
+              onClick: ({ key }) => onAddSize(
+                card.variants.map(({ variant }) => variant),
+                key,
+              ),
+            }}
+            trigger={["click"]}
+          >
+            <Button className={styles.addVariantSize} icon={<PlusOutlined />}>
+              Agregar talle
+            </Button>
+          </Dropdown>
+        ) : null}
       </div>
 
       <div className={styles.variantStockTotal}>

@@ -22,6 +22,7 @@ import type {
   SimilarPublicationCreationResult,
   SimilarPublicationDraft,
   SimilarPublicationPicture,
+  SimilarPublicationVariant,
 } from "../domain/similar-publication.model";
 import type {
   CreateSimilarPublicationAction,
@@ -30,6 +31,7 @@ import type {
 import {
   buildSimilarPublicationInput,
   commonPriceForDraft,
+  createAddedSizeVariant,
   createInitialSimilarPublicationValues,
   familyNameIsUnchanged,
   type SimilarPublicationFormValues,
@@ -74,6 +76,8 @@ export function SimilarPublicationForm({
   const [pendingUploads, setPendingUploads] = useState(0);
   const [commonPictures, setCommonPictures] = useState<readonly SimilarPublicationPicture[]>([]);
   const [variantPictures, setVariantPictures] = useState<VariantPictures>({});
+  const [activeVariants, setActiveVariants] =
+    useState<readonly SimilarPublicationVariant[]>(draft.variants);
   const commonPicturesRef = useRef<readonly SimilarPublicationPicture[]>([]);
   const variantPicturesRef = useRef<VariantPictures>({});
   const [creationResult, setCreationResult] = useState<SimilarPublicationCreationResult | null>(null);
@@ -227,6 +231,67 @@ export function SimilarPublicationForm({
     );
   };
 
+  const addSize = (
+    colorVariants: readonly SimilarPublicationVariant[],
+    size: string,
+  ) => {
+    const template = colorVariants[0];
+    if (!template) return;
+    const added = createAddedSizeVariant(template, size);
+    if (activeVariants.some(({ sourceReference }) => sourceReference === added.sourceReference)) {
+      return;
+    }
+
+    const current = form.getFieldsValue(true) as SimilarPublicationFormValues;
+    const values: SimilarPublicationFormValues = {
+      ...current,
+      variants: {
+        ...current.variants,
+        [added.sourceReference]: { price: added.price, stock: 0, sku: "" },
+      },
+      attributes: {
+        ...current.attributes,
+        [added.sourceReference]: Object.fromEntries(
+          added.attributes.map((attribute) => [attribute.id, attribute.valueName ?? ""]),
+        ),
+      },
+    };
+    const colorPictures = colorVariants
+      .map(({ sourceReference }) => variantPicturesRef.current[sourceReference] ?? [])
+      .find((pictures) => pictures.length > 0) ?? [];
+    const nextPictures = {
+      ...variantPicturesRef.current,
+      [added.sourceReference]: colorPictures,
+    };
+
+    form.setFieldsValue(values);
+    setVisualValues(values);
+    setActiveVariants((variants) => [...variants, added]);
+    variantPicturesRef.current = nextPictures;
+    setVariantPictures(nextPictures);
+    scheduleAutosave(values, commonPicturesRef.current, nextPictures);
+  };
+
+  const removeAddedVariant = (sourceReference: string) => {
+    const current = form.getFieldsValue(true) as SimilarPublicationFormValues;
+    const variants = { ...current.variants };
+    const attributes = { ...current.attributes };
+    const pictures = { ...variantPicturesRef.current };
+    delete variants[sourceReference];
+    delete attributes[sourceReference];
+    delete pictures[sourceReference];
+    const values = { ...current, variants, attributes };
+
+    form.setFieldsValue(values);
+    setVisualValues(values);
+    setActiveVariants((currentVariants) =>
+      currentVariants.filter((variant) => variant.sourceReference !== sourceReference),
+    );
+    variantPicturesRef.current = pictures;
+    setVariantPictures(pictures);
+    scheduleAutosave(values, commonPicturesRef.current, pictures);
+  };
+
   const replicateNewPublication = async (
     newSourceKey: string,
     options: ReplicationOptions,
@@ -259,6 +324,7 @@ export function SimilarPublicationForm({
         draft,
         commonPictures,
         variantPictures,
+        activeVariants,
       ).length > 0
     ) {
       setError("Asigná al menos una foto nueva a cada variante.");
@@ -281,7 +347,12 @@ export function SimilarPublicationForm({
       setError("Esperá a que terminen de subirse todas las imágenes.");
       return;
     }
-    if (variantsWithoutPictures(draft, commonPictures, variantPictures).length > 0) {
+    if (variantsWithoutPictures(
+      draft,
+      commonPictures,
+      variantPictures,
+      activeVariants,
+    ).length > 0) {
       setError("Asigná al menos una foto nueva a cada variante.");
       return;
     }
@@ -289,7 +360,13 @@ export function SimilarPublicationForm({
     submittingRef.current = true;
     setStage("PUBLISHING_ML");
     try {
-      const input = buildSimilarPublicationInput(draft, values, commonPictures, variantPictures);
+      const input = buildSimilarPublicationInput(
+        draft,
+        values,
+        commonPictures,
+        variantPictures,
+        activeVariants,
+      );
       const created = await createAction(input);
       if (!created.ok) {
         setError(created.message);
@@ -401,8 +478,8 @@ export function SimilarPublicationForm({
             <Typography.Text strong>Mercado Libre</Typography.Text>
             <br />
             <Typography.Text type="secondary">
-              Se crearán {draft.variants.length}{" "}
-              {draft.variants.length === 1 ? "variante" : "variantes"}.
+              Se crearán {activeVariants.length}{" "}
+              {activeVariants.length === 1 ? "variante" : "variantes"}.
             </Typography.Text>
           </div>
 
@@ -522,9 +599,11 @@ export function SimilarPublicationForm({
           showPriceColumn={commonPrice === null}
           onPicturesChange={updateVariantPictures}
           onUploadingChange={updateUploading}
+          onAddSize={addSize}
+          onRemoveVariant={removeAddedVariant}
           picturesByVariant={variantPictures}
           uploadAction={uploadAction}
-          variants={draft.variants}
+          variants={activeVariants}
         />
       </Card>
 

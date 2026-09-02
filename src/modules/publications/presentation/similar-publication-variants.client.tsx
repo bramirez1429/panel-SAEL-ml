@@ -28,6 +28,11 @@ type Props = Readonly<{
   ) => void;
   uploadAction: UploadSimilarPublicationPictureAction;
   onUploadingChange: (uploading: boolean) => void;
+  onAddSize: (
+    variants: readonly SimilarPublicationVariant[],
+    size: string,
+  ) => void;
+  onRemoveVariant: (sourceReference: string) => void;
 }>;
 
 export function SimilarPublicationVariants({
@@ -39,6 +44,8 @@ export function SimilarPublicationVariants({
   onPicturesChange,
   uploadAction,
   onUploadingChange,
+  onAddSize,
+  onRemoveVariant,
 }: Props) {
   const cards = createSimilarPublicationVariantCards(
     variants,
@@ -58,12 +65,15 @@ export function SimilarPublicationVariants({
         {cards.map((card) => (
           <SimilarPublicationVariantCard
             card={card}
+            formValues={formValues}
             key={card.key}
             onPicturesChange={onPicturesChange}
             onUploadingChange={onUploadingChange}
             picturesByVariant={picturesByVariant}
             showPriceColumn={showPriceColumn}
             uploadAction={uploadAction}
+            onAddSize={onAddSize}
+            onRemoveVariant={onRemoveVariant}
           />
         ))}
       </div>

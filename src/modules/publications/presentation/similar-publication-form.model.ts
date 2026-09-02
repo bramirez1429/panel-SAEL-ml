@@ -27,6 +27,53 @@ export type SimilarPublicationFormValues = {
 
 export type VariantPictures = Readonly<Record<string, readonly SimilarPublicationPicture[]>>;
 
+export const CHILDREN_SIZES = ["6", "8", "10", "12", "14"] as const;
+
+export function availableChildrenSizes(
+  variants: readonly SimilarPublicationVariant[],
+  values: Pick<SimilarPublicationFormValues, "attributes"> | undefined,
+): readonly string[] {
+  const existing = new Set(
+    variants.flatMap((variant) => {
+      const size = variant.attributes.find(
+        ({ id }) => id.trim().toUpperCase() === "SIZE",
+      );
+      if (!size) return [];
+      const edited = values?.attributes[variant.sourceReference]?.[size.id];
+      return [(edited ?? size.valueName ?? "").trim()];
+    }),
+  );
+  return CHILDREN_SIZES.filter((size) => !existing.has(size));
+}
+
+export function createAddedSizeVariant(
+  template: SimilarPublicationVariant,
+  size: string,
+): SimilarPublicationVariant {
+  const sizeAttribute = template.attributes.find(
+    ({ id }) => id.trim().toUpperCase() === "SIZE",
+  );
+  if (!sizeAttribute || !CHILDREN_SIZES.includes(size as typeof CHILDREN_SIZES[number])) {
+    throw new Error("El talle seleccionado no es válido.");
+  }
+  return {
+    ...template,
+    sourceReference: addedVariantReference(template.sourceReference, size),
+    stock: 0,
+    sku: null,
+    pictureIds: [],
+    attributes: template.attributes.map((attribute) =>
+      attribute === sizeAttribute
+        ? { ...attribute, valueId: null, valueName: size, values: [] }
+        : attribute,
+    ),
+  };
+}
+
+export function isAddedSizeVariant(sourceReference: string): boolean {
+  return sourceReference.startsWith("added-size:");
+}
+
 export function createInitialSimilarPublicationValues(
   draft: SimilarPublicationDraft,
 ): SimilarPublicationFormValues {
@@ -61,6 +108,7 @@ export function buildSimilarPublicationInput(
   values: SimilarPublicationFormValues,
   commonPictures: readonly SimilarPublicationPicture[],
   variantPictures: VariantPictures,
+  variants: readonly SimilarPublicationVariant[] = draft.variants,
 ): SimilarPublicationCreateInput {
   return {
     sourceKey: draft.sourceKey,
@@ -75,7 +123,7 @@ export function buildSimilarPublicationInput(
     shipping: draft.shipping,
     channels: draft.channels,
     pictures: commonPictures.map(({ id }) => id),
-    variants: draft.variants.map((variant) => {
+    variants: variants.map((variant) => {
       const edited = values.variants[variant.sourceReference];
       const pictureIds = [
         ...commonPictures.map(({ id }) => id),
@@ -125,11 +173,16 @@ export function variantsWithoutPictures(
   draft: SimilarPublicationDraft,
   commonPictures: readonly SimilarPublicationPicture[],
   variantPictures: VariantPictures,
+  variants: readonly SimilarPublicationVariant[] = draft.variants,
 ): string[] {
   if (commonPictures.length > 0) return [];
-  return draft.variants
+  return variants
     .filter(({ sourceReference }) => !(variantPictures[sourceReference]?.length))
     .map(({ sourceReference }) => sourceReference);
+}
+
+function addedVariantReference(sourceReference: string, size: string): string {
+  return `added-size:${encodeURIComponent(sourceReference)}:${size}`;
 }
 
 export function familyNameIsUnchanged(

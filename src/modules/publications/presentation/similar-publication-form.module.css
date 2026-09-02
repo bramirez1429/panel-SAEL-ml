@@ -333,6 +333,10 @@
   margin-top: 24px;
 }
 
+.addVariantSize {
+  margin-top: 12px;
+}
+
 .variantStockTotal {
   display: flex;
   justify-content: space-between;
