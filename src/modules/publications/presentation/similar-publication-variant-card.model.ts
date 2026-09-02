@@ -135,7 +135,6 @@ function createCard(
     hasAttribute(variant, "SIZE"),
   );
   const hasEverySize = !requiresSize || variants.every(({ size }) => Boolean(size));
-  const hasEverySku = variants.every(({ sku }) => Boolean(sku.trim()));
   const hasApplicablePictures = commonPictures.length > 0 || pictures.length > 0;
 
   return {
@@ -147,7 +146,6 @@ function createCard(
     complete:
       Boolean(color) &&
       hasEverySize &&
-      hasEverySku &&
       variants.every(({ stock }) => stock !== null) &&
       hasApplicablePictures,
     commonPicturesCount: commonPictures.length,

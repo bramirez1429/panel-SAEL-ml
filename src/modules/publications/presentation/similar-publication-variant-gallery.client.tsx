@@ -1,7 +1,7 @@
 "use client";
 
 import { DeleteOutlined } from "@ant-design/icons";
-import { Button, Image, Select, Typography } from "antd";
+import { Button, Image, Typography } from "antd";
 import { useState } from "react";
 
 import type { SimilarPublicationPicture } from "../domain/similar-publication.model";
@@ -40,14 +40,9 @@ export function SimilarPublicationVariantGallery({
   const [selectedKey, setSelectedKey] = useState<string | null>(
     pictures[0]?.key ?? null,
   );
-  const [targetReference, setTargetReference] = useState<string | null>(
-    variants[0]?.sourceReference ?? null,
-  );
   const selected =
     pictures.find(({ key }) => key === selectedKey) ?? pictures[0] ?? null;
-  const target = variants.find(
-    ({ sourceReference }) => sourceReference === targetReference,
-  ) ?? variants[0] ?? null;
+  const colorPictures = pictures.map(({ picture }) => picture);
 
   return (
     <div className={styles.variantGallery}>
@@ -89,7 +84,14 @@ export function SimilarPublicationVariantGallery({
                 aria-label={`Eliminar imagen ${index + 1} de ${color}`}
                 className={styles.variantPictureRemove}
                 icon={<DeleteOutlined />}
-                onClick={() => removePicture(picture, picturesByVariant, onPicturesChange)}
+                onClick={() =>
+                  removePicture(
+                    picture,
+                    variants,
+                    picturesByVariant,
+                    onPicturesChange,
+                  )
+                }
                 size="small"
                 type="text"
               />
@@ -102,29 +104,25 @@ export function SimilarPublicationVariantGallery({
           ) : null}
         </div>
 
-        {target ? (
+        {variants.length > 0 ? (
           <div className={styles.variantGalleryUpload}>
-            {variants.length > 1 ? (
-              <Select
-                aria-label={`Asignar fotos de ${color} a talle`}
-                onChange={setTargetReference}
-                options={variants.map((variant) => ({
-                  label: variant.size ? `Talle ${variant.size}` : "Variante sin talle",
-                  value: variant.sourceReference,
-                }))}
-                value={target.sourceReference}
-              />
-            ) : null}
             <SimilarPublicationImages
               display="upload-only"
               onChange={(nextPictures) =>
-                onPicturesChange(target.sourceReference, nextPictures)
+                updateColorPictures(
+                  variants,
+                  nextPictures,
+                  onPicturesChange,
+                )
               }
               onUploadingChange={onUploadingChange}
-              pictures={picturesByVariant[target.sourceReference] ?? []}
+              pictures={colorPictures}
               uploadAction={uploadAction}
               uploadButtonLabel="Agregar foto"
             />
+            <Typography.Text type="secondary">
+              La imagen se aplicará a todos los talles de {color}.
+            </Typography.Text>
           </div>
         ) : null}
       </div>
@@ -138,14 +136,28 @@ export function SimilarPublicationVariantGallery({
   );
 }
 
+function updateColorPictures(
+  variants: readonly SimilarPublicationCardVariant[],
+  pictures: readonly SimilarPublicationPicture[],
+  onPicturesChange: Props["onPicturesChange"],
+) {
+  variants.forEach(({ sourceReference }) => {
+    onPicturesChange(sourceReference, pictures);
+  });
+}
+
 function removePicture(
   picture: SimilarPublicationVariantPicture,
+  variants: readonly SimilarPublicationCardVariant[],
   picturesByVariant: Readonly<Record<string, readonly SimilarPublicationPicture[]>>,
   onPicturesChange: Props["onPicturesChange"],
 ) {
-  const ownerPictures = picturesByVariant[picture.sourceReference] ?? [];
-  onPicturesChange(
-    picture.sourceReference,
-    ownerPictures.filter(({ id }) => id !== picture.picture.id),
-  );
+  variants.forEach(({ sourceReference }) => {
+    const currentPictures = picturesByVariant[sourceReference] ?? [];
+
+    onPicturesChange(
+      sourceReference,
+      currentPictures.filter(({ id }) => id !== picture.picture.id),
+    );
+  });
 }
