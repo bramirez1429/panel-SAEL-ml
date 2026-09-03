@@ -39,6 +39,7 @@ import {
   createAddedSizeVariant,
   createInitialSimilarPublicationValues,
   familyNameIsUnchanged,
+  variantHasSizeValue,
   type SimilarPublicationFormValues,
   type VariantPictures,
   variantsWithoutPictures,
@@ -243,39 +244,152 @@ export function SimilarPublicationForm({
   ) => {
     const template = colorVariants[0];
     if (!template) return;
-    const added = createAddedSizeVariant(template, size);
-    if (activeVariants.some(({ sourceReference }) => sourceReference === added.sourceReference)) {
+
+    const added =
+      createAddedSizeVariant(template, size);
+
+    if (
+      activeVariants.some(
+        ({ sourceReference }) =>
+          sourceReference ===
+          added.sourceReference,
+      )
+    ) {
       return;
     }
 
-    const current = form.getFieldsValue(true) as SimilarPublicationFormValues;
-    const values: SimilarPublicationFormValues = {
-      ...current,
-      variants: {
-        ...current.variants,
-        [added.sourceReference]: { price: added.price, stock: 0, sku: "" },
-      },
-      attributes: {
-        ...current.attributes,
-        [added.sourceReference]: Object.fromEntries(
-          added.attributes.map((attribute) => [attribute.id, attribute.valueName ?? ""]),
-        ),
-      },
+    const current =
+      form.getFieldsValue(true) as SimilarPublicationFormValues;
+
+    const isEmptyColorModule =
+      colorVariants.length === 1 &&
+      !variantHasSizeValue(template);
+
+    const nextVariantValues = {
+      ...current.variants,
     };
-    const colorPictures = colorVariants
-      .map(({ sourceReference }) => variantPicturesRef.current[sourceReference] ?? [])
-      .find((pictures) => pictures.length > 0) ?? [];
+
+    const nextAttributes = {
+      ...current.attributes,
+    };
+
     const nextPictures = {
       ...variantPicturesRef.current,
-      [added.sourceReference]: colorPictures,
+    };
+
+    /*
+     * El primer talle reemplaza el placeholder vacío
+     * del color. Los siguientes talles se agregan
+     * normalmente.
+     */
+    if (isEmptyColorModule) {
+      const placeholderValues =
+        nextVariantValues[
+          template.sourceReference
+        ];
+
+      delete nextVariantValues[
+        template.sourceReference
+      ];
+
+      delete nextAttributes[
+        template.sourceReference
+      ];
+
+      const placeholderPictures =
+        nextPictures[
+          template.sourceReference
+        ] ?? [];
+
+      delete nextPictures[
+        template.sourceReference
+      ];
+
+      nextVariantValues[
+        added.sourceReference
+      ] = {
+        price:
+          placeholderValues?.price ??
+          added.price,
+        stock:
+          placeholderValues?.stock ??
+          0,
+        sku:
+          placeholderValues?.sku ??
+          "",
+      };
+
+      nextPictures[
+        added.sourceReference
+      ] = placeholderPictures;
+    } else {
+      const colorPictures =
+        colorVariants
+          .map(
+            ({ sourceReference }) =>
+              nextPictures[
+                sourceReference
+              ] ?? [],
+          )
+          .find(
+            (pictures) =>
+              pictures.length > 0,
+          ) ?? [];
+
+      nextVariantValues[
+        added.sourceReference
+      ] = {
+        price: added.price,
+        stock: 0,
+        sku: "",
+      };
+
+      nextPictures[
+        added.sourceReference
+      ] = colorPictures;
+    }
+
+    nextAttributes[
+      added.sourceReference
+    ] = Object.fromEntries(
+      added.attributes.map(
+        (attribute) => [
+          attribute.id,
+          attribute.valueName ?? "",
+        ],
+      ),
+    );
+
+    const values: SimilarPublicationFormValues = {
+      ...current,
+      variants: nextVariantValues,
+      attributes: nextAttributes,
     };
 
     form.setFieldsValue(values);
     setVisualValues(values);
-    setActiveVariants((variants) => [...variants, added]);
-    variantPicturesRef.current = nextPictures;
+
+    setActiveVariants((variants) =>
+      isEmptyColorModule
+        ? variants.map((variant) =>
+            variant.sourceReference ===
+            template.sourceReference
+              ? added
+              : variant,
+          )
+        : [...variants, added],
+    );
+
+    variantPicturesRef.current =
+      nextPictures;
+
     setVariantPictures(nextPictures);
-    scheduleAutosave(values, commonPicturesRef.current, nextPictures);
+
+    scheduleAutosave(
+      values,
+      commonPicturesRef.current,
+      nextPictures,
+    );
   };
 
   const removeAddedVariant = (sourceReference: string) => {
@@ -302,125 +416,80 @@ export function SimilarPublicationForm({
     option: SimilarPublicationAttributeOption,
   ) => {
     /*
-     * Tomamos un template por talle.
-     * Si actualmente existen S / M / L,
-     * el nuevo color nace automáticamente con S / M / L.
+     * Un color nuevo crea solamente UN módulo.
+     * No copiamos automáticamente S/M/L/etc.
+     *
+     * Desde ese módulo el usuario agrega después
+     * sus talles, stock, SKU y fotos.
      */
-    const seenSizes = new Set<string>();
+    const template = activeVariants[0];
 
-    const templates = activeVariants.filter((variant) => {
-      const sizeAttribute =
-        variant.attributes.find(
-          (attribute) => {
-            const id =
-              attribute.id
-                .trim()
-                .toUpperCase();
+    if (!template) return;
 
-            if (
-              id.startsWith(
-                "SIZE_GRID",
-              )
-            ) {
-              return false;
-            }
-
-            return (
-              id === "SIZE" ||
-              attribute.role ===
-                "SIZE" ||
-              attribute.name
-                ?.toLocaleLowerCase()
-                .includes("talle") ===
-                true
-            );
-          },
-        );
-
-      const rawSize =
-        sizeAttribute?.valueName ??
-        sizeAttribute?.values.flatMap(({ name }) => name ?? [])[0] ??
-        "";
-
-      const sizeKey =
-        rawSize.trim().toLocaleUpperCase("es-AR") || "__SIN_TALLE__";
-
-      if (seenSizes.has(sizeKey)) {
-        return false;
-      }
-
-      seenSizes.add(sizeKey);
-      return true;
-    });
-
-    if (templates.length === 0) return;
-
-    const addedVariants = templates
-      .map((template) =>
-        createAddedColorVariant(template, option),
-      )
-      .filter(
-        (candidate) =>
-          !activeVariants.some(
-            ({ sourceReference }) =>
-              sourceReference === candidate.sourceReference,
-          ),
+    const added =
+      createAddedColorVariant(
+        template,
+        option,
       );
 
-    if (addedVariants.length === 0) return;
+    if (
+      activeVariants.some(
+        ({ sourceReference }) =>
+          sourceReference ===
+          added.sourceReference,
+      )
+    ) {
+      return;
+    }
 
     const current =
       form.getFieldsValue(true) as SimilarPublicationFormValues;
 
-    const nextVariantValues = {
-      ...current.variants,
-    };
-
-    const nextAttributes = {
-      ...current.attributes,
+    const values: SimilarPublicationFormValues = {
+      ...current,
+      variants: {
+        ...current.variants,
+        [added.sourceReference]: {
+          price: added.price,
+          stock: 0,
+          sku: "",
+        },
+      },
+      attributes: {
+        ...current.attributes,
+        [added.sourceReference]:
+          Object.fromEntries(
+            added.attributes.map(
+              (attribute) => [
+                attribute.id,
+                attribute.valueName ?? "",
+              ],
+            ),
+          ),
+      },
     };
 
     const nextPictures = {
       ...variantPicturesRef.current,
-    };
-
-    for (const added of addedVariants) {
-      nextVariantValues[added.sourceReference] = {
-        price: added.price,
-        stock: 0,
-        sku: "",
-      };
-
-      nextAttributes[added.sourceReference] =
-        Object.fromEntries(
-          added.attributes.map((attribute) => [
-            attribute.id,
-            attribute.valueName ?? "",
-          ]),
-        );
 
       /*
-       * Un color nuevo comienza SIN fotos.
-       * Cada color tendrá su propia galería.
+       * Cada color nuevo empieza con su propia
+       * galería vacía.
        */
-      nextPictures[added.sourceReference] = [];
-    }
-
-    const values: SimilarPublicationFormValues = {
-      ...current,
-      variants: nextVariantValues,
-      attributes: nextAttributes,
+      [added.sourceReference]: [],
     };
 
     form.setFieldsValue(values);
     setVisualValues(values);
 
-    setActiveVariants((currentVariants) => [
-      ...currentVariants,
-      ...addedVariants,
+    setActiveVariants((variants) => [
+      ...variants,
+      added,
     ]);
 
-    variantPicturesRef.current = nextPictures;
+    variantPicturesRef.current =
+      nextPictures;
+
     setVariantPictures(nextPictures);
 
     scheduleAutosave(

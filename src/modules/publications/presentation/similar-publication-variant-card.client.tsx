@@ -79,6 +79,15 @@ export function SimilarPublicationVariantCard({
     formValues,
   );
 
+  /*
+   * Un color recién agregado mantiene una variante
+   * placeholder interna para sostener fotos y metadata,
+   * pero no debe mostrarse como "Sin talle".
+   */
+  const visibleVariants = card.variants.filter(
+    ({ size }) => Boolean(size?.trim()),
+  );
+
   const columns: NonNullable<
     TableProps<SimilarPublicationCardVariant>["columns"]
   > = [
@@ -191,7 +200,7 @@ export function SimilarPublicationVariantCard({
    * Si hay más de un talle, cualquiera puede quitarse.
    * Incluso un talle heredado de la publicación original.
    */
-  if (card.variants.length > 1) {
+  if (visibleVariants.length > 1) {
     columns.push({
       title: "",
       key: "remove",
@@ -310,7 +319,11 @@ export function SimilarPublicationVariantCard({
 
         <Table<SimilarPublicationCardVariant>
           columns={columns}
-          dataSource={[...card.variants]}
+          dataSource={[...visibleVariants]}
+          locale={{
+            emptyText:
+              "Agregá un talle para comenzar.",
+          }}
           pagination={false}
           rowKey="sourceReference"
           scroll={{

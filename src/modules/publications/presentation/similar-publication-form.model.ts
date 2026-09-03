@@ -203,9 +203,51 @@ export function createAddedColorVariant(
         };
       }
 
+      const id = attribute.id
+        .trim()
+        .toUpperCase();
+
+      /*
+       * Un color nuevo es solamente un módulo vacío.
+       * No heredamos el talle ni la fila de la guía
+       * del color usado como template.
+       *
+       * SIZE_GRID_ID sí se conserva porque luego el
+       * backend lo usa para resolver la fila correcta
+       * cuando el usuario agrega un talle.
+       */
+      if (
+        attribute === findSizeAttribute(template) ||
+        id === "SIZE_GRID_ROW_ID"
+      ) {
+        return {
+          ...clearIdentifier(attribute),
+          valueId: null,
+          valueName: null,
+          values: [],
+        };
+      }
+
       return clearIdentifier(attribute);
     }),
   };
+}
+
+export function variantHasSizeValue(
+  variant: SimilarPublicationVariant,
+): boolean {
+  const attribute = findSizeAttribute(variant);
+
+  if (!attribute) return false;
+
+  const value =
+    attribute.valueName ??
+    attribute.values.flatMap(
+      ({ name }) => name ?? [],
+    )[0] ??
+    "";
+
+  return value.trim().length > 0;
 }
 
 export function isAddedSizeVariant(sourceReference: string): boolean {
