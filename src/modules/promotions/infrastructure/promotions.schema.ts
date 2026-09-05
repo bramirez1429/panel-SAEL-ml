@@ -38,6 +38,29 @@ const rowSchema = z.object({
   familyId: z.string().nullable(),
   title: z.string(),
   thumbnail: z.string().nullable(),
+
+  sku: z
+    .string()
+    .nullish()
+    .transform((value) => value ?? null),
+
+  stock: z
+    .number()
+    .int()
+    .nonnegative()
+    .nullish()
+    .transform((value) => value ?? null),
+
+  freeShipping: z
+    .boolean()
+    .nullish()
+    .transform((value) => value ?? null),
+
+  installmentLabel: z
+    .string()
+    .nullish()
+    .transform((value) => value ?? null),
+
   productGroup: z.enum([
     "WOMEN_TSHIRT",
     "WOMEN_SWEATSHIRT",

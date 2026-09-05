@@ -61,5 +61,5 @@ function page(publications: PromotionsPage["publications"]): PromotionsPage {
 }
 
 function row(itemId: string, familyId: string | null): PromotionsPage["publications"][number] {
-  return { itemId, familyId, title: `Título ${itemId}`, thumbnail: null, productGroup: "WOMEN_TSHIRT", price: 10_000, currentPromotion: null, hasActivePromotion: false, availablePromotionsCount: 0, promotionStatus: "NONE" };
+  return { itemId, familyId, title: `Título ${itemId}`, thumbnail: null, sku: null, stock: null, freeShipping: null, installmentLabel: null, productGroup: "WOMEN_TSHIRT", price: 10_000, currentPromotion: null, hasActivePromotion: false, availablePromotionsCount: 0, promotionStatus: "NONE" };
 }

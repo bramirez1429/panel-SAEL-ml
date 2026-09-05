@@ -135,6 +135,7 @@ function ControlledModal({ option, onClose }: Readonly<{
 function publication(): PromotionRow {
   return {
     itemId: "MLA1", familyId: "123456", title: "Remera", thumbnail: null,
+    sku: null, stock: null, freeShipping: null, installmentLabel: null,
     productGroup: "WOMEN_TSHIRT", price: 20_000, currentPromotion: null,
     hasActivePromotion: true, availablePromotionsCount: 0, promotionStatus: "ACTIVE",
   };

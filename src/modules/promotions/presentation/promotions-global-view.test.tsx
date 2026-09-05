@@ -57,7 +57,7 @@ describe("vista global de promociones", () => {
 
     expect(screen.getByText("Remera")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Expandir|Cerrar/ })).not.toBeInTheDocument();
-    expect(await screen.findByText("Cyber Fest")).toBeInTheDocument();
+    expect(await screen.findByText(/Cyber Fest/i)).toBeInTheDocument();
     rerender(<PromotionsCatalogClient page={page([publication()])} />);
     await waitFor(() => expect(mocks.getOptions).toHaveBeenCalledTimes(1));
   });
@@ -71,7 +71,7 @@ describe("vista global de promociones", () => {
       expect(await screen.findByLabelText(label)).toBeInTheDocument();
     }
     resolveOptions([candidate()]);
-    expect(await screen.findByText("Cyber Fest")).toBeInTheDocument();
+    expect(await screen.findByText(/Cyber Fest/i)).toBeInTheDocument();
   });
 
   it("renderiza started, candidates y pending en filas ordenadas", async () => {
@@ -106,7 +106,7 @@ describe("vista global de promociones", () => {
     ]);
     render(<PromotionsCatalogClient page={page([publication()])} />);
 
-    expect(await screen.findByText("Cyber Fest")).toBeInTheDocument();
+    expect(await screen.findByText(/CYBER FEST/i)).toBeInTheDocument();
     expect(screen.getByText("31/ago al 14/sep")).toBeInTheDocument();
   });
 
@@ -125,6 +125,46 @@ describe("vista global de promociones", () => {
     await user.click(within(exactRow!).getByRole("button", { name: "Dejar de participar" }));
 
     expect(screen.getByRole("dialog")).toHaveTextContent("Baja exacta");
+  });
+
+  it("oculta promociones que no tienen ninguna acción disponible", async () => {
+    mocks.getOptions.mockResolvedValue([
+      candidate({
+        id: "NO-ACTION",
+        name: "PRICE_DISCOUNT",
+        type: "PRICE_DISCOUNT",
+        promotionPrice: null,
+        startDate: null,
+        finishDate: null,
+        canApply: true,
+      }),
+      candidate({
+        id: "CYBER-1",
+        name: "Cyber Fest",
+        type: "DEAL",
+        canApply: true,
+      }),
+    ]);
+
+    render(
+      <PromotionsCatalogClient
+        page={page([publication()])}
+      />,
+    );
+
+    expect(
+      await screen.findByText(/CYBER FEST/i),
+    ).toBeInTheDocument();
+
+    expect(
+      screen.queryByText("PRICE_DISCOUNT"),
+    ).not.toBeInTheDocument();
+
+    expect(
+      screen.getAllByRole("button", {
+        name: "Participar",
+      }),
+    ).toHaveLength(1);
   });
 
   it("carga promociones para una publicación legacy", async () => {
@@ -220,7 +260,7 @@ describe("vista global de promociones", () => {
 });
 
 function publication(overrides: Partial<PromotionRow> = {}): PromotionRow {
-  return { itemId: "MLA1", familyId: "F-1", title: "Remera", thumbnail: null, productGroup: "WOMEN_TSHIRT", price: 20_000, currentPromotion: null, hasActivePromotion: false, availablePromotionsCount: 1, promotionStatus: "AVAILABLE", ...overrides };
+  return { itemId: "MLA1", familyId: "F-1", title: "Remera", thumbnail: null, sku: null, stock: null, freeShipping: null, installmentLabel: null, productGroup: "WOMEN_TSHIRT", price: 20_000, currentPromotion: null, hasActivePromotion: false, availablePromotionsCount: 1, promotionStatus: "AVAILABLE", ...overrides };
 }
 
 function page(publications: readonly PromotionRow[], done = true, nextCursor: string | null = null): PromotionsPage {
