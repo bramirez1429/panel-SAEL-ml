@@ -1,24 +1,15 @@
 "use client";
 
-import { useTransition, type ReactNode } from "react";
-import { Button, Dropdown, Image, Space, Table, Tag } from "antd";
+import { message, Table } from "antd";
 import type { TableColumnsType } from "antd";
-import { MoreOutlined } from "@ant-design/icons";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
-import type {
-  Publication,
-  PublicationsPage,
-  SalesChannel,
-} from "../domain/publication.model";
-import {
-  buildPublicationsUrl,
-  parsePublicationsSearchParams,
-} from "./publications-search-params";
-import { PublicationStatus } from "./publication-status";
+import type { Publication, PublicationsPage } from "../domain/publication.model";
+import { PublicationProductRow } from "./publication-product-row.client";
+import type { InlineStockUpdateAction } from "./publication-stock-cell.client";
+import { PublicationsPagination } from "./publications-pagination.client";
 import styles from "./publications-view.module.css";
-import { TiendanubeReplicationCell, type ReplicatePublicationAction } from "@/modules/tiendanube/presentation/tiendanube-replication-cell.client";
+import type { ReplicatePublicationAction } from "@/modules/tiendanube/presentation/tiendanube-replication-cell.client";
 import type { TiendanubeCategory, TiendanubeReplicationState } from "@/modules/tiendanube/domain/tiendanube-replication.model";
 
 type PublicationsTableProps = Readonly<{
@@ -27,268 +18,54 @@ type PublicationsTableProps = Readonly<{
   tiendanubeStatusBySourceKey?: Readonly<Record<string, TiendanubeReplicationState>>;
   replicateAction?: ReplicatePublicationAction;
   categories?: readonly TiendanubeCategory[];
+  updateAction?: InlineStockUpdateAction;
 }>;
 
-const missingValue = <span title="Dato no disponible">—</span>;
-
-const salesChannelLabels: Record<SalesChannel, string> = {
-  MERCADO_LIBRE: "Mercado Libre",
-};
-
-function createColumns(
-  searchParams: URLSearchParams,
-  tiendanubeStatusBySourceKey: Readonly<Record<string, TiendanubeReplicationState>>,
-  replicateAction: ReplicatePublicationAction,
-  categories: readonly TiendanubeCategory[],
-): TableColumnsType<Publication> {
-  return [
-  {
-    title: "Tiendanube",
-    key: "tiendanube",
+export function PublicationsTable({ page, loading = false, tiendanubeStatusBySourceKey = {}, replicateAction = async () => ({ ok: false as const, message: "La replicación no está disponible." }), categories = [], updateAction }: PublicationsTableProps) {
+  const searchParams = useSearchParams();
+  const [messageApi, messageContext] = message.useMessage();
+  const columns: TableColumnsType<Publication> = [{
+    key: "publication",
     render: (_, publication) => (
-      <TiendanubeReplicationCell
-        action={replicateAction}
-        initialState={tiendanubeStatusBySourceKey[publication.group.key] ?? {
-          sourceKey: publication.group.key,
-          status: "NOT_REPLICATED",
-          tiendanubeProductId: null,
-        }}
-        sourceKey={publication.group.key}
+      <PublicationProductRow
+        publication={publication}
+        tiendanubeState={tiendanubeStatusBySourceKey[publication.group.key] ?? { sourceKey: publication.group.key, status: "NOT_REPLICATED", tiendanubeProductId: null }}
+        replicateAction={replicateAction}
         categories={categories}
+        updateAction={updateAction}
+        detailHref={createDetailHref(publication.id, searchParams)}
+        similarHref={createSimilarHref(publication.group.key, searchParams)}
+        onStockError={(error) => void messageApi.error(error)}
       />
     ),
-    width: 120,
-  },
-  {
-    title: "Imagen",
-    key: "thumbnail",
-    render: (_, publication) =>
-      publication.thumbnailUrl ? (
-        <Image
-          alt={`Imagen de ${publication.title}`}
-          height={48}
-          preview={false}
-          src={publication.thumbnailUrl}
-          width={48}
-        />
-      ) : (
-        <span className={styles.thumbnailPlaceholder} title="Imagen no disponible">
-          —
-        </span>
-      ),
-    width: 60,
-  },
-  {
-    title: "Producto",
-    dataIndex: "title",
-    key: "product",
-    ellipsis: true,
-    render: (title: Publication["title"]) => (
-      <span className={styles.productTitle}>{title}</span>
-    ),
-    width: 180,
-  },
-  {
-    title: "Canal",
-    key: "channel",
-    render: (_, publication) => salesChannelLabels[publication.channel],
-    width: 100,
-  },
-  {
-    title: "Tipo",
-    key: "type",
-    render: (_, publication) =>
-      publication.group.type === "USER_PRODUCT" ? (
-        <Space orientation="vertical" size={0}>
-          <Tag color="blue">Familia</Tag>
-          <small>{publication.group.familyId ?? "—"}</small>
-          {publication.group.userProductId ? (
-            <small>{publication.group.userProductId}</small>
-          ) : null}
-        </Space>
-      ) : (
-        <Tag>Anterior</Tag>
-      ),
-    width: 85,
-  },
-  {
-    title: "Variantes",
-    key: "variants",
-    align: "right",
-    render: (_, publication) =>
-      publication.group.type === "USER_PRODUCT"
-        ? publication.group.childrenCount
-        : missingValue,
-    width: 75,
-  },
-  {
-    title: "Precio",
-    key: "price",
-    align: "right",
-    render: (_, publication) => formatPrice(publication),
-    width: 125,
-  },
-  {
-    title: "Stock",
-    dataIndex: "stock",
-    key: "stock",
-    align: "right",
-    width: 65,
-  },
-  {
-    title: "Vendidos",
-    dataIndex: "sold",
-    key: "sold",
-    align: "right",
-    render: (sold: Publication["sold"]) =>
-      sold === null ? missingValue : sold,
-    width: 75,
-  },
-  {
-    title: "Estado",
-    key: "status",
-    render: (_, publication) =>
-      <PublicationStatus status={publication.status} />,
-    width: 95,
-  },
-  {
-    title: "Acciones",
-    key: "actions",
-    render: (_, publication) => (
-      <Dropdown
-        menu={{
-          items: [
-            {
-              key: "detail",
-              label: (
-                <Link href={createDetailHref(publication.id, searchParams)}>
-                  Ver detalle
-                </Link>
-              ),
-            },
-            {
-              key: "similar",
-              label: (
-                <Link href={createSimilarHref(publication.group.key, searchParams)}>
-                  Publicar similar
-                </Link>
-              ),
-            },
-          ],
-        }}
-        trigger={["click"]}
-      >
-        <Button
-          aria-label={`Acciones de ${publication.title}`}
-          icon={<MoreOutlined />}
-          type="text"
-        />
-      </Dropdown>
-    ),
-    width: 95,
-  },
-  ];
-}
-
-export function PublicationsTable({
-  page,
-  loading = false,
-  tiendanubeStatusBySourceKey = {},
-  replicateAction = async () => ({ ok: false as const, message: "La replicación no está disponible." }),
-  categories = [],
-}: PublicationsTableProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [isPending, startTransition] = useTransition();
-  const columns = createColumns(searchParams, tiendanubeStatusBySourceKey, replicateAction, categories);
-
-  const goToNextPage = () => {
-    if (isPending || !hasNextPage) return;
-    const current = parsePublicationsSearchParams(
-      Object.fromEntries(searchParams.entries()),
-    );
-
-    startTransition(() => {
-      router.push(
-        buildPublicationsUrl(current, {
-          page: current.page + 1,
-          cursor: page.nextCursor,
-        }),
-      );
-    });
-  };
-
-  const hasNextPage = !page.done && page.nextCursor !== null;
-
+  }];
   return (
-    <div
-      className={styles.tableCard}
-      aria-busy={loading || isPending}
-      aria-label="Tabla de publicaciones"
-      role="region"
-    >
+    <>{messageContext}<div className={styles.tableCard} aria-busy={loading} aria-label="Tabla de publicaciones" role="region">
       <Table<Publication>
+        className={styles.productsTable}
         columns={columns}
         dataSource={[...page.publications]}
-        loading={loading || isPending}
+        loading={loading}
         locale={{ emptyText: "No se encontraron publicaciones." }}
         pagination={false}
         rowKey="id"
-        scroll={{ x: "max-content" }}
-        size="small"
+        showHeader={false}
+        scroll={{ x: 1080 }}
       />
-
-      {!loading && page.count > 0 ? (
-        <div className={styles.pagination} aria-label="Paginación por cursor">
-          <Space>
-            {page.page > 1 ? <Button onClick={() => { if (!isPending) router.back(); }}>Anterior</Button> : null}
-            <span>Página {page.page}</span>
-            {hasNextPage ? <Button loading={isPending} onClick={goToNextPage} type="primary">Siguiente</Button> : null}
-          </Space>
-        </div>
-      ) : null}
-    </div>
+      {!loading && page.productsCount > 0 ? <PublicationsPagination page={page} /> : null}
+    </div></>
   );
 }
 
-export function createDetailHref(
-  publicationId: string,
-  searchParams: URLSearchParams,
-): string {
+export function createDetailHref(publicationId: string, searchParams: URLSearchParams): string {
   const query = searchParams.toString();
   const returnTo = query ? `/publicaciones?${query}` : "/publicaciones";
   return `/publicaciones/${encodeURIComponent(publicationId)}?returnTo=${encodeURIComponent(returnTo)}`;
 }
 
-export function createSimilarHref(
-  sourceKey: string,
-  searchParams: URLSearchParams,
-): string {
+export function createSimilarHref(sourceKey: string, searchParams: URLSearchParams): string {
   const query = searchParams.toString();
   const returnTo = query ? `/publicaciones?${query}` : "/publicaciones";
   const params = new URLSearchParams({ sourceKey, returnTo });
   return `/publicaciones/similar?${params.toString()}`;
-}
-
-function formatPrice(publication: Publication): ReactNode {
-  const from = publication.price?.from ?? null;
-  const to = publication.price?.to ?? null;
-  const currency = publication.price?.currency ?? "";
-
-  if (from === null && to === null) {
-    return missingValue;
-  }
-
-  const format = (value: number) =>
-    new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 }).format(value);
-  const formatWithCurrency = (value: number) =>
-    currency ? `${currency} ${format(value)}` : format(value);
-
-  if (from !== null && to !== null && from !== to) {
-    return `${formatWithCurrency(from)} — ${formatWithCurrency(to)}`;
-  }
-
-  const amount = from ?? to;
-
-  return amount === null ? missingValue : formatWithCurrency(amount);
 }

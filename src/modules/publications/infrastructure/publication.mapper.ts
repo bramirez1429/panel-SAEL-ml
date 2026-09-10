@@ -3,6 +3,7 @@ import type {
   GroupedPublicationDto,
   PublicationsResponseDto,
 } from "./publications-response.schema";
+import { mapLegacyVariations } from "./publication-detail.mapper";
 
 type SharedProductDto = Extract<GroupedPublicationDto, { model: "SHARED" }>;
 type FamilySummaryDto = Extract<
@@ -11,6 +12,7 @@ type FamilySummaryDto = Extract<
 >;
 
 function mapSharedProduct(dto: SharedProductDto): Publication {
+  const variants = mapLegacyVariations(dto.variations);
   return {
     id: dto.itemId,
     title: dto.title ?? dto.itemId,
@@ -22,9 +24,12 @@ function mapSharedProduct(dto: SharedProductDto): Publication {
       dto.price === null
         ? null
         : { from: dto.price, to: dto.price, currency: null },
-    stock: dto.stock,
+    stock: variants.length > 0
+      ? variants.reduce((total, variant) => total + (variant.stock ?? 0), 0)
+      : dto.stock,
     sold: dto.sold,
     attributes: [],
+    variants,
     group: {
       key: dto.key,
       productId: dto.product_id ?? null,
@@ -62,6 +67,26 @@ function mapFamilySummary(dto: FamilySummaryDto): Publication {
     stock: items.reduce((total, item) => total + item.stock, 0),
     sold: items.reduce((total, item) => total + item.sold, 0),
     attributes: [],
+    variants: dto.variants.flatMap((variant) =>
+      variant.items.map((item) => ({
+        id: `${variant.userProductId}:${item.itemId}`,
+        itemId: item.itemId,
+        userProductId: variant.userProductId,
+        label: null,
+        title: item.title,
+        thumbnailUrl: item.thumbnail,
+        status: item.status,
+        price: item.price === null ? null : { amount: item.price, currency: null },
+        stock: item.stock,
+        sold: item.sold,
+        sku: getAttributeValue(item.attributes, "SELLER_SKU"),
+        attributes: item.attributes.map((attribute) => ({
+          id: attribute.id,
+          value: attribute.value_name ?? attribute.values?.[0]?.name ?? null,
+        })),
+        permalink: null,
+      })),
+    ),
     group: {
       key: dto.key,
       productId: dto.product_id ?? null,
@@ -72,6 +97,14 @@ function mapFamilySummary(dto: FamilySummaryDto): Publication {
       childrenCount: dto.variantsCount,
     },
   };
+}
+
+function getAttributeValue(
+  attributes: FamilySummaryDto["variants"][number]["items"][number]["attributes"],
+  id: string,
+): string | null {
+  const attribute = attributes.find((item) => item.id.trim().toUpperCase() === id);
+  return attribute?.value_name ?? attribute?.values?.[0]?.name ?? null;
 }
 
 /** Convierte el DTO agrupado real al modelo propio de la UI. */

@@ -103,7 +103,7 @@ describe("PublicationsView", () => {
     expect(screen.getByText("Familia")).toBeInTheDocument();
     expect(screen.getByText("ARS 1.000")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /Acciones de/ }));
-    expect(screen.getByRole("link", { name: "Ver detalle" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Ver detalle / editar" })).toHaveAttribute(
       "href",
       "/publicaciones/publication-id?returnTo=%2Fpublicaciones%3Fpage%3D1%26search%3D%26type%3D%26status%3D",
     );

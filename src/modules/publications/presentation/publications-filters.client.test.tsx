@@ -21,6 +21,7 @@ describe("PublicationsFilters", () => {
 
   beforeEach(() => {
     navigation.push.mockReset();
+    sessionStorage.clear();
   });
 
   it("writes submitted filters to the URL and resets the page", async () => {
@@ -81,5 +82,10 @@ describe("PublicationsFilters", () => {
         "/publicaciones?page=1&cursor=&search=anterior&type=USER_PRODUCT&status=paused",
       );
     });
+  });
+
+  it("muestra el buscador global para título e identificadores", () => {
+    render(<PublicationsFilters filters={{ page: 1, cursor: null, search: "", type: null, status: "" }} />);
+    expect(screen.getByPlaceholderText("Buscar por título, SKU, Familia, MLA o MLAU")).toBeInTheDocument();
   });
 });

@@ -1,8 +1,9 @@
 import type {
   PublicationAttribute,
-  PublicationDetail,
+  Publication,
   PublicationVariant,
 } from "../domain/publication.model";
+import type { PublicationEditTarget } from "../domain/publication-edit.repository";
 
 export type PublicationVariantTableRow = Readonly<{
   key: string;
@@ -32,9 +33,9 @@ export type PublicationVariationTableRow = Readonly<{
 
 /** Convierte el dominio a filas planas y deja los targets de edición explícitos. */
 export function createPublicationVariantRows(
-  publication: PublicationDetail,
+  publication: Publication,
 ): readonly PublicationVariantTableRow[] {
-  if (publication.variants.length > 0) {
+  if (publication.variants && publication.variants.length > 0) {
     return publication.variants.map((variant) =>
       mapVariantRow(variant, publication),
     );
@@ -60,6 +61,14 @@ export function createPublicationVariantRows(
       permalink: publication.permalink,
     },
   ];
+}
+
+export function toPublicationEditTarget(row: PublicationVariantTableRow): PublicationEditTarget {
+  if (row.publicationType === "USER_PRODUCT") {
+    if (!row.familyId) throw new Error("La familia no tiene familyId disponible para editar.");
+    return { type: "family", familyId: row.familyId, itemId: row.itemId ?? row.publicationId };
+  }
+  return { type: "legacy", itemId: row.itemId ?? row.publicationId, variationId: row.variationId };
 }
 
 /** Agrupa ofertas MLA sin perder sus precios ni identificadores individuales. */
@@ -96,17 +105,26 @@ export function compareSizes(left: string | null, right: string | null): number 
   const numericLeft = left !== null && /^\d+(?:[.,]\d+)?$/.test(left.trim()) ? Number(left.replace(",", ".")) : null;
   const numericRight = right !== null && /^\d+(?:[.,]\d+)?$/.test(right.trim()) ? Number(right.replace(",", ".")) : null;
   if (numericLeft !== null && numericRight !== null) return numericLeft - numericRight;
-  const order = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"];
-  const leftIndex = order.indexOf(left?.trim().toUpperCase() ?? "");
-  const rightIndex = order.indexOf(right?.trim().toUpperCase() ?? "");
+  if (numericLeft !== null) return -1;
+  if (numericRight !== null) return 1;
+  const leftIndex = alphaSizeRank(left);
+  const rightIndex = alphaSizeRank(right);
   if (leftIndex >= 0 && rightIndex >= 0) return leftIndex - rightIndex;
   if (leftIndex >= 0) return -1;
   if (rightIndex >= 0) return 1;
   return (left ?? "").localeCompare(right ?? "", "es", { numeric: true, sensitivity: "base" });
 }
 
+function alphaSizeRank(value: string | null): number {
+  const aliases: Readonly<Record<string, number>> = {
+    XXS: 0, XS: 1, S: 2, M: 3, L: 4, XL: 5,
+    "2XL": 6, XXL: 6, "3XL": 7, XXXL: 7,
+  };
+  return aliases[value?.trim().toUpperCase() ?? ""] ?? -1;
+}
+
 function toVariantPrice(
-  publication: PublicationDetail,
+  publication: Publication,
 ): PublicationVariantTableRow["price"] {
   const from = publication.price?.from ?? null;
   const to = publication.price?.to ?? null;
@@ -118,7 +136,7 @@ function toVariantPrice(
 
 function mapVariantRow(
   variant: PublicationVariant,
-  publication: PublicationDetail,
+  publication: Publication,
 ): PublicationVariantTableRow {
   const isFamily = publication.group.type === "USER_PRODUCT";
   return {

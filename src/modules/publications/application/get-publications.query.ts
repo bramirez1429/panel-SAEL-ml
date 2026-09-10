@@ -36,9 +36,9 @@ export class GetPublicationsQuery {
       cursor: input.cursor,
       search: input.search,
     });
-    const publications = page.publications.filter((publication) =>
-      matchesFilters(publication, input),
-    );
+    const publications = page.publications
+      .filter((publication) => matchesFilters(publication, input))
+      .sort((left, right) => (right.sold ?? 0) - (left.sold ?? 0));
 
     return {
       ...page,

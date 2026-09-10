@@ -7,11 +7,10 @@ import { useState } from "react";
 
 import type { UpdatePublicationInput } from "../application/update-publication.command";
 import { getPublicationEditChanges, validatePublicationEditChanges } from "../application/publication-edit.validation";
-import type { PublicationEditTarget } from "../domain/publication-edit.repository";
 import type { PublicationEditStatus } from "../domain/publication-edit.repository";
 import { PublicationStatus } from "./publication-status";
 import type { PublicationVariantTableRow, PublicationVariationTableRow } from "./publication-variant-row";
-import { groupFamilyRows } from "./publication-variant-row";
+import { groupFamilyRows, toPublicationEditTarget } from "./publication-variant-row";
 import { PublicationStatusSwitch, type PublicationStatusUpdateAction } from "./publication-status-switch.client";
 import styles from "./publication-detail-view.module.css";
 
@@ -64,7 +63,7 @@ function EditableTables({ rows, updateAction, statusAction }: { rows: readonly P
     try {
       const result = await updateAction({
         publicationId: row.publicationId,
-        target: toEditTarget(row),
+        target: toPublicationEditTarget(row),
         current,
         draft,
       });
@@ -91,7 +90,7 @@ function EditableTables({ rows, updateAction, statusAction }: { rows: readonly P
   const offerColumns: TableColumnsType<PublicationVariantTableRow> = [
     { title: "ID publicación", dataIndex: "publicationId", key: "publicationId" },
     { title: "Precio", key: "price", render: (_, row) => editCell(row, "price") ?? <span>{formatPrice(row.price)} <small>Precio de esta oferta</small></span> },
-    { title: "Estado", key: "status", render: (_, row) => <PublicationStatusSwitch key={`${row.key}-${row.status}`} publicationId={row.publicationId} target={toEditTarget(row)} initialStatus={row.status} action={statusAction} onConfirmed={(status) => setConfirmed((previous) => ({ ...previous, [row.key]: { ...previous[row.key], status } }))} /> },
+    { title: "Estado", key: "status", render: (_, row) => <PublicationStatusSwitch key={`${row.key}-${row.status}`} publicationId={row.publicationId} target={toPublicationEditTarget(row)} initialStatus={row.status} action={statusAction} onConfirmed={(status) => setConfirmed((previous) => ({ ...previous, [row.key]: { ...previous[row.key], status } }))} /> },
     { title: "Vendidos", dataIndex: "sold", key: "sold", render: (value: number | null) => value ?? missingValue },
     { title: "Acciones", key: "actions", render: (_, row) => actions(row) },
   ];
@@ -131,13 +130,6 @@ function legacyColumns(editCell?: (row: PublicationVariantTableRow, field: keyof
   ];
 }
 
-export function toEditTarget(row: PublicationVariantTableRow): PublicationEditTarget {
-  if (row.publicationType === "USER_PRODUCT") {
-    if (!row.familyId) throw new Error("La familia no tiene familyId disponible para editar.");
-    return { type: "family", familyId: row.familyId, itemId: row.itemId ?? row.publicationId };
-  }
-  return { type: "legacy", itemId: row.itemId ?? row.publicationId, variationId: row.variationId };
-}
 function applyConfirmed(row: PublicationVariantTableRow, values: Readonly<{ sku?: string | null; price?: number | null; stock?: number | null; status?: PublicationEditStatus }> | undefined): PublicationVariantTableRow {
   if (!values) return row;
   return {

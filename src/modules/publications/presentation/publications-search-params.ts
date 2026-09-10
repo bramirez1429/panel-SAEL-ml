@@ -32,10 +32,14 @@ export function parsePublicationsSearchParams(
   return {
     page: cursor ? page : 1,
     cursor: cursor || null,
-    search: getFirstValue(searchParams.search).trim(),
+    search: normalizePublicationSearch(getFirstValue(searchParams.search)),
     type: isPublicationType(typeValue) ? typeValue : null,
     status: getFirstValue(searchParams.status).trim(),
   };
+}
+
+export function normalizePublicationSearch(value: string): string {
+  return value.trim().replace(/\s+/g, " ");
 }
 
 export function buildPublicationsUrl(

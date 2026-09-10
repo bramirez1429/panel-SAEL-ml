@@ -43,7 +43,7 @@ export function mapPublicationDetail(
     },
     variants: familyDto
       ? familyDto.variants.map(mapFamilyVariant)
-      : mapVariations(dto.variations),
+      : mapLegacyVariations(dto.variations),
   };
 }
 
@@ -78,7 +78,7 @@ function mapFamilyVariant(
   };
 }
 
-function mapVariations(variations: readonly unknown[]): PublicationDetail["variants"] {
+export function mapLegacyVariations(variations: readonly unknown[]): PublicationDetail["variants"] {
   return variations.flatMap((variation) => {
     if (!isRecord(variation)) return [];
 

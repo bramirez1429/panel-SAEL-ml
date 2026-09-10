@@ -6,10 +6,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import {
   buildPublicationsUrl,
+  normalizePublicationSearch,
   parsePublicationsSearchParams,
   type PublicationsUrlState,
 } from "./publications-search-params";
 import styles from "./publications-view.module.css";
+import { resetPublicationsCursorHistory } from "./publications-cursor-history.client";
 
 type PublicationsFiltersProps = Readonly<{
   filters: PublicationsUrlState;
@@ -25,6 +27,7 @@ export function PublicationsFilters({ filters }: PublicationsFiltersProps) {
       Object.fromEntries(searchParams.entries()),
     );
 
+    if (patch.cursor === null) resetPublicationsCursorHistory();
     startTransition(() => {
       router.push(buildPublicationsUrl(current, patch));
     });
@@ -37,7 +40,7 @@ export function PublicationsFilters({ filters }: PublicationsFiltersProps) {
     navigate({
       page: 1,
       cursor: null,
-      search: String(formData.get("search") ?? "").trim(),
+      search: normalizePublicationSearch(String(formData.get("search") ?? "")),
       status: String(formData.get("status") ?? "").trim(),
     });
   };
@@ -57,7 +60,7 @@ export function PublicationsFilters({ filters }: PublicationsFiltersProps) {
         <Input
           defaultValue={filters.search}
           name="search"
-          placeholder="Nombre del producto"
+          placeholder="Buscar por título, SKU, Familia, MLA o MLAU"
         />
       </label>
 

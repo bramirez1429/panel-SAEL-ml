@@ -61,12 +61,13 @@ describe("PublicationsTable", () => {
     cleanup();
     navigation.back.mockReset();
     navigation.push.mockReset();
+    sessionStorage.clear();
   });
 
   it("uses the backend cursor for the next page while preserving filters", async () => {
     const user = userEvent.setup();
     render(<PublicationsTable page={pageWithPublication} />);
-    await user.click(screen.getByRole("button", { name: "Siguiente" }));
+    await user.click(screen.getByTitle("2"));
     expect(navigation.push).toHaveBeenCalledWith(
       "/publicaciones?page=2&cursor=cursor-2&search=campera&type=LEGACY&status=active",
     );
@@ -77,7 +78,7 @@ describe("PublicationsTable", () => {
     render(<PublicationsTable page={pageWithPublication} />);
     await user.click(screen.getByRole("button", { name: "Acciones de Publicación real" }));
 
-    expect(screen.getByRole("link", { name: "Ver detalle" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Ver detalle / editar" })).toHaveAttribute(
       "href",
       "/publicaciones/publication%2Fid?returnTo=%2Fpublicaciones%3Fpage%3D1%26cursor%3D%26search%3Dcampera%26type%3DLEGACY%26status%3Dactive",
     );
@@ -93,7 +94,8 @@ describe("PublicationsTable", () => {
     expect(screen.queryByRole("button", { name: "Volver a replicar" })).not.toBeInTheDocument();
     expect(screen.getByText("Publicación real")).toBeInTheDocument();
     expect(screen.getByText("Mercado Libre")).toBeInTheDocument();
-    expect(screen.getAllByText("Anterior").length).toBeGreaterThan(0);
+    expect(screen.getByText("Activa")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Copiar MLA MLA1" })).toBeInTheDocument();
     expect(screen.getByText("1.000 — 1.250")).toBeInTheDocument();
     expect(screen.getByText("3")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Imagen de Publicación real" })).toBeInTheDocument();
@@ -107,6 +109,33 @@ describe("PublicationsTable", () => {
     expect(screen.getByTitle("Imagen no disponible")).toBeInTheDocument();
   });
 
+  it("muestra siempre las variantes USER_PRODUCT, sus IDs copiables y sin expandir", () => {
+    const family = {
+      ...pageWithPublication.publications[0]!,
+      group: { ...pageWithPublication.publications[0]!.group, type: "USER_PRODUCT" as const, familyId: "FAMILY-1", childrenCount: 1 },
+      variants: [
+        { id: "UP-1:MLA2", itemId: "MLA2", userProductId: "UP-1", label: null, title: "Talle 42", thumbnailUrl: null, status: "active", price: { amount: 1000, currency: null }, stock: 8, sold: 0, sku: "SKU-42", attributes: [{ id: "SIZE", value: "42" }], permalink: null },
+        { id: "UP-1:MLA3", itemId: "MLA3", userProductId: "UP-1", label: null, title: "Talle 42", thumbnailUrl: null, status: "active", price: { amount: 1000, currency: null }, stock: 8, sold: 0, sku: "SKU-42", attributes: [{ id: "SIZE", value: "42" }], permalink: null },
+      ],
+    };
+    const { container } = render(<PublicationsTable page={{ ...pageWithPublication, publications: [family] }} updateAction={vi.fn()} />);
+
+    expect(container.querySelector(".ant-table-row-expand-icon")).not.toBeInTheDocument();
+    expect(container.querySelector('[aria-label="Variantes de Publicación real"]')).toBeInTheDocument();
+    expect(screen.getAllByText("42")).toHaveLength(1);
+    expect(screen.getByRole("spinbutton", { name: "Stock de 42" })).toHaveValue("8");
+    expect(container.querySelector('[aria-label="Copiar Family ID FAMILY-1"]')).toBeInTheDocument();
+    expect(container.querySelector('[aria-label="Copiar MLA MLA2"]')).toBeInTheDocument();
+    expect(container.querySelector('[aria-label="Copiar MLA MLA3"]')).toBeInTheDocument();
+    expect(container.querySelector('[aria-label="Copiar MLAU UP-1"]')).not.toBeInTheDocument();
+    expect(container.querySelector('[aria-label="Copiar SKU SKU-42"]')).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Eliminar variante 42" })).toBeDisabled();
+    const identity = container.querySelector("aside");
+    expect(identity).not.toHaveTextContent("MLA2");
+    expect(identity).not.toHaveTextContent("MLA3");
+    expect(identity).not.toHaveTextContent("UP-1");
+  });
+
   it("replica usando group.key y no IDs internos", async () => {
     const action = vi.fn().mockResolvedValue({ ok: true, action: "created" as const });
     const user = userEvent.setup();
@@ -114,5 +143,13 @@ describe("PublicationsTable", () => {
     await user.click(screen.getByRole("button", { name: "Replicar TN" }));
     expect(action).not.toHaveBeenCalled();
     expect(action).not.toHaveBeenCalledWith("123e4567-e89b-42d3-a456-426614174000");
+  });
+
+  it("muestra variantes clásicas con stock individual", () => {
+    const legacy = { ...pageWithPublication.publications[0]!, variants: [{ id: "987", itemId: null, userProductId: null, label: null, title: null, thumbnailUrl: null, status: null, price: { amount: 1200, currency: "ARS" }, stock: 6, sold: 2, sku: "SKU-M", attributes: [{ id: "COLOR", value: "Negro" }, { id: "SIZE", value: "M" }], permalink: null }] };
+    render(<PublicationsTable page={{ ...pageWithPublication, publications: [legacy] }} updateAction={vi.fn()} />);
+    expect(screen.getByRole("table", { name: "Variantes de Publicación real" })).toBeInTheDocument();
+    expect(screen.getByText("Negro / M")).toBeInTheDocument();
+    expect(screen.getByRole("spinbutton", { name: "Stock de M" })).toHaveValue("6");
   });
 });

@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { PublicationDetail } from "../domain/publication.model";
-import { createPublicationVariantRows, getAttributeValue, groupFamilyRows, compareSizes, compareRows } from "./publication-variant-row";
-import { toEditTarget } from "./publication-variants-table.client";
+import { createPublicationVariantRows, getAttributeValue, groupFamilyRows, compareSizes, compareRows, toPublicationEditTarget } from "./publication-variant-row";
 
 const base: PublicationDetail = {
   id: "MLA100",
@@ -59,11 +58,25 @@ describe("publication variant rows", () => {
     expect(compareSizes("38", "40")).toBeLessThan(0);
     expect(compareSizes("M", "XL")).toBeLessThan(0);
     expect(compareRows({ ...createPublicationVariantRows(base)[0]!, size: "42" }, { ...createPublicationVariantRows(base)[0]!, size: "38" })).toBeGreaterThan(0);
+    expect(["3XL", "XL", "S", "2XL", "L", "M", "XS", "XXS"].sort(compareSizes)).toEqual(["XXS", "XS", "S", "M", "L", "XL", "2XL", "3XL"]);
+    expect(["14", "6", "12", "8", "10"].sort(compareSizes)).toEqual(["6", "8", "10", "12", "14"]);
+  });
+
+  it("termina un color antes de ordenar el siguiente", () => {
+    const template = createPublicationVariantRows(base)[0]!;
+    const rows = [
+      { ...template, key: "b-m", color: "Blanco", size: "M" },
+      { ...template, key: "n-l", color: "Negro", size: "L" },
+      { ...template, key: "n-s", color: "Negro", size: "S" },
+      { ...template, key: "b-s", color: "Blanco", size: "S" },
+    ].sort(compareRows);
+    expect(rows.map((row) => `${row.color}/${row.size}`)).toEqual(["Blanco/S", "Blanco/M", "Negro/S", "Negro/L"]);
   });
 
   it("determina el target por publicationType, no por familyId", () => {
     const row = { ...createPublicationVariantRows(base)[0]!, publicationType: "USER_PRODUCT" as const, familyId: null };
-    expect(() => toEditTarget(row)).toThrow("familyId");
-    expect(toEditTarget({ ...row, publicationType: "LEGACY", variationId: 12 })).toMatchObject({ type: "legacy", variationId: 12 });
+    expect(() => toPublicationEditTarget(row)).toThrow("familyId");
+    expect(toPublicationEditTarget({ ...row, familyId: "FAMILY-1", itemId: "MLA200" })).toEqual({ type: "family", familyId: "FAMILY-1", itemId: "MLA200" });
+    expect(toPublicationEditTarget({ ...row, publicationType: "LEGACY", variationId: 12 })).toMatchObject({ type: "legacy", variationId: 12 });
   });
 });

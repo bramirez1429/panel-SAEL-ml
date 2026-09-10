@@ -150,6 +150,10 @@
   padding: 32px clamp(24px, 4vw, 48px) 48px;
 }
 
+.main:has([data-dashboard-full-width="true"]) {
+  max-width: none;
+}
+
 @media (max-width: 767px) {
   .shell {
     grid-template-areas:

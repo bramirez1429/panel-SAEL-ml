@@ -45,6 +45,10 @@ describe("parsePublicationsSearchParams", () => {
       status: "",
     });
   });
+
+  it("normaliza espacios sin alterar IDs, SKU ni mayúsculas", () => {
+    expect(parsePublicationsSearchParams({ search: "  RM-CV-LOV   MLAU123  " }).search).toBe("RM-CV-LOV MLAU123");
+  });
 });
 
 describe("buildPublicationsUrl", () => {

@@ -165,7 +165,7 @@ export function SimilarPublicationVariants({
                     onClick={addCustomColor}
                     type="text"
                   >
-                    Agregar "{customColor}"
+                    Agregar &ldquo;{customColor}&rdquo;
                   </Button>
                 )
               ) : (

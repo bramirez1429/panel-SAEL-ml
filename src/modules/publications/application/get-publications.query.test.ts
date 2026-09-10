@@ -121,6 +121,12 @@ describe("GetPublicationsQuery", () => {
     expect(notMatching.count).toBe(0);
   });
 
+  it("ordena el lote visible de más vendidos a menos vendidos", async () => {
+    const getPublications = vi.fn<PublicationsRepository["getPublications"]>().mockResolvedValue({ ...publicationsPage, publications: [{ ...legacyPublication, id: "low", sold: 5 }, { ...familyPublication, id: "high", sold: 150 }, { ...legacyPublication, id: "middle", sold: 54 }] });
+    const result = await new GetPublicationsQuery(createRepository(getPublications)).execute(defaultInput);
+    expect(result.publications.map((publication) => publication.sold)).toEqual([150, 54, 5]);
+  });
+
   it("propagates controlled repository errors without changing them", async () => {
     const repositoryError = new AppError(
       "No se pudieron obtener las publicaciones.",
