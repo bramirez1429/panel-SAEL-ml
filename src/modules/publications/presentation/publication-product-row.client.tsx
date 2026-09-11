@@ -1,8 +1,10 @@
 "use client";
 
 import { DeleteOutlined, MoreOutlined } from "@ant-design/icons";
-import { Button, Dropdown, Image, Tag, Tooltip } from "antd";
+import { Button, Dropdown, Image, Modal, Tag, Tooltip, message } from "antd";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 import type { Publication } from "../domain/publication.model";
 import { PublicationStockCell, type InlineStockUpdateAction } from "./publication-stock-cell.client";
@@ -21,14 +23,26 @@ type Props = Readonly<{
   replicateAction: ReplicatePublicationAction;
   categories: readonly TiendanubeCategory[];
   updateAction?: InlineStockUpdateAction;
+  deleteVariationAction?: DeleteVariationAction;
   detailHref: string;
   similarHref: string;
   onStockError: (message: string) => void;
 }>;
 
+export type DeleteVariationAction = (input: Readonly<{
+  publicationId: string;
+  publicationType: "LEGACY" | "USER_PRODUCT";
+  itemId: string;
+  variationId: number;
+}>) => Promise<Readonly<{ ok: true } | { ok: false; code?: string; message: string }>>;
+
 const missingValue = <span title="Dato no disponible">—</span>;
 
-export function PublicationProductRow({ publication, tiendanubeState, replicateAction, categories, updateAction, detailHref, similarHref, onStockError }: Props) {
+export function PublicationProductRow({ publication, tiendanubeState, replicateAction, categories, updateAction, deleteVariationAction, detailHref, similarHref, onStockError }: Props) {
+  const router = useRouter();
+  const [modalApi, modalContextHolder] = Modal.useModal();
+  const [messageApi, messageContextHolder] = message.useMessage();
+  const [deletingVariationId, setDeletingVariationId] = useState<number | null>(null);
   const rows = createPublicationVariantRows(publication);
   const isFamily = publication.group.type === "USER_PRODUCT";
   const hasVariants = Boolean(publication.variants?.length);
@@ -37,7 +51,62 @@ export function PublicationProductRow({ publication, tiendanubeState, replicateA
     : [...rows].sort(compareRows).map((row) => ({ key: row.key, representative: row, offers: [row] }));
   const mainStockRow = !hasVariants ? rows[0] : undefined;
 
+  const onDeleteVariation = (row: (typeof rows)[number]) => {
+    if (!deleteVariationAction || !row.itemId || row.variationId === null || deletingVariationId !== null) return;
+    const itemId = row.itemId;
+    const variationId = row.variationId;
+
+    const confirmation: ReturnType<typeof modalApi.confirm> = modalApi.confirm({
+      title: "¿Eliminar talle?",
+      content: (
+        <>
+          <p>¿Estás seguro de borrar el talle {row.size ?? "—"}?</p>
+          <p><strong>Color:</strong> {row.color ?? "—"}</p>
+          <p>Esta acción eliminará esta variante de Mercado Libre.</p>
+        </>
+      ),
+      okText: "Eliminar",
+      cancelText: "Cancelar",
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        setDeletingVariationId(variationId);
+        confirmation.update({
+          okText: "Eliminando...",
+          okButtonProps: { danger: true, loading: true, disabled: true },
+          cancelButtonProps: { disabled: true },
+          closable: false,
+          keyboard: false,
+          mask: { closable: false },
+        });
+        try {
+          const result = await deleteVariationAction({
+            publicationId: publication.id,
+            publicationType: row.publicationType,
+            itemId,
+            variationId,
+          });
+          if (!result.ok) {
+            messageApi.error(result.message);
+            confirmation.destroy();
+            return;
+          }
+          confirmation.destroy();
+          messageApi.success("Talle eliminado correctamente");
+          router.refresh();
+        } catch (error: unknown) {
+          messageApi.error(error instanceof Error ? error.message : "No se pudo eliminar la variante.");
+          confirmation.destroy();
+        } finally {
+          setDeletingVariationId(null);
+        }
+      },
+    });
+  };
+
   return (
+    <>
+      {modalContextHolder}
+      {messageContextHolder}
     <article className={styles.productBlock} aria-label={`Publicación ${publication.title}`}>
       <aside className={styles.productIdentity}>
         {publication.thumbnailUrl ? <Image alt={`Imagen de ${publication.title}`} height={78} preview={false} src={publication.thumbnailUrl} width={78} /> : <span className={styles.productImagePlaceholder} title="Imagen no disponible">—</span>}
@@ -70,12 +139,13 @@ export function PublicationProductRow({ publication, tiendanubeState, replicateA
               <span>{updateAction ? <PublicationStockCell row={row} updateAction={updateAction} onError={onStockError} /> : row.stock ?? missingValue}</span>
               <span>{formatVariantPrice(row.price)}</span>
               <span>{missingValue}</span>
-              <span><Tooltip title="Eliminar variante todavía no disponible"><Button aria-label={`Eliminar variante ${variantNameText(row.color, row.size)}`} disabled danger icon={<DeleteOutlined />} size="small" type="text" /></Tooltip></span>
+              <span><Tooltip title="Eliminar variante"><Button aria-label={`Eliminar variante ${variantNameText(row.color, row.size)}`} icon={<DeleteOutlined />} loading={deletingVariationId === row.variationId} disabled={!deleteVariationAction || !row.itemId || row.variationId === null || deletingVariationId !== null} onClick={() => onDeleteVariation(row)} size="small" style={{ cursor: "pointer" }} type="text" /></Tooltip></span>
             </div>
           ))}
         </div>
       ) : null}
     </article>
+    </>
   );
 }
 

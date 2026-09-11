@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 
 import type { Publication, PublicationsPage } from "../domain/publication.model";
 import { PublicationProductRow } from "./publication-product-row.client";
+import type { DeleteVariationAction } from "./publication-product-row.client";
 import type { InlineStockUpdateAction } from "./publication-stock-cell.client";
 import { PublicationsPagination } from "./publications-pagination.client";
 import styles from "./publications-view.module.css";
@@ -19,9 +20,10 @@ type PublicationsTableProps = Readonly<{
   replicateAction?: ReplicatePublicationAction;
   categories?: readonly TiendanubeCategory[];
   updateAction?: InlineStockUpdateAction;
+  deleteVariationAction?: DeleteVariationAction;
 }>;
 
-export function PublicationsTable({ page, loading = false, tiendanubeStatusBySourceKey = {}, replicateAction = async () => ({ ok: false as const, message: "La replicación no está disponible." }), categories = [], updateAction }: PublicationsTableProps) {
+export function PublicationsTable({ page, loading = false, tiendanubeStatusBySourceKey = {}, replicateAction = async () => ({ ok: false as const, message: "La replicación no está disponible." }), categories = [], updateAction, deleteVariationAction }: PublicationsTableProps) {
   const searchParams = useSearchParams();
   const [messageApi, messageContext] = message.useMessage();
   const columns: TableColumnsType<Publication> = [{
@@ -33,6 +35,7 @@ export function PublicationsTable({ page, loading = false, tiendanubeStatusBySou
         replicateAction={replicateAction}
         categories={categories}
         updateAction={updateAction}
+        deleteVariationAction={deleteVariationAction}
         detailHref={createDetailHref(publication.id, searchParams)}
         similarHref={createSimilarHref(publication.group.key, searchParams)}
         onStockError={(error) => void messageApi.error(error)}

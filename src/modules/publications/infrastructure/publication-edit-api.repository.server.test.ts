@@ -6,7 +6,16 @@ import type { AuthenticatedHttpClient } from "@/shared/api/authenticated-http-cl
 import { PublicationEditApiRepository } from "./publication-edit-api.repository.server";
 
 function client() {
-  return { get: vi.fn(), getResponse: vi.fn(), post: vi.fn(), postResponse: vi.fn(), patch: vi.fn(), patchResponse: vi.fn(), delete: vi.fn(), deleteResponse: vi.fn() } satisfies AuthenticatedHttpClient;
+  return {
+    get: vi.fn(),
+    getResponse: vi.fn(),
+    post: vi.fn(),
+    postResponse: vi.fn(),
+    patch: vi.fn(),
+    patchResponse: vi.fn(),
+    delete: vi.fn(),
+    deleteResponse: vi.fn(),
+  } satisfies AuthenticatedHttpClient;
 }
 
 describe("PublicationEditApiRepository", () => {
@@ -65,5 +74,12 @@ describe("PublicationEditApiRepository", () => {
     const repo = new PublicationEditApiRepository(http);
     await repo.updateStatus({ type: "family", familyId: "F1", itemId: "MLA2" }, "paused");
     expect(http.patch).toHaveBeenCalledWith("/mercadolibre/direct/edicion/nueva/F1/items/MLA2", { status: "paused" });
+  });
+
+  it("elimina una variación legacy usando sus IDs reales", async () => {
+    const http = client();
+    const repo = new PublicationEditApiRepository(http);
+    await repo.deleteVariation("MLA123", 456);
+    expect(http.delete).toHaveBeenCalledWith("/mercadolibre/direct/edicion/items/MLA123/variations/456");
   });
 });

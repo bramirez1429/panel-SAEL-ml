@@ -14,7 +14,7 @@ import { getTiendanubeCategories } from "@/modules/tiendanube/tiendanube.composi
 import type { TiendanubeCategory } from "@/modules/tiendanube/domain/tiendanube-replication.model";
 import { replicatePublicationAction } from "./tiendanube.action";
 import type { TiendanubeReplicationState } from "@/modules/tiendanube/domain/tiendanube-replication.model";
-import { updatePublicationAction } from "./[id]/update-publication.action";
+import { deletePublicationVariationAction, updatePublicationAction } from "./[id]/update-publication.action";
 
 export const dynamic = "force-dynamic";
 
@@ -83,7 +83,7 @@ export default async function PublicationsPage({
       <PageHeader
         description="Gestiona las publicaciones de tus canales de venta."
       />
-      <PublicationsView filters={filters} replicateAction={replicatePublicationAction} updateAction={updatePublicationAction} tiendanubeStatusBySourceKey={result.state === "error" ? {} : result.tiendanubeStatusBySourceKey} categories={result.state === "error" ? [] : result.categories} {...result} />
+      <PublicationsView filters={filters} replicateAction={replicatePublicationAction} updateAction={updatePublicationAction} deleteVariationAction={deletePublicationVariationAction} tiendanubeStatusBySourceKey={result.state === "error" ? {} : result.tiendanubeStatusBySourceKey} categories={result.state === "error" ? [] : result.categories} {...result} />
     </>
   );
 }

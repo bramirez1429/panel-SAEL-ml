@@ -1,6 +1,7 @@
 "use client";
 
-import { Button, Image, Input, InputNumber, Table, message } from "antd";
+import { DeleteOutlined } from "@ant-design/icons";
+import { Button, Image, Input, InputNumber, Modal, Table, message } from "antd";
 import type { TableColumnsType } from "antd";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -15,33 +16,82 @@ import { PublicationStatusSwitch, type PublicationStatusUpdateAction } from "./p
 import styles from "./publication-detail-view.module.css";
 
 export type PublicationUpdateAction = (input: UpdatePublicationInput) => Promise<
-  Readonly<{ ok: true; confirmed: Readonly<{ sku?: string | null; price?: number | null; stock?: number | null; status?: PublicationEditStatus }> } | { ok: false; message: string }>
+  Readonly<
+    | {
+        ok: true;
+        confirmed: Readonly<{
+          sku?: string | null;
+          price?: number | null;
+          stock?: number | null;
+          status?: PublicationEditStatus;
+        }>;
+      }
+    | { ok: false; message: string }
+  >
 >;
 
 export type PublicationStatusAction = PublicationStatusUpdateAction;
-type Props = Readonly<{ rows: readonly PublicationVariantTableRow[]; updateAction?: PublicationUpdateAction; statusAction?: PublicationStatusAction }>;
+export type PublicationVariationDeleteAction = (
+  input: Readonly<{
+    publicationId: string;
+    publicationType: "LEGACY" | "USER_PRODUCT";
+    itemId: string;
+    variationId: number;
+  }>,
+) => Promise<Readonly<{ ok: true } | { ok: false; code?: string; message: string }>>;
+type Props = Readonly<{
+  rows: readonly PublicationVariantTableRow[];
+  updateAction?: PublicationUpdateAction;
+  statusAction?: PublicationStatusAction;
+  deleteVariationAction?: PublicationVariationDeleteAction;
+}>;
 type Draft = { sku: string; price: number | null; stock: number | null };
 const missingValue = <span title="Dato no disponible">—</span>;
 
-export function PublicationVariantsTable({ rows, updateAction, statusAction }: Props) {
+export function PublicationVariantsTable({ rows, updateAction, statusAction, deleteVariationAction }: Props) {
   if (!updateAction) return <ReadOnlyTable rows={rows} />;
-  return <EditableTables rows={rows} updateAction={updateAction} statusAction={statusAction} />;
+  return <EditableTables rows={rows} updateAction={updateAction} statusAction={statusAction} deleteVariationAction={deleteVariationAction} />;
 }
 
 function ReadOnlyTable({ rows }: Readonly<{ rows: readonly PublicationVariantTableRow[] }>) {
   const family = rows.some((row) => row.familyId !== null);
   if (family) {
     const groups = groupFamilyRows(rows);
-    return <Table<PublicationVariationTableRow> columns={familyColumns()} dataSource={[...groups]} expandable={{ expandedRowRender: (group) => <OfferTable rows={group.offers} />, rowExpandable: (group) => group.offers.length > 0 }} pagination={false} rowKey="key" scroll={{ x: 1100 }} size="small" />;
+    return (
+      <Table<PublicationVariationTableRow>
+        columns={familyColumns()}
+        dataSource={[...groups]}
+        expandable={{
+          expandedRowRender: (group) => <OfferTable rows={group.offers} />,
+          rowExpandable: (group) => group.offers.length > 0,
+        }}
+        pagination={false}
+        rowKey="key"
+        scroll={{ x: 1100 }}
+        size="small"
+      />
+    );
   }
   return <Table<PublicationVariantTableRow> columns={legacyColumns()} dataSource={[...rows]} pagination={false} rowKey="key" scroll={{ x: 1050 }} size="small" />;
 }
 
-function EditableTables({ rows, updateAction, statusAction }: { rows: readonly PublicationVariantTableRow[]; updateAction: PublicationUpdateAction; statusAction?: PublicationStatusAction }) {
+function EditableTables({ rows, updateAction, statusAction, deleteVariationAction }: { rows: readonly PublicationVariantTableRow[]; updateAction: PublicationUpdateAction; statusAction?: PublicationStatusAction; deleteVariationAction?: PublicationVariationDeleteAction }) {
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saving, setSaving] = useState(false);
-  const [confirmed, setConfirmed] = useState<Record<string, Readonly<{ sku?: string | null; price?: number | null; stock?: number | null; status?: PublicationEditStatus }>>>({});
+  const [confirmed, setConfirmed] = useState<
+    Record<
+      string,
+      Readonly<{
+        sku?: string | null;
+        price?: number | null;
+        stock?: number | null;
+        status?: PublicationEditStatus;
+      }>
+    >
+  >({});
+  const [deletingRow, setDeletingRow] = useState<PublicationVariantTableRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
   const router = useRouter();
   const family = rows.some((row) => row.familyId !== null);
@@ -50,15 +100,29 @@ function EditableTables({ rows, updateAction, statusAction }: { rows: readonly P
 
   const startEditing = (row: PublicationVariantTableRow) => {
     setEditingKey(row.key);
-    setDraft({ sku: row.sku ?? "", price: row.price?.amount ?? null, stock: row.stock });
+    setDraft({
+      sku: row.sku ?? "",
+      price: row.price?.amount ?? null,
+      stock: row.stock,
+    });
   };
   const save = async (row: PublicationVariantTableRow) => {
     if (!draft || saving) return;
-    const current = { sku: row.sku, price: row.price?.amount ?? null, stock: row.stock };
+    const current = {
+      sku: row.sku,
+      price: row.price?.amount ?? null,
+      stock: row.stock,
+    };
     const changes = getPublicationEditChanges(current, draft);
     const validation = validatePublicationEditChanges(changes);
-    if (!validation.success) { messageApi.error(validation.message); return; }
-    if (Object.keys(changes).length === 0) { messageApi.info("No hay cambios para guardar."); return; }
+    if (!validation.success) {
+      messageApi.error(validation.message);
+      return;
+    }
+    if (Object.keys(changes).length === 0) {
+      messageApi.info("No hay cambios para guardar.");
+      return;
+    }
     setSaving(true);
     try {
       const result = await updateAction({
@@ -67,70 +131,326 @@ function EditableTables({ rows, updateAction, statusAction }: { rows: readonly P
         current,
         draft,
       });
-      if (!result.ok) { messageApi.error(result.message); return; }
-      setConfirmed((previous) => ({ ...previous, [row.key]: result.confirmed }));
+      if (!result.ok) {
+        messageApi.error(result.message);
+        return;
+      }
+      setConfirmed((previous) => ({
+        ...previous,
+        [row.key]: result.confirmed,
+      }));
       setEditingKey(null);
       setDraft(null);
       messageApi.success("Publicación actualizada.");
       router.refresh();
     } catch (error: unknown) {
       messageApi.error(error instanceof Error ? error.message : "No se pudo preparar la actualización.");
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   };
   const editCell = (row: PublicationVariantTableRow, field: keyof Draft) => {
     if (editingKey !== row.key || !draft) return null;
     if (field === "sku") return <Input value={draft.sku} onChange={(event) => setDraft({ ...draft, sku: event.target.value })} />;
-    return <InputNumber min={field === "price" ? 0.01 : 0} precision={field === "stock" ? 0 : undefined} value={draft[field]} onChange={(value) => setDraft({ ...draft, [field]: typeof value === "number" ? value : null })} />;
+    return (
+      <InputNumber
+        min={field === "price" ? 0.01 : 0}
+        precision={field === "stock" ? 0 : undefined}
+        value={draft[field]}
+        onChange={(value) =>
+          setDraft({
+            ...draft,
+            [field]: typeof value === "number" ? value : null,
+          })
+        }
+      />
+    );
   };
-  const cancelEditing = () => { if (saving) return; setEditingKey(null); setDraft(null); };
-  const actions = (row: PublicationVariantTableRow) => editingKey === row.key ? <><Button type="link" loading={saving} onClick={() => save(row)}>Guardar</Button><Button type="link" onClick={cancelEditing}>Cancelar</Button></> : <><Button type="link" onClick={() => startEditing(row)}>Editar</Button>{row.permalink ? <Button href={row.permalink} rel="noreferrer" target="_blank" type="link">Ver en Mercado Libre</Button> : missingValue}</>;
+  const cancelEditing = () => {
+    if (saving) return;
+    setEditingKey(null);
+    setDraft(null);
+  };
+  const deleteVariation = async () => {
+    if (!deletingRow || !deleteVariationAction || deleting || deletingRow.variationId === null || !deletingRow.itemId) return;
+    setDeleting(true);
+    try {
+      const result = await deleteVariationAction({
+        publicationId: deletingRow.publicationId,
+        publicationType: deletingRow.publicationType,
+        itemId: deletingRow.itemId,
+        variationId: deletingRow.variationId,
+      });
+      if (!result.ok) {
+        messageApi.error(result.message);
+        return;
+      }
+      setDeletingRow(null);
+      messageApi.success("Variante eliminada correctamente");
+      router.refresh();
+    } catch (error: unknown) {
+      messageApi.error(error instanceof Error ? error.message : "No se pudo eliminar la variante.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+  const actions = (row: PublicationVariantTableRow) =>
+    editingKey === row.key ? (
+      <>
+        <Button type="link" loading={saving} onClick={() => save(row)}>
+          Guardar
+        </Button>
+        <Button type="link" onClick={cancelEditing}>
+          Cancelar
+        </Button>
+      </>
+    ) : (
+      <>
+        <Button type="link" onClick={() => startEditing(row)}>
+          Editar
+        </Button>
+        {row.permalink ? (
+          <Button href={row.permalink} rel="noreferrer" target="_blank" type="link">
+            Ver en Mercado Libre
+          </Button>
+        ) : (
+          missingValue
+        )}
+        {deleteVariationAction && row.publicationType === "LEGACY" && row.variationId !== null && row.itemId ? (
+          <Button danger icon={<DeleteOutlined />} type="link" disabled={deleting} onClick={() => setDeletingRow(row)}>
+            Eliminar variante
+          </Button>
+        ) : null}
+      </>
+    );
 
   const legacy = legacyColumns(editCell, actions);
   const familyMain = familyColumns(editCell, actions);
   const offerColumns: TableColumnsType<PublicationVariantTableRow> = [
-    { title: "ID publicación", dataIndex: "publicationId", key: "publicationId" },
-    { title: "Precio", key: "price", render: (_, row) => editCell(row, "price") ?? <span>{formatPrice(row.price)} <small>Precio de esta oferta</small></span> },
-    { title: "Estado", key: "status", render: (_, row) => <PublicationStatusSwitch key={`${row.key}-${row.status}`} publicationId={row.publicationId} target={toPublicationEditTarget(row)} initialStatus={row.status} action={statusAction} onConfirmed={(status) => setConfirmed((previous) => ({ ...previous, [row.key]: { ...previous[row.key], status } }))} /> },
-    { title: "Vendidos", dataIndex: "sold", key: "sold", render: (value: number | null) => value ?? missingValue },
+    {
+      title: "ID publicación",
+      dataIndex: "publicationId",
+      key: "publicationId",
+    },
+    {
+      title: "Precio",
+      key: "price",
+      render: (_, row) =>
+        editCell(row, "price") ?? (
+          <span>
+            {formatPrice(row.price)} <small>Precio de esta oferta</small>
+          </span>
+        ),
+    },
+    {
+      title: "Estado",
+      key: "status",
+      render: (_, row) => (
+        <PublicationStatusSwitch
+          key={`${row.key}-${row.status}`}
+          publicationId={row.publicationId}
+          target={toPublicationEditTarget(row)}
+          initialStatus={row.status}
+          action={statusAction}
+          onConfirmed={(status) =>
+            setConfirmed((previous) => ({
+              ...previous,
+              [row.key]: { ...previous[row.key], status },
+            }))
+          }
+        />
+      ),
+    },
+    {
+      title: "Vendidos",
+      dataIndex: "sold",
+      key: "sold",
+      render: (value: number | null) => value ?? missingValue,
+    },
     { title: "Acciones", key: "actions", render: (_, row) => actions(row) },
   ];
-  return <>{contextHolder}<div className={styles.variantTable} role="region" aria-label="Variantes de la publicación">
-    {family ? <Table<PublicationVariationTableRow> columns={familyMain} dataSource={[...groups]} expandable={{ expandedRowRender: (group) => <Table<PublicationVariantTableRow> columns={offerColumns} dataSource={[...group.offers]} pagination={false} rowKey="key" scroll={{ x: 700 }} size="small" />, rowExpandable: (group) => group.offers.length > 0 }} pagination={false} rowKey="key" scroll={{ x: 1100 }} size="small" /> : <Table<PublicationVariantTableRow> columns={legacy} dataSource={displayRows} pagination={false} rowKey="key" scroll={{ x: 1150 }} size="small" />}
-  </div></>;
+  return (
+    <>
+      {contextHolder}
+      <div className={styles.variantTable} role="region" aria-label="Variantes de la publicación">
+        {family ? (
+          <Table<PublicationVariationTableRow>
+            columns={familyMain}
+            dataSource={[...groups]}
+            expandable={{
+              expandedRowRender: (group) => <Table<PublicationVariantTableRow> columns={offerColumns} dataSource={[...group.offers]} pagination={false} rowKey="key" scroll={{ x: 700 }} size="small" />,
+              rowExpandable: (group) => group.offers.length > 0,
+            }}
+            pagination={false}
+            rowKey="key"
+            scroll={{ x: 1100 }}
+            size="small"
+          />
+        ) : (
+          <Table<PublicationVariantTableRow> columns={legacy} dataSource={displayRows} pagination={false} rowKey="key" scroll={{ x: 1150 }} size="small" />
+        )}
+      </div>
+      <Modal
+        title="¿Eliminar esta variante?"
+        open={deletingRow !== null}
+        okText={deleting ? "Eliminando..." : "Eliminar"}
+        cancelText="Cancelar"
+        okButtonProps={{ danger: true }}
+        confirmLoading={deleting}
+        closable={!deleting}
+        maskClosable={!deleting}
+        onCancel={() => {
+          if (!deleting) setDeletingRow(null);
+        }}
+        onOk={deleteVariation}
+      >
+        <p>Esta acción eliminará la variante de la publicación de Mercado Libre.</p>
+        <p>
+          <strong>Talle:</strong> {deletingRow?.size ?? "—"}
+          <br />
+          <strong>Color:</strong> {deletingRow?.color ?? "—"}
+          <br />
+          <strong>Stock:</strong> {deletingRow?.stock ?? "—"}
+        </p>
+      </Modal>
+    </>
+  );
 }
 
 function familyColumns(editCell?: (row: PublicationVariantTableRow, field: keyof Draft) => React.ReactNode, actions?: (row: PublicationVariantTableRow) => React.ReactNode): TableColumnsType<PublicationVariationTableRow> {
   return [
-    { title: "Imagen", key: "image", render: (_, group) => group.representative.imageUrl ? <Image alt={`Imagen de ${group.userProductId}`} preview={false} src={group.representative.imageUrl} width={48} /> : missingValue },
+    {
+      title: "Imagen",
+      key: "image",
+      render: (_, group) => (group.representative.imageUrl ? <Image alt={`Imagen de ${group.userProductId}`} preview={false} src={group.representative.imageUrl} width={48} /> : missingValue),
+    },
     { title: "ID producto", dataIndex: "userProductId", key: "userProductId" },
-    { title: "SKU", key: "sku", render: (_, group) => editCell ? editCell(group.representative, "sku") ?? group.representative.sku ?? missingValue : group.representative.sku ?? missingValue },
-    { title: "Color", key: "color", render: (_, group) => group.representative.color ?? missingValue },
-    { title: "Talle", key: "size", render: (_, group) => group.representative.size ?? missingValue },
-    { title: "Stock", key: "stock", render: (_, group) => editCell ? editCell(group.representative, "stock") ?? group.representative.stock ?? missingValue : group.representative.stock ?? missingValue },
-    { title: "Vendidos", key: "sold", render: (_, group) => group.representative.sold ?? missingValue },
-    { title: "Estado", key: "status", render: (_, group) => <PublicationStatus status={group.representative.status} /> },
-    { title: "Publicaciones", key: "offers", render: (_, group) => group.offers.length },
-    ...(actions ? [{ title: "Acciones", key: "actions", render: (_: unknown, group: PublicationVariationTableRow) => actions(group.representative) }] : []),
+    {
+      title: "SKU",
+      key: "sku",
+      render: (_, group) => (editCell ? (editCell(group.representative, "sku") ?? group.representative.sku ?? missingValue) : (group.representative.sku ?? missingValue)),
+    },
+    {
+      title: "Color",
+      key: "color",
+      render: (_, group) => group.representative.color ?? missingValue,
+    },
+    {
+      title: "Talle",
+      key: "size",
+      render: (_, group) => group.representative.size ?? missingValue,
+    },
+    {
+      title: "Stock",
+      key: "stock",
+      render: (_, group) => (editCell ? (editCell(group.representative, "stock") ?? group.representative.stock ?? missingValue) : (group.representative.stock ?? missingValue)),
+    },
+    {
+      title: "Vendidos",
+      key: "sold",
+      render: (_, group) => group.representative.sold ?? missingValue,
+    },
+    {
+      title: "Estado",
+      key: "status",
+      render: (_, group) => <PublicationStatus status={group.representative.status} />,
+    },
+    {
+      title: "Publicaciones",
+      key: "offers",
+      render: (_, group) => group.offers.length,
+    },
+    ...(actions
+      ? [
+          {
+            title: "Acciones",
+            key: "actions",
+            render: (_: unknown, group: PublicationVariationTableRow) => actions(group.representative),
+          },
+        ]
+      : []),
   ];
 }
 
 function legacyColumns(editCell?: (row: PublicationVariantTableRow, field: keyof Draft) => React.ReactNode, actions?: (row: PublicationVariantTableRow) => React.ReactNode): TableColumnsType<PublicationVariantTableRow> {
   return [
-    { title: "Imagen", key: "image", render: (_, row) => row.imageUrl ? <Image alt={`Imagen de ${row.publicationId}`} preview={false} src={row.imageUrl} width={48} /> : missingValue },
-    { title: "ID publicación", dataIndex: "publicationId", key: "publicationId" },
-    { title: "ID producto", dataIndex: "userProductId", key: "userProductId", render: (value: string | null) => value ?? missingValue },
-    { title: "SKU", key: "sku", render: (_, row) => editCell ? editCell(row, "sku") ?? row.sku ?? missingValue : row.sku ?? missingValue },
-    { title: "Color", dataIndex: "color", key: "color", render: (value: string | null) => value ?? missingValue },
-    { title: "Talle", dataIndex: "size", key: "size", render: (value: string | null) => value ?? missingValue },
-    { title: "Precio", key: "price", render: (_, row) => editCell ? editCell(row, "price") ?? formatPrice(row.price) : formatPrice(row.price) },
-    { title: "Stock", key: "stock", render: (_, row) => editCell ? editCell(row, "stock") ?? row.stock ?? missingValue : row.stock ?? missingValue },
-    { title: "Vendidos", dataIndex: "sold", key: "sold", render: (value: number | null) => value ?? missingValue },
-    { title: "Estado", key: "status", render: (_, row) => <PublicationStatus status={row.status} /> },
-    ...(actions ? [{ title: "Acciones", key: "actions", render: (_: unknown, row: PublicationVariantTableRow) => actions(row) }] : []),
+    {
+      title: "Imagen",
+      key: "image",
+      render: (_, row) => (row.imageUrl ? <Image alt={`Imagen de ${row.publicationId}`} preview={false} src={row.imageUrl} width={48} /> : missingValue),
+    },
+    {
+      title: "ID publicación",
+      dataIndex: "publicationId",
+      key: "publicationId",
+    },
+    {
+      title: "ID producto",
+      dataIndex: "userProductId",
+      key: "userProductId",
+      render: (value: string | null) => value ?? missingValue,
+    },
+    {
+      title: "SKU",
+      key: "sku",
+      render: (_, row) => (editCell ? (editCell(row, "sku") ?? row.sku ?? missingValue) : (row.sku ?? missingValue)),
+    },
+    {
+      title: "Color",
+      dataIndex: "color",
+      key: "color",
+      render: (value: string | null) => value ?? missingValue,
+    },
+    {
+      title: "Talle",
+      dataIndex: "size",
+      key: "size",
+      render: (value: string | null) => value ?? missingValue,
+    },
+    {
+      title: "Precio",
+      key: "price",
+      render: (_, row) => (editCell ? (editCell(row, "price") ?? formatPrice(row.price)) : formatPrice(row.price)),
+    },
+    {
+      title: "Stock",
+      key: "stock",
+      render: (_, row) => (editCell ? (editCell(row, "stock") ?? row.stock ?? missingValue) : (row.stock ?? missingValue)),
+    },
+    {
+      title: "Vendidos",
+      dataIndex: "sold",
+      key: "sold",
+      render: (value: number | null) => value ?? missingValue,
+    },
+    {
+      title: "Estado",
+      key: "status",
+      render: (_, row) => <PublicationStatus status={row.status} />,
+    },
+    ...(actions
+      ? [
+          {
+            title: "Acciones",
+            key: "actions",
+            render: (_: unknown, row: PublicationVariantTableRow) => actions(row),
+          },
+        ]
+      : []),
   ];
 }
 
-function applyConfirmed(row: PublicationVariantTableRow, values: Readonly<{ sku?: string | null; price?: number | null; stock?: number | null; status?: PublicationEditStatus }> | undefined): PublicationVariantTableRow {
+function applyConfirmed(
+  row: PublicationVariantTableRow,
+  values:
+    | Readonly<{
+        sku?: string | null;
+        price?: number | null;
+        stock?: number | null;
+        status?: PublicationEditStatus;
+      }>
+    | undefined,
+): PublicationVariantTableRow {
   if (!values) return row;
   return {
     ...row,
@@ -140,5 +460,55 @@ function applyConfirmed(row: PublicationVariantTableRow, values: Readonly<{ sku?
     price: values.price === undefined ? row.price : values.price === null ? null : { amount: values.price, currency: row.price?.currency ?? null },
   };
 }
-function formatPrice(price: PublicationVariantTableRow["price"]): React.ReactNode { if (!price) return missingValue; const amount = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 }).format(price.amount); return price.currency ? `${price.currency} ${amount}` : amount; }
-function OfferTable({ rows }: { rows: readonly PublicationVariantTableRow[] }) { return <Table<PublicationVariantTableRow> columns={[{ title: "ID publicación", dataIndex: "publicationId", key: "publicationId" }, { title: "Precio", key: "price", render: (_, row) => formatPrice(row.price) }, { title: "Estado", key: "status", render: (_, row) => <PublicationStatus status={row.status} /> }, { title: "Vendidos", dataIndex: "sold", key: "sold", render: (value: number | null) => value ?? missingValue }, { title: "Ver en Mercado Libre", key: "link", render: (_, row) => row.permalink ? <Button href={row.permalink} rel="noreferrer" target="_blank" type="link">Ver en Mercado Libre</Button> : missingValue }]} dataSource={[...rows]} pagination={false} rowKey="key" size="small" />; }
+function formatPrice(price: PublicationVariantTableRow["price"]): React.ReactNode {
+  if (!price) return missingValue;
+  const amount = new Intl.NumberFormat("es-AR", {
+    maximumFractionDigits: 2,
+  }).format(price.amount);
+  return price.currency ? `${price.currency} ${amount}` : amount;
+}
+function OfferTable({ rows }: { rows: readonly PublicationVariantTableRow[] }) {
+  return (
+    <Table<PublicationVariantTableRow>
+      columns={[
+        {
+          title: "ID publicación",
+          dataIndex: "publicationId",
+          key: "publicationId",
+        },
+        {
+          title: "Precio",
+          key: "price",
+          render: (_, row) => formatPrice(row.price),
+        },
+        {
+          title: "Estado",
+          key: "status",
+          render: (_, row) => <PublicationStatus status={row.status} />,
+        },
+        {
+          title: "Vendidos",
+          dataIndex: "sold",
+          key: "sold",
+          render: (value: number | null) => value ?? missingValue,
+        },
+        {
+          title: "Ver en Mercado Libre",
+          key: "link",
+          render: (_, row) =>
+            row.permalink ? (
+              <Button href={row.permalink} rel="noreferrer" target="_blank" type="link">
+                Ver en Mercado Libre
+              </Button>
+            ) : (
+              missingValue
+            ),
+        },
+      ]}
+      dataSource={[...rows]}
+      pagination={false}
+      rowKey="key"
+      size="small"
+    />
+  );
+}

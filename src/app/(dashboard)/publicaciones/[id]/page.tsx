@@ -1,14 +1,12 @@
 import type { PublicationDetail } from "@/modules/publications/domain/publication.model";
-import {
-  PublicationDetailError,
-} from "@/modules/publications/presentation/publication-detail-states";
+import { PublicationDetailError } from "@/modules/publications/presentation/publication-detail-states";
 import { PublicationDetailView } from "@/modules/publications/presentation/publication-detail-view";
 import { createGetPublicationByIdQuery } from "@/modules/publications/publications.composition.server";
 import { ApiError } from "@/shared/api/api-error";
 import { AppError } from "@/shared/errors/app-error";
 import { PageHeader } from "@/shared/ui/page-header/page-header";
 import { notFound } from "next/navigation";
-import { updatePublicationAction, updatePublicationStatusAction } from "./update-publication.action";
+import { deletePublicationVariationAction, updatePublicationAction, updatePublicationStatusAction } from "./update-publication.action";
 
 export const dynamic = "force-dynamic";
 
@@ -17,13 +15,9 @@ type PublicationDetailPageProps = Readonly<{
   searchParams?: Promise<Readonly<Record<string, string | string[] | undefined>>>;
 }>;
 
-type PublicationDetailLoadResult =
-  | Readonly<{ state: "success"; publication: PublicationDetail }>
-  | Readonly<{ state: "error"; message: string }>;
+type PublicationDetailLoadResult = Readonly<{ state: "success"; publication: PublicationDetail }> | Readonly<{ state: "error"; message: string }>;
 
-async function loadPublicationDetail(
-  id: string,
-): Promise<PublicationDetailLoadResult> {
+async function loadPublicationDetail(id: string): Promise<PublicationDetailLoadResult> {
   try {
     const publication = await createGetPublicationByIdQuery().execute(id);
 
@@ -44,10 +38,7 @@ async function loadPublicationDetail(
   }
 }
 
-export default async function PublicationDetailPage({
-  params,
-  searchParams,
-}: PublicationDetailPageProps) {
+export default async function PublicationDetailPage({ params, searchParams }: PublicationDetailPageProps) {
   const { id } = await params;
   const result = await loadPublicationDetail(id);
   const detailSearchParams = searchParams ? await searchParams : {};
@@ -56,16 +47,7 @@ export default async function PublicationDetailPage({
   return (
     <>
       <PageHeader description="Consulta la información y las variantes de la publicación." />
-      {result.state === "success" ? (
-        <PublicationDetailView
-          publication={result.publication}
-          returnTo={returnTo}
-          updateAction={updatePublicationAction}
-          statusAction={updatePublicationStatusAction}
-        />
-      ) : (
-        <PublicationDetailError message={result.message} />
-      )}
+      {result.state === "success" ? <PublicationDetailView publication={result.publication} returnTo={returnTo} updateAction={updatePublicationAction} statusAction={updatePublicationStatusAction} deleteVariationAction={deletePublicationVariationAction} /> : <PublicationDetailError message={result.message} />}
     </>
   );
 }

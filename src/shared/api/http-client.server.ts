@@ -10,6 +10,7 @@ export type HttpDeleteClient = Pick<HttpClient, "delete">;
 export type HttpRequestOptions = Readonly<{
   bearerToken?: string;
   cookieHeader?: string;
+  credentials?: RequestCredentials;
   timeoutMs?: number;
 }>;
 export type HttpGetOptions = HttpRequestOptions;
@@ -40,6 +41,7 @@ export class HttpClient {
   ): Promise<HttpResponse> {
     return this.request(path, {
       method: "GET",
+      credentials: options.credentials,
       headers: {
         Accept: "application/json, text/plain;q=0.9",
         ...(options.bearerToken
@@ -68,6 +70,7 @@ export class HttpClient {
 
     return this.request(path, {
       method: "POST",
+      credentials: options.credentials,
       headers: {
         Accept: "application/json, text/plain;q=0.9",
         ...(hasBody ? { "Content-Type": "application/json" } : {}),
@@ -87,6 +90,7 @@ export class HttpClient {
   ): Promise<unknown> {
     const response = await this.request(path, {
       method: "POST",
+      credentials: options.credentials,
       headers: {
         Accept: "application/json, text/plain;q=0.9",
         ...(options.bearerToken
@@ -112,6 +116,7 @@ export class HttpClient {
     const hasBody = body !== undefined;
     return this.request(path, {
       method: "PATCH",
+      credentials: options.credentials,
       headers: {
         Accept: "application/json, text/plain;q=0.9",
         ...(hasBody ? { "Content-Type": "application/json" } : {}),
@@ -130,6 +135,7 @@ export class HttpClient {
   async deleteResponse(path: string, options: HttpDeleteOptions = {}): Promise<HttpResponse> {
     return this.request(path, {
       method: "DELETE",
+      credentials: options.credentials,
       headers: {
         Accept: "application/json, text/plain;q=0.9",
         ...(options.bearerToken ? { Authorization: `Bearer ${options.bearerToken}` } : {}),

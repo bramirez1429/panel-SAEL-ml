@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import type { PublicationsPage } from "../domain/publication.model";
@@ -61,6 +61,7 @@ describe("PublicationsTable", () => {
     cleanup();
     navigation.back.mockReset();
     navigation.push.mockReset();
+    navigation.refresh.mockReset();
     sessionStorage.clear();
   });
 
@@ -151,5 +152,47 @@ describe("PublicationsTable", () => {
     expect(screen.getByRole("table", { name: "Variantes de Publicación real" })).toBeInTheDocument();
     expect(screen.getByText("Negro / M")).toBeInTheDocument();
     expect(screen.getByRole("spinbutton", { name: "Stock de M" })).toHaveValue("6");
+  });
+
+  it("elimina una variante clásica por sus IDs reales y refresca después del backend", async () => {
+    const user = userEvent.setup();
+    let resolveDelete: ((value: { ok: true }) => void) | undefined;
+    const deleteVariationAction = vi.fn(() => new Promise<{ ok: true }>((resolve) => { resolveDelete = resolve; }));
+    const legacy = {
+      ...pageWithPublication.publications[0]!,
+      status: "closed",
+      variants: [{ id: "987", itemId: "MLA1", userProductId: null, label: null, title: null, thumbnailUrl: null, status: "closed", price: { amount: 1200, currency: "ARS" }, stock: 0, sold: 2, sku: "SKU-38", attributes: [{ id: "COLOR", value: "Crema" }, { id: "SIZE", value: "38" }], permalink: null }],
+    };
+    render(<PublicationsTable page={{ ...pageWithPublication, publications: [legacy] }} updateAction={vi.fn()} deleteVariationAction={deleteVariationAction} />);
+
+    const trash = screen.getByRole("button", { name: "Eliminar variante Crema / 38" });
+    expect(trash).toBeEnabled();
+    await user.click(trash);
+    expect(screen.getByRole("dialog")).toHaveTextContent("¿Estás seguro de borrar el talle 38?");
+    expect(screen.getByRole("dialog")).toHaveTextContent("Color: Crema");
+
+    await user.click(screen.getByRole("button", { name: "Eliminar" }));
+    expect(deleteVariationAction).toHaveBeenCalledWith({ publicationId: "publication/id", publicationType: "LEGACY", itemId: "MLA1", variationId: 987 });
+    expect(screen.getByText("Crema / 38")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Eliminando/ })).toBeDisabled();
+    expect(navigation.refresh).not.toHaveBeenCalled();
+
+    resolveDelete?.({ ok: true });
+    await waitFor(() => expect(navigation.refresh).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText("Talle eliminado correctamente")).toBeInTheDocument();
+  });
+
+  it("conserva la fila y muestra el mensaje del backend cuando falla", async () => {
+    const user = userEvent.setup();
+    const deleteVariationAction = vi.fn().mockResolvedValue({ ok: false, message: "Mercado Libre no permite eliminar esta variante" });
+    const legacy = { ...pageWithPublication.publications[0]!, variants: [{ id: "456", itemId: "MLA1", userProductId: null, label: null, title: null, thumbnailUrl: null, status: "active", price: null, stock: 5, sold: 0, sku: null, attributes: [{ id: "COLOR", value: "Negro" }, { id: "SIZE", value: "46" }], permalink: null }] };
+    render(<PublicationsTable page={{ ...pageWithPublication, publications: [legacy] }} updateAction={vi.fn()} deleteVariationAction={deleteVariationAction} />);
+
+    await user.click(screen.getByRole("button", { name: "Eliminar variante Negro / 46" }));
+    await user.click(screen.getByRole("button", { name: "Eliminar" }));
+
+    expect(await screen.findByText("Mercado Libre no permite eliminar esta variante")).toBeInTheDocument();
+    expect(screen.getByText("Negro / 46")).toBeInTheDocument();
+    expect(navigation.refresh).not.toHaveBeenCalled();
   });
 });

@@ -1,13 +1,5 @@
-import type {
-  PublicationEditRepository,
-  PublicationEditTarget,
-  PublicationEditStatus,
-} from "../domain/publication-edit.repository";
-import {
-  changedPublicationFields,
-  validatePublicationEditChanges,
-  type PublicationEditDraft,
-} from "./publication-edit.validation";
+import type { PublicationEditRepository, PublicationEditTarget, PublicationEditStatus } from "../domain/publication-edit.repository";
+import { changedPublicationFields, validatePublicationEditChanges, type PublicationEditDraft } from "./publication-edit.validation";
 import type { PublicationEditSnapshot } from "./publication-edit.validation";
 import { AppError } from "@/shared/errors/app-error";
 
@@ -48,6 +40,10 @@ export class UpdatePublicationCommand {
 
   async updateStatus(target: PublicationEditTarget, status: PublicationEditStatus): Promise<void> {
     await runOperation("estado", () => this.repository.updateStatus(target, status));
+  }
+
+  async deleteVariation(itemId: string, variationId: number): Promise<void> {
+    await this.repository.deleteVariation(itemId, variationId);
   }
 }
 

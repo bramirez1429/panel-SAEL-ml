@@ -7,7 +7,7 @@ import { PublicationStatus } from "./publication-status";
 import { createPublicationVariantRows } from "./publication-variant-row";
 import { PublicationVariantsTable } from "./publication-variants-table.client";
 import styles from "./publication-detail-view.module.css";
-import type { PublicationStatusAction, PublicationUpdateAction } from "./publication-variants-table.client";
+import type { PublicationStatusAction, PublicationUpdateAction, PublicationVariationDeleteAction } from "./publication-variants-table.client";
 import { PublicationStatusSwitch } from "./publication-status-switch.client";
 
 export type PublicationDetailViewProps = Readonly<{
@@ -15,6 +15,7 @@ export type PublicationDetailViewProps = Readonly<{
   returnTo?: string;
   updateAction?: PublicationUpdateAction;
   statusAction?: PublicationStatusAction;
+  deleteVariationAction?: PublicationVariationDeleteAction;
 }>;
 
 const channelLabels: Record<SalesChannel, string> = {
@@ -23,12 +24,7 @@ const channelLabels: Record<SalesChannel, string> = {
 
 const missingValue = <span title="Dato no disponible">—</span>;
 
-export function PublicationDetailView({
-  publication,
-  returnTo,
-  updateAction,
-  statusAction,
-}: PublicationDetailViewProps) {
+export function PublicationDetailView({ publication, returnTo, updateAction, statusAction, deleteVariationAction }: PublicationDetailViewProps) {
   const isFamily = publication.group.type === "USER_PRODUCT";
   const rows = createPublicationVariantRows(publication);
 
@@ -45,44 +41,34 @@ export function PublicationDetailView({
 
       <Card>
         <div className={styles.productHeader}>
-          {publication.thumbnailUrl ? (
-            <Image
-              alt={`Imagen de ${publication.title}`}
-              className={styles.thumbnail}
-              preview={false}
-              src={publication.thumbnailUrl}
-              width={128}
-            />
-          ) : null}
+          {publication.thumbnailUrl ? <Image alt={`Imagen de ${publication.title}`} className={styles.thumbnail} preview={false} src={publication.thumbnailUrl} width={128} /> : null}
           <div className={styles.productHeading}>
             <Space size="small" wrap>
-              <Tag color={isFamily ? "blue" : undefined}>
-                {isFamily ? "Familia" : "Anterior"}
-              </Tag>
-              {isFamily || !statusAction ? <PublicationStatus status={publication.status} /> : (
+              <Tag color={isFamily ? "blue" : undefined}>{isFamily ? "Familia" : "Anterior"}</Tag>
+              {isFamily || !statusAction ? (
+                <PublicationStatus status={publication.status} />
+              ) : (
                 <PublicationStatusSwitch
                   action={statusAction}
                   initialStatus={publication.status}
                   publicationId={publication.id}
-                  target={{ type: "legacy", itemId: publication.id, variationId: null }}
+                  target={{
+                    type: "legacy",
+                    itemId: publication.id,
+                    variationId: null,
+                  }}
                 />
               )}
             </Space>
             <h2>{publication.title}</h2>
           </div>
         </div>
-        <Descriptions
-          className={styles.descriptions}
-          column={{ xs: 1, sm: 2, lg: 3 }}
-          items={createPublicationDetails(publication)}
-          layout="vertical"
-          size="small"
-        />
+        <Descriptions className={styles.descriptions} column={{ xs: 1, sm: 2, lg: 3 }} items={createPublicationDetails(publication)} layout="vertical" size="small" />
       </Card>
 
       <Card title={isFamily ? "Familia" : "Variaciones Anterior"}>
         {isFamily ? <FamilySummary publication={publication} /> : null}
-        <PublicationVariantsTable rows={rows} updateAction={updateAction} statusAction={statusAction} />
+        <PublicationVariantsTable rows={rows} updateAction={updateAction} statusAction={statusAction} deleteVariationAction={deleteVariationAction} />
       </Card>
     </div>
   );
@@ -93,9 +79,21 @@ function FamilySummary({ publication }: { publication: PublicationDetail }) {
     <Descriptions
       column={{ xs: 1, sm: 3 }}
       items={[
-        { key: "familyId", label: "ID de familia", children: valueOrMissing(publication.group.familyId) },
-        { key: "userProductId", label: "ID user product", children: valueOrMissing(publication.group.userProductId) },
-        { key: "count", label: "Publicaciones", children: publication.group.childrenCount },
+        {
+          key: "familyId",
+          label: "ID de familia",
+          children: valueOrMissing(publication.group.familyId),
+        },
+        {
+          key: "userProductId",
+          label: "ID user product",
+          children: valueOrMissing(publication.group.userProductId),
+        },
+        {
+          key: "count",
+          label: "Publicaciones",
+          children: publication.group.childrenCount,
+        },
       ]}
       layout="vertical"
       size="small"
@@ -105,16 +103,46 @@ function FamilySummary({ publication }: { publication: PublicationDetail }) {
 
 function createPublicationDetails(publication: PublicationDetail): DescriptionsProps["items"] {
   return [
-    { key: "channel", label: "Canal", children: channelLabels[publication.channel] },
-    { key: "price", label: "Precio", children: formatPublicationPrice(publication) },
+    {
+      key: "channel",
+      label: "Canal",
+      children: channelLabels[publication.channel],
+    },
+    {
+      key: "price",
+      label: "Precio",
+      children: formatPublicationPrice(publication),
+    },
     { key: "stock", label: "Stock", children: publication.stock },
-    { key: "sold", label: "Vendidos", children: publication.sold === null ? missingValue : publication.sold },
-    { key: "familyId", label: "ID de familia", children: valueOrMissing(publication.group.familyId) },
-    { key: "itemId", label: "ID del ítem", children: valueOrMissing(publication.group.itemId) },
-    { key: "externalKey", label: "Clave externa", children: publication.group.key },
+    {
+      key: "sold",
+      label: "Vendidos",
+      children: publication.sold === null ? missingValue : publication.sold,
+    },
+    {
+      key: "familyId",
+      label: "ID de familia",
+      children: valueOrMissing(publication.group.familyId),
+    },
+    {
+      key: "itemId",
+      label: "ID del ítem",
+      children: valueOrMissing(publication.group.itemId),
+    },
+    {
+      key: "externalKey",
+      label: "Clave externa",
+      children: publication.group.key,
+    },
     { key: "internalId", label: "ID interno", children: publication.id },
     ...(publication.group.type === "LEGACY"
-      ? [{ key: "legacyDescription", label: "Descripción", children: "Publicación del modelo anterior de Mercado Libre." }]
+      ? [
+          {
+            key: "legacyDescription",
+            label: "Descripción",
+            children: "Publicación del modelo anterior de Mercado Libre.",
+          },
+        ]
       : []),
   ];
 }
@@ -135,6 +163,8 @@ function formatPublicationPrice(publication: PublicationDetail): ReactNode {
 }
 
 function formatAmount(amount: number, currency: string | null): string {
-  const formatted = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 }).format(amount);
+  const formatted = new Intl.NumberFormat("es-AR", {
+    maximumFractionDigits: 2,
+  }).format(amount);
   return currency ? `${currency} ${formatted}` : formatted;
 }
