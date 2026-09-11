@@ -2,7 +2,7 @@ import "server-only";
 
 import { ApiError } from "./api-error";
 
-const DEFAULT_API_TIMEOUT_MS = 5_000;
+const DEFAULT_API_TIMEOUT_MS = 30_000;
 const MAX_API_TIMEOUT_MS = 2_147_483_647;
 
 type ApiEnvironment = Readonly<Record<string, string | undefined>>;

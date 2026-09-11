@@ -149,13 +149,19 @@ export class HttpClient {
     if (!Number.isInteger(effectiveTimeout) || effectiveTimeout <= 0) {
       throw new ApiError("El timeout debe ser un entero positivo.", "API_CONFIGURATION_ERROR");
     }
+    const controller = new AbortController();
+    const timeoutReason = new DOMException("Backend request timed out", "TimeoutError");
+    const timeout = setTimeout(() => {
+      controller.abort(timeoutReason);
+    }, effectiveTimeout);
+
     try {
       const response = await this.fetchImplementation(
         resolveApiUrl(this.config.baseUrl, path),
         {
           ...init,
           cache: "no-store",
-          signal: AbortSignal.timeout(effectiveTimeout),
+          signal: controller.signal,
         },
       );
 
@@ -177,7 +183,7 @@ export class HttpClient {
         throw error;
       }
 
-      if (isTimeoutError(error)) {
+      if (isTimeoutAbort(error, controller.signal, timeoutReason)) {
         throw new ApiError(
           "La solicitud al backend superó el tiempo límite.",
           "API_TIMEOUT",
@@ -190,8 +196,21 @@ export class HttpClient {
         "API_UNREACHABLE",
         { cause: error },
       );
+    } finally {
+      clearTimeout(timeout);
     }
   }
+}
+
+function isTimeoutAbort(
+  error: unknown,
+  signal: AbortSignal,
+  timeoutReason: DOMException,
+): boolean {
+  return signal.aborted &&
+    signal.reason === timeoutReason &&
+    error instanceof Error &&
+    (error === timeoutReason || error.name === "TimeoutError" || error.name === "AbortError");
 }
 
 function extractHttpErrorMessage(status: number, body: unknown): string {
@@ -237,11 +256,4 @@ async function readResponseBody(response: Response): Promise<unknown> {
       { cause, status: response.status },
     );
   }
-}
-
-function isTimeoutError(error: unknown): boolean {
-  return (
-    error instanceof Error &&
-    (error.name === "TimeoutError" || error.name === "AbortError")
-  );
 }

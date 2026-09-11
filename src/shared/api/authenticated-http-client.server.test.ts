@@ -20,6 +20,7 @@ vi.mock("@/modules/auth/infrastructure/session/auth-session.server", () => ({
 
 import { ApiError } from "./api-error";
 import { createAuthenticatedHttpClient } from "./authenticated-http-client.server";
+import { HttpClient } from "./http-client.server";
 
 const refreshedSession = {
   accessToken: "new-access-jwt",
@@ -71,6 +72,30 @@ describe("createAuthenticatedHttpClient", () => {
       refreshToken: "rotated-refresh-jwt",
       refreshTokenExpiresAt: new Date(refreshedSession.refreshTokenExpiresAt),
     });
+  });
+
+  it("crea un AbortSignal nuevo y un timeout completo para el retry", async () => {
+    session.getRefresh.mockResolvedValue("fresh-signal-refresh-jwt");
+    const fetchImplementation = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(Response.json({ code: "AUTHENTICATION_REQUIRED" }, { status: 401 }))
+      .mockResolvedValueOnce(Response.json(refreshedSession))
+      .mockResolvedValueOnce(Response.json({ publications: [] }));
+    const client = createAuthenticatedHttpClient(new HttpClient({
+      baseUrl: "https://api.example.com",
+      timeoutMs: 30_000,
+    }, fetchImplementation));
+
+    await expect(client.get("/mercadolibre/direct/publicaciones/agrupadas", {
+      timeoutMs: 60_000,
+    })).resolves.toEqual({ publications: [] });
+
+    const firstSignal = fetchImplementation.mock.calls[0]?.[1]?.signal;
+    const retrySignal = fetchImplementation.mock.calls[2]?.[1]?.signal;
+    expect(firstSignal).toBeInstanceOf(AbortSignal);
+    expect(retrySignal).toBeInstanceOf(AbortSignal);
+    expect(retrySignal).not.toBe(firstSignal);
+    expect(fetchImplementation.mock.calls[0]?.[0]).toEqual(new URL("https://api.example.com/mercadolibre/direct/publicaciones/agrupadas"));
+    expect(fetchImplementation.mock.calls[2]?.[0]).toEqual(new URL("https://api.example.com/mercadolibre/direct/publicaciones/agrupadas"));
   });
 
   it("renueva ante AUTHENTICATION_REQUIRED aunque no haya access cookie", async () => {

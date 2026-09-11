@@ -13,7 +13,7 @@ describe("getApiConfig", () => {
       }),
     ).toEqual({
       baseUrl: "https://api.example.com",
-      timeoutMs: 5_000,
+      timeoutMs: 30_000,
     });
   });
 

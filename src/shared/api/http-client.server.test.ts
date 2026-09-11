@@ -153,6 +153,30 @@ describe("HttpClient", () => {
     });
   });
 
+  it("does not classify an unrelated AbortError as API_TIMEOUT", async () => {
+    const fetchImplementation = vi.fn<typeof fetch>().mockRejectedValue(
+      new DOMException("cancelled externally", "AbortError"),
+    );
+
+    await expect(new HttpClient(apiConfig, fetchImplementation).get("/"))
+      .rejects.toMatchObject({ code: "API_UNREACHABLE" });
+  });
+
+  it("creates a fresh AbortSignal for every HTTP attempt", async () => {
+    const signals: AbortSignal[] = [];
+    const fetchImplementation = vi.fn<typeof fetch>(async (_input, init) => {
+      if (init?.signal instanceof AbortSignal) signals.push(init.signal);
+      return Response.json({ ok: true });
+    });
+    const client = new HttpClient(apiConfig, fetchImplementation);
+
+    await client.get("/first");
+    await client.get("/retry");
+
+    expect(signals).toHaveLength(2);
+    expect(signals[1]).not.toBe(signals[0]);
+  });
+
   it("aborts requests after the configured timeout", async () => {
     const fetchImplementation: typeof fetch = (_input, init) =>
       new Promise<Response>((_resolve, reject) => {

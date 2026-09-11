@@ -23,21 +23,22 @@ describe("PublicationsApiRepository", () => {
     ).resolves.toEqual(expect.objectContaining({ productsCount: 1, count: 1 }));
     expect(get).toHaveBeenCalledWith(
       "/mercadolibre/direct/publicaciones/agrupadas?limit=20&cursor=cursor-2",
+      { timeoutMs: 60_000 },
     );
   });
 
-  it("uses a dedicated timeout for global title search", async () => {
+  it("uses a 60-second timeout for global title search", async () => {
     const get = vi.fn<HttpGetClient["get"]>();
     get.mockResolvedValue(createPublicationsResponse());
     await new PublicationsApiRepository({ get }).getPublications({ pageSize: 20, cursor: null, search: "buzo" });
-    expect(get).toHaveBeenCalledWith("/mercadolibre/direct/publicaciones/agrupadas?limit=20&search=buzo", { timeoutMs: 30_000 });
+    expect(get).toHaveBeenCalledWith("/mercadolibre/direct/publicaciones/agrupadas?limit=20&search=buzo", { timeoutMs: 60_000 });
   });
 
-  it("does not customize timeout when search is absent", async () => {
+  it("uses the same 60-second timeout when search is absent", async () => {
     const get = vi.fn<HttpGetClient["get"]>();
     get.mockResolvedValue(createPublicationsResponse());
     await new PublicationsApiRepository({ get }).getPublications({ pageSize: 20, cursor: null });
-    expect(get).toHaveBeenCalledWith("/mercadolibre/direct/publicaciones/agrupadas?limit=20");
+    expect(get).toHaveBeenCalledWith("/mercadolibre/direct/publicaciones/agrupadas?limit=20", { timeoutMs: 60_000 });
   });
 
   it("translates an invalid payload into a controlled API error", async () => {

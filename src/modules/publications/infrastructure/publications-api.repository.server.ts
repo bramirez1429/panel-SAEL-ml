@@ -22,6 +22,7 @@ import { publicationsResponseSchema } from "./publications-response.schema";
 const PUBLICATIONS_ENDPOINT =
   "/mercadolibre/direct/publicaciones/agrupadas";
 const FAMILY_ENDPOINT = "/mercadolibre/direct/familias";
+const PUBLICATIONS_TIMEOUT_MS = 60_000;
 
 /**
  * Implementación HTTP del contrato PublicationsRepository.
@@ -41,9 +42,9 @@ export class PublicationsApiRepository implements PublicationsRepository {
       query.set("search", request.search.trim());
     }
     const endpoint = `${PUBLICATIONS_ENDPOINT}?${query.toString()}`;
-    const response = request.search?.trim()
-      ? await this.httpClient.get(endpoint, { timeoutMs: 30_000 })
-      : await this.httpClient.get(endpoint);
+    const response = await this.httpClient.get(endpoint, {
+      timeoutMs: PUBLICATIONS_TIMEOUT_MS,
+    });
     const validation = publicationsResponseSchema.safeParse(response);
 
     if (!validation.success) {
