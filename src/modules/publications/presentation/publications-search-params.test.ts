@@ -21,13 +21,14 @@ describe("parsePublicationsSearchParams", () => {
       search: "campera",
       type: "USER_PRODUCT",
       status: "active",
+      quickFilters: [],
     });
   });
 
   it("falls back safely for invalid page and type values", () => {
     expect(
       parsePublicationsSearchParams({ page: "0", type: "UNKNOWN" }),
-    ).toEqual({ page: 1, cursor: null, search: "", type: null, status: "" });
+    ).toEqual({ page: 1, cursor: null, search: "", type: null, status: "", quickFilters: [] });
   });
 
   it("uses the first value when a query key is repeated", () => {
@@ -43,11 +44,18 @@ describe("parsePublicationsSearchParams", () => {
       search: "uno",
       type: null,
       status: "",
+      quickFilters: [],
     });
   });
 
   it("normaliza espacios sin alterar IDs, SKU ni mayúsculas", () => {
     expect(parsePublicationsSearchParams({ search: "  RM-CV-LOV   MLAU123  " }).search).toBe("RM-CV-LOV MLAU123");
+  });
+
+  it("conserva solamente filtros rápidos conocidos", () => {
+    expect(parsePublicationsSearchParams({
+      quick: "GIRLS_TSHIRT,INVALID,BOYS_SWEATSHIRT",
+    }).quickFilters).toEqual(["GIRLS_TSHIRT", "BOYS_SWEATSHIRT"]);
   });
 });
 
@@ -61,6 +69,7 @@ describe("buildPublicationsUrl", () => {
           search: "campera",
           type: "LEGACY",
           status: "active",
+          quickFilters: [],
         },
         { page: 1, cursor: null, type: null },
       ),

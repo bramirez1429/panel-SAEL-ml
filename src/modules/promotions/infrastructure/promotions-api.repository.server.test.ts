@@ -20,9 +20,9 @@ describe("PromotionsApiRepository publication operations", () => {
     const http = client();
     vi.mocked(http.get).mockResolvedValue({ done: true, nextCursor: null, count: 0, publications: [] });
 
-    await new PromotionsApiRepository(http).getCatalog({ limit: 20, cursor: null, search: "123456" });
+    await new PromotionsApiRepository(http).getCatalog({ limit: 20, cursor: null, search: "7452953254396627" });
 
-    expect(http.get).toHaveBeenCalledWith("/mercadolibre/direct/promociones?limit=20&search=123456");
+    expect(http.get).toHaveBeenCalledWith("/mercadolibre/direct/promociones?limit=20&search=7452953254396627");
   });
 
   it.each([

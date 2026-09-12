@@ -1,7 +1,7 @@
 "use client";
 
 const PREFIX = "publications:cursor-history:";
-const CONTEXT_KEYS = ["search", "type", "status"] as const;
+const CONTEXT_KEYS = ["search", "type", "status", "quick"] as const;
 
 export function publicationsCursorContextKey(params: Pick<URLSearchParams, "get">): string {
   const context = new URLSearchParams();

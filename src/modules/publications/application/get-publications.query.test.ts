@@ -66,6 +66,7 @@ const defaultInput: GetPublicationsQueryInput = {
   search: "",
   type: null,
   status: null,
+  quickFilters: [],
 };
 
 describe("GetPublicationsQuery", () => {
@@ -81,6 +82,51 @@ describe("GetPublicationsQuery", () => {
       cursor: "cursor-2",
       search: "",
     });
+  });
+
+  it("resuelve globalmente la familia real 7452953254396627 y carga su detalle completo", async () => {
+    const familyId = "7452953254396627";
+    const getPublications = vi.fn<PublicationsRepository["getPublications"]>();
+    const repository = createRepository(getPublications);
+    const familyDetail = {
+      ...familyPublication,
+      id: "MLA1491447379",
+      group: { ...familyPublication.group, key: `family:${familyId}`, familyId },
+      variants: [{
+        id: "UP-1:MLA1491447379",
+        itemId: "MLA1491447379",
+        userProductId: "UP-1",
+        label: null,
+        title: "Remera mujer",
+        thumbnailUrl: null,
+        status: "active",
+        price: { amount: 10_000, currency: "ARS" },
+        stock: 5,
+        sold: 2,
+        sku: "SKU-1",
+        attributes: [],
+        permalink: null,
+      }],
+    };
+    vi.mocked(repository.getById).mockResolvedValue(familyDetail);
+    const searchFamily = vi.fn().mockResolvedValue([
+      { itemId: "MLA1491447379", familyId: null },
+      { itemId: "MLA1491447380", familyId },
+    ]);
+
+    const result = await new GetPublicationsQuery(repository, searchFamily).execute({
+      ...defaultInput,
+      page: 1,
+      cursor: null,
+      search: familyId,
+    });
+
+    expect(searchFamily).toHaveBeenCalledWith(familyId);
+    expect(repository.getById).toHaveBeenCalledWith("MLA1491447379");
+    expect(getPublications).not.toHaveBeenCalled();
+    expect(result.publications).toEqual([familyDetail]);
+    expect(result.publications[0]?.variants).toHaveLength(1);
+    expect(result.count).toBe(1);
   });
 
   it("applies case-insensitive search to the fetched page", async () => {

@@ -7,7 +7,7 @@
 
 .filters {
   display: grid;
-  grid-template-columns: minmax(220px, 2fr) minmax(150px, 1fr) minmax(170px, 1fr) auto;
+  grid-template-columns: minmax(150px, 1fr) minmax(170px, 1fr) auto;
   gap: 16px;
   align-items: end;
   padding: 24px;
@@ -32,6 +32,24 @@
 
 .filterButton {
   min-width: 128px;
+}
+
+.quickFilters {
+  width: 100%;
+}
+
+.quickFilter {
+  display: inline-flex;
+  min-height: 36px;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px 4px 10px;
+  color: var(--ant-color-text, #172033);
+  background: var(--ant-color-bg-container, #ffffff);
+  border: 1px solid var(--ant-color-border-secondary, #e7eaf0);
+  border-radius: var(--ant-border-radius, 8px);
+  font-size: 0.875rem;
 }
 
 .summary,

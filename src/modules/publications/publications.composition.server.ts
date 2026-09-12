@@ -13,6 +13,8 @@ import { CreateSimilarPublicationCommand } from "./application/create-similar-pu
 import { GetSimilarPublicationDraftQuery } from "./application/get-similar-publication-draft.query";
 import { UploadSimilarPublicationPictureCommand } from "./application/upload-similar-publication-picture.command";
 import { SimilarPublicationApiRepository } from "./infrastructure/similar-publication-api.repository.server";
+import { createPromotionsRepository } from "@/modules/promotions/promotions.composition.server";
+import { searchPublicationsByFamily } from "@/modules/promotions/application/search-publications-by-family";
 
 /**
  * Punto de composición server-only: conecta el caso de uso con infraestructura
@@ -24,7 +26,14 @@ export function createGetPublicationsQuery(): GetPublicationsQuery {
   );
   const repository = new PublicationsApiRepository(httpClient);
 
-  return new GetPublicationsQuery(repository);
+  return new GetPublicationsQuery(repository, async (familyId) => {
+    const page = await searchPublicationsByFamily(
+      createPromotionsRepository(),
+      familyId,
+      { limit: 20, cursor: null },
+    );
+    return page.publications;
+  });
 }
 
 export function createGetPublicationByIdQuery(): GetPublicationByIdQuery {

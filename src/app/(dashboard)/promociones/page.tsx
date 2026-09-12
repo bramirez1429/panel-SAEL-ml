@@ -10,7 +10,9 @@ type Props = Readonly<{
 }>;
 
 export default function PromotionsPage({ searchParams }: Props) {
-  return <Suspense fallback={<PromotionCampaignsSkeleton />}>
-    <PromotionsCatalog searchParams={searchParams} />
-  </Suspense>;
+  return <div data-dashboard-full-width="true">
+    <Suspense fallback={<PromotionCampaignsSkeleton />}>
+      <PromotionsCatalog searchParams={searchParams} />
+    </Suspense>
+  </div>;
 }

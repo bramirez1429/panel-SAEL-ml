@@ -1,4 +1,8 @@
 import type { PublicationType } from "../domain/publication.model";
+import {
+  PUBLICATION_QUICK_FILTERS,
+  type PublicationQuickFilter,
+} from "../application/publication-quick-filter";
 
 export const PUBLICATIONS_PAGE_SIZE = 20;
 
@@ -12,6 +16,7 @@ export type PublicationsUrlState = Readonly<{
   search: string;
   type: PublicationType | null;
   status: string;
+  quickFilters: readonly PublicationQuickFilter[];
 }>;
 
 const publicationTypes: readonly PublicationType[] = [
@@ -35,6 +40,7 @@ export function parsePublicationsSearchParams(
     search: normalizePublicationSearch(getFirstValue(searchParams.search)),
     type: isPublicationType(typeValue) ? typeValue : null,
     status: getFirstValue(searchParams.status).trim(),
+    quickFilters: parseQuickFilters(getFirstValue(searchParams.quick)),
   };
 }
 
@@ -54,6 +60,9 @@ export function buildPublicationsUrl(
     type: next.type ?? "",
     status: next.status,
   });
+  if (next.quickFilters.length > 0) {
+    searchParams.set("quick", next.quickFilters.join(","));
+  }
 
   return `/publicaciones?${searchParams.toString()}`;
 }
@@ -66,4 +75,9 @@ function getFirstValue(
 
 function isPublicationType(value: string): value is PublicationType {
   return publicationTypes.some((type) => type === value);
+}
+
+function parseQuickFilters(value: string): readonly PublicationQuickFilter[] {
+  const values = new Set(value.split(","));
+  return PUBLICATION_QUICK_FILTERS.filter((filter) => values.has(filter));
 }

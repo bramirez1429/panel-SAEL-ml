@@ -30,12 +30,13 @@ describe("PromotionsCatalog search SSR", () => {
   });
 
   it("FAMILY renderiza todos los MLA entregados por backend", async () => {
-    repository.getCatalog.mockResolvedValue(page([row("MLA1", "123456"), row("MLA2", "123456")]));
-    render(await PromotionsCatalog({ searchParams: Promise.resolve({ search: "123456" }) }));
+    const familyId = "7452953254396627";
+    repository.getCatalog.mockResolvedValue(page([row("MLA1491447379", familyId), row("MLA1491447380", familyId)]));
+    render(await PromotionsCatalog({ searchParams: Promise.resolve({ search: familyId }) }));
 
-    expect(repository.getCatalog).toHaveBeenCalledWith(expect.objectContaining({ search: "123456" }));
-    expect(screen.getByText("MLA1")).toBeInTheDocument();
-    expect(screen.getByText("MLA2")).toBeInTheDocument();
+    expect(repository.getCatalog).toHaveBeenCalledWith(expect.objectContaining({ search: familyId }));
+    expect(screen.getByText("MLA1491447379")).toBeInTheDocument();
+    expect(screen.getByText("MLA1491447380")).toBeInTheDocument();
   });
 
   it("MLA normaliza y renderiza el resultado exacto", async () => {

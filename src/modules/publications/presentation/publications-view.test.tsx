@@ -21,6 +21,7 @@ const filters = {
   search: "",
   type: null,
   status: "",
+  quickFilters: [],
 } as const;
 
 const publication: Publication = {

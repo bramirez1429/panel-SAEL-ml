@@ -5,6 +5,7 @@ import { parsePublicationSearch } from "../domain/publication-search.parser";
 import { PromotionsCatalogClient } from "./promotions-catalog.client";
 import { PromotionsSearchTopbar } from "./promotions-search-topbar";
 import type { PromotionsPage } from "../domain/promotion.model";
+import { searchPublicationsByFamily } from "../application/search-publications-by-family";
 type Props = Readonly<{
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }>;
@@ -18,7 +19,11 @@ export async function PromotionsCatalog({ searchParams }: Props) {
   const search = criteria?.value ?? "";
   let page: PromotionsPage;
   try {
-    page = await createPromotionsRepository().getCatalog({ limit: 20, cursor: first(params.cursor) ?? null, ...(search ? { search } : {}), productGroup: oneOf(first(params.productGroup), productGroups), promotionStatus: oneOf(first(params.promotionStatus), statuses), promotionType: first(params.promotionType) });
+    const repository = createPromotionsRepository();
+    const request = { limit: 20, cursor: first(params.cursor) ?? null, productGroup: oneOf(first(params.productGroup), productGroups), promotionStatus: oneOf(first(params.promotionStatus), statuses), promotionType: first(params.promotionType) };
+    page = criteria?.type === "FAMILY"
+      ? await searchPublicationsByFamily(repository, criteria.value, request)
+      : await repository.getCatalog({ ...request, ...(search ? { search } : {}) });
   } catch (error) {
     const message = error instanceof ApiError && error.code === "API_TIMEOUT" ? "Mercado Libre tardó demasiado en responder. Volvé a intentar." : "No se pudieron cargar las promociones de Mercado Libre.";
     return <><PromotionsSearchTopbar key={search} initialSearch={search} /><Alert type="error" showIcon message={message} /></>;

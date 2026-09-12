@@ -19,7 +19,7 @@ type PublicationsViewProps = Readonly<{
 
 /** Presenta modelos de dominio; la lectura se resuelve en el Server Component de la ruta. */
 export function PublicationsView(props: PublicationsViewProps) {
-  const hasFilters = Boolean(props.filters.search || props.filters.type || props.filters.status);
+  const hasFilters = Boolean(props.filters.search || props.filters.type || props.filters.status || props.filters.quickFilters.length);
   const tableProps = {
     tiendanubeStatusBySourceKey: props.tiendanubeStatusBySourceKey,
     replicateAction: props.replicateAction,

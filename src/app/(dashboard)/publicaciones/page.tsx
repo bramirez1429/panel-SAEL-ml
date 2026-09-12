@@ -37,6 +37,7 @@ async function loadPublications(
       search: filters.search,
       type: filters.type,
       status: filters.status || null,
+      quickFilters: filters.quickFilters,
     });
     const states = await loadTiendanubeStatuses(page.publications.map((publication) => publication.group.key));
     const categories = await getTiendanubeCategories().catch(() => [] as readonly TiendanubeCategory[]);
