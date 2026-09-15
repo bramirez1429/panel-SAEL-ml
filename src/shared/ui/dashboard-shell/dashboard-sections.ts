@@ -9,6 +9,7 @@ export const dashboardSections = [
   { href: "/promociones", title: "Promociones" },
   { href: "/ventas", title: "Ventas 48 hs" },
   { href: "/pedidos", title: "Pedidos" },
+  { href: "/usuarios", title: "Usuarios" },
   { href: "/integraciones", title: "Integraciones" },
 ] as const satisfies readonly DashboardSection[];
 
