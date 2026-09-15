@@ -61,14 +61,66 @@ export function PublicationsFilters({ filters }: PublicationsFiltersProps) {
     });
   };
 
-  return (<>
-    <MercadoLibrePublicationSearch
-      initialSearch={filters.search}
-      pathname="/publicaciones"
-      onResetCursorHistory={resetPublicationsCursorHistory}
-      clearSearchParams={["quick"]}
-      hasAdditionalFilters={filters.quickFilters.length > 0}
-    />
+  return <section
+    aria-label="Búsqueda y filtros de publicaciones"
+    className={styles.toolbar}
+  >
+    <div className={styles.toolbarPrimary}>
+      <MercadoLibrePublicationSearch
+        className={styles.toolbarSearch}
+        initialSearch={filters.search}
+        integrated
+        pathname="/publicaciones"
+        onResetCursorHistory={resetPublicationsCursorHistory}
+        clearSearchParams={["quick"]}
+        hasAdditionalFilters={filters.quickFilters.length > 0}
+      />
+      <form
+        key={`${filters.search}:${filters.status}`}
+        className={styles.filters}
+        action="/publicaciones"
+        method="get"
+        onSubmit={submitFilters}
+      >
+        <input name="page" type="hidden" value="1" />
+
+        <label className={styles.filterField}>
+          <span>Tipo</span>
+          <input name="type" type="hidden" value={filters.type ?? ""} />
+          <Select
+            aria-label="Filtrar por tipo"
+            allowClear
+            onChange={(type: PublicationsUrlState["type"]) =>
+              navigate({ page: 1, cursor: null, type: type ?? null })
+            }
+            options={[
+              { label: "Familia", value: "USER_PRODUCT" },
+              { label: "Legacy", value: "LEGACY" },
+            ]}
+            placeholder="Todos"
+            value={filters.type ?? undefined}
+          />
+        </label>
+
+        <label className={styles.filterField}>
+          <span>Estado</span>
+          <Input
+            defaultValue={filters.status}
+            name="status"
+            placeholder="Estado exacto"
+          />
+        </label>
+
+        <Button
+          className={styles.filterButton}
+          htmlType="submit"
+          loading={isPending && pendingQuickFilter === null}
+          type="primary"
+        >
+          Aplicar filtros
+        </Button>
+      </form>
+    </div>
     <Flex className={styles.quickFilters} gap={8} wrap>
       {quickFilterOptions.map(({ value, label }) => (
         <label className={styles.quickFilter} key={value}>
@@ -85,52 +137,7 @@ export function PublicationsFilters({ filters }: PublicationsFiltersProps) {
         </label>
       ))}
     </Flex>
-    <form
-      key={`${filters.search}:${filters.status}`}
-      className={styles.filters}
-      action="/publicaciones"
-      method="get"
-      onSubmit={submitFilters}
-    >
-      <input name="page" type="hidden" value="1" />
-
-      <label className={styles.filterField}>
-        <span>Tipo</span>
-        <input name="type" type="hidden" value={filters.type ?? ""} />
-        <Select
-          aria-label="Filtrar por tipo"
-          allowClear
-          onChange={(type: PublicationsUrlState["type"]) =>
-            navigate({ page: 1, cursor: null, type: type ?? null })
-          }
-          options={[
-            { label: "Familia", value: "USER_PRODUCT" },
-            { label: "Legacy", value: "LEGACY" },
-          ]}
-          placeholder="Todos"
-          value={filters.type ?? undefined}
-        />
-      </label>
-
-      <label className={styles.filterField}>
-        <span>Estado</span>
-        <Input
-          defaultValue={filters.status}
-          name="status"
-          placeholder="Estado exacto"
-        />
-      </label>
-
-      <Button
-        className={styles.filterButton}
-        htmlType="submit"
-        loading={isPending && pendingQuickFilter === null}
-        type="primary"
-      >
-        Aplicar filtros
-      </Button>
-    </form>
-  </>);
+  </section>;
 }
 
 const quickFilterOptions: readonly Readonly<{

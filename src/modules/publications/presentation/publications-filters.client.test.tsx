@@ -62,13 +62,26 @@ describe("PublicationsFilters", () => {
     const user = userEvent.setup();
     render(<PublicationsFilters filters={{ page: 2, cursor: "cursor-2", search: "anterior", type: null, status: "paused", quickFilters: [] }} />);
 
-    const search = screen.getByRole("textbox", { name: "Buscar publicaciones" });
+    const search = screen.getByRole("searchbox", { name: "Buscar publicaciones" });
     await user.clear(search);
     await user.type(search, "mla1491447379");
     await user.click(screen.getByRole("button", { name: "Buscar" }));
 
     await waitFor(() => expect(navigation.push).toHaveBeenCalledWith(
       "/publicaciones?page=1&search=MLA1491447379&type=&status=paused",
+    ));
+  });
+
+  it("ejecuta la misma búsqueda al presionar Enter", async () => {
+    const user = userEvent.setup();
+    render(<PublicationsFilters filters={{ page: 2, cursor: "cursor-2", search: "anterior", type: null, status: "paused", quickFilters: [] }} />);
+
+    const search = screen.getByRole("searchbox", { name: "Buscar publicaciones" });
+    await user.clear(search);
+    await user.type(search, "remera{Enter}");
+
+    await waitFor(() => expect(navigation.push).toHaveBeenCalledWith(
+      "/publicaciones?page=1&search=remera&type=&status=paused",
     ));
   });
 
@@ -105,17 +118,15 @@ describe("PublicationsFilters", () => {
     expect(screen.getByPlaceholderText("Buscar por familia, MLA o nombre")).toBeInTheDocument();
   });
 
-  it("muestra los seis filtros rápidos como Switch Sí/No", () => {
+  it("muestra los cuatro filtros rápidos como Switch Sí/No", () => {
     render(<PublicationsFilters filters={{ page: 1, cursor: null, search: "", type: null, status: "", quickFilters: [] }} />);
 
-    expect(screen.getAllByRole("switch")).toHaveLength(6);
+    expect(screen.getAllByRole("switch")).toHaveLength(4);
     [
       "Remera de mujer",
       "Buzo de mujer",
       "Remera de niña",
       "Buzo de niña",
-      "Remera de niño",
-      "Buzo de niño",
     ].forEach((label) => {
       expect(screen.getByRole("switch", { name: label })).toHaveTextContent("No");
     });
@@ -140,7 +151,7 @@ describe("PublicationsFilters", () => {
     render(<PublicationsFilters filters={{ page: 2, cursor: null, search: "remera", type: null, status: "paused", quickFilters: ["GIRLS_TSHIRT"] }} />);
 
     expect(screen.getByRole("switch", { name: "Remera de niña" })).toBeChecked();
-    await user.click(screen.getByRole("button", { name: "Limpiar" }));
+    await user.click(screen.getByRole("button", { name: "close-circle" }));
 
     await waitFor(() => expect(navigation.push).toHaveBeenCalledWith(
       "/publicaciones?page=1&type=&status=paused",

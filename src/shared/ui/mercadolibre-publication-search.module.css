@@ -8,6 +8,10 @@
   max-width: 100%;
 }
 
+.integratedInput {
+  width: 100%;
+}
+
 @media (max-width: 640px) {
   .controls > :first-child {
     flex: 1 1 100%;

@@ -1,5 +1,6 @@
 "use client";
 
+import { SearchOutlined } from "@ant-design/icons";
 import { Button, Input, Space, Typography } from "antd";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
@@ -13,9 +14,11 @@ type Props = Readonly<{
   onResetCursorHistory: () => void;
   clearSearchParams?: readonly string[];
   hasAdditionalFilters?: boolean;
+  integrated?: boolean;
+  className?: string;
 }>;
 
-export function MercadoLibrePublicationSearch({ initialSearch, pathname, onResetCursorHistory, clearSearchParams = [], hasAdditionalFilters = false }: Props) {
+export function MercadoLibrePublicationSearch({ initialSearch, pathname, onResetCursorHistory, clearSearchParams = [], hasAdditionalFilters = false, integrated = false, className }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [value, setValue] = useState(initialSearch);
@@ -45,6 +48,25 @@ export function MercadoLibrePublicationSearch({ initialSearch, pathname, onReset
   function clear(): void {
     setValue("");
     navigate("", true);
+  }
+
+  if (integrated) {
+    return <div className={`${styles.form} ${className ?? ""}`} role="search">
+      <Input.Search
+        allowClear
+        aria-label="Buscar publicaciones"
+        className={styles.integratedInput}
+        enterButton={<SearchOutlined aria-label="Buscar" />}
+        loading={pending}
+        onChange={(event) => setValue(event.target.value)}
+        onSearch={(term, _event, info) => {
+          if (info?.source === "clear") clear();
+          else navigate(term);
+        }}
+        placeholder="Buscar por familia, MLA o nombre"
+        value={value}
+      />
+    </div>;
   }
 
   return <form className={styles.form} onSubmit={submit}>

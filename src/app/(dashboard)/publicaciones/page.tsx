@@ -8,7 +8,6 @@ import {
   type PublicationsUrlState,
 } from "@/modules/publications/presentation/publications-search-params";
 import { AppError } from "@/shared/errors/app-error";
-import { PageHeader } from "@/shared/ui/page-header/page-header";
 import { createGetTiendanubeReplicationStatusQuery } from "@/modules/tiendanube/tiendanube.composition.server";
 import { getTiendanubeCategories } from "@/modules/tiendanube/tiendanube.composition.server";
 import type { TiendanubeCategory } from "@/modules/tiendanube/domain/tiendanube-replication.model";
@@ -80,11 +79,6 @@ export default async function PublicationsPage({
   const result = await loadPublications(filters);
 
   return (
-    <>
-      <PageHeader
-        description="Gestiona las publicaciones de tus canales de venta."
-      />
-      <PublicationsView filters={filters} replicateAction={replicatePublicationAction} updateAction={updatePublicationAction} deleteVariationAction={deletePublicationVariationAction} tiendanubeStatusBySourceKey={result.state === "error" ? {} : result.tiendanubeStatusBySourceKey} categories={result.state === "error" ? [] : result.categories} {...result} />
-    </>
+    <PublicationsView filters={filters} replicateAction={replicatePublicationAction} updateAction={updatePublicationAction} deleteVariationAction={deletePublicationVariationAction} tiendanubeStatusBySourceKey={result.state === "error" ? {} : result.tiendanubeStatusBySourceKey} categories={result.state === "error" ? [] : result.categories} {...result} />
   );
 }
