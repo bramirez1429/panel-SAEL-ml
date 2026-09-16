@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({ getOptions: vi.fn(), push: vi.fn(), searchPara
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push }), useSearchParams: () => mocks.searchParams }));
 vi.mock("./promotion-options.action", () => ({ getPromotionOptions: mocks.getOptions }));
 vi.mock("./apply-selected-promotion.action", () => ({ applySelectedPromotion: vi.fn() }));
+vi.mock("./deactivate-selected-promotion.action", () => ({ deactivateSelectedPromotion: vi.fn() }));
 vi.mock("./promotion-options-modal.client", () => ({
   PromotionOptionsModal: ({ open }: Readonly<{ open: boolean }>) => open ? <div role="dialog">Participar</div> : null,
 }));
@@ -92,8 +93,98 @@ describe("vista global de promociones", () => {
     expect(dataRows[3]).toHaveTextContent("Programada");
     expect(screen.getAllByRole("button", { name: "Dejar de participar" })).toHaveLength(2);
 
-    // Sólo los candidate pueden seleccionarse; pending y started no vuelven a aplicar.
-    expect(screen.getAllByRole("checkbox")).toHaveLength(2);
+    expect(screen.getAllByRole("checkbox", { name: /^Seleccionar (?!para dejar)/ })).toHaveLength(2);
+    expect(screen.getAllByRole("checkbox", { name: /^Seleccionar para dejar de participar/ })).toHaveLength(2);
+  });
+
+  it("candidate/canApply mantiene su selección para participar", async () => {
+    mocks.getOptions.mockResolvedValue([candidate({ name: "Nueva propuesta" })]);
+    render(<PromotionsCatalogClient page={page([publication()])} />);
+
+    expect(await screen.findByRole("checkbox", { name: "Seleccionar Nueva propuesta" })).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", {
+      name: "Seleccionar para dejar de participar Nueva propuesta",
+    })).not.toBeInTheDocument();
+  });
+
+  it("canRemove started muestra checkbox para selección de baja", async () => {
+    mocks.getOptions.mockResolvedValue([
+      candidate({ name: "Activa removible", status: "started", canApply: false, canRemove: true }),
+    ]);
+    render(<PromotionsCatalogClient page={page([publication()])} />);
+
+    expect(await screen.findByRole("checkbox", {
+      name: "Seleccionar para dejar de participar Activa removible",
+    })).toBeInTheDocument();
+  });
+
+  it("una promoción no removible no entra en la selección de baja", async () => {
+    mocks.getOptions.mockResolvedValue([
+      candidate({ name: "Activa sin baja", status: "started", canApply: false, canRemove: false }),
+      candidate({ name: "Activa removible", status: "started", canApply: false, canRemove: true }),
+    ]);
+    render(<PromotionsCatalogClient page={page([publication()])} />);
+
+    expect(await screen.findByText("Activa removible")).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", {
+      name: "Seleccionar para dejar de participar Activa sin baja",
+    })).not.toBeInTheDocument();
+    expect(screen.queryByText("Activa sin baja")).not.toBeInTheDocument();
+  });
+
+  it("seleccionar una activa habilita Dejar de participar de 1 promoción", async () => {
+    const user = userEvent.setup();
+    mocks.getOptions.mockResolvedValue([
+      candidate({ name: "Activa", status: "started", canApply: false, canRemove: true }),
+    ]);
+    render(<PromotionsCatalogClient page={page([publication()])} />);
+
+    await user.click(await screen.findByRole("checkbox", {
+      name: "Seleccionar para dejar de participar Activa",
+    }));
+
+    expect(screen.getByRole("button", { name: "Dejar de participar de 1 promoción" })).toBeInTheDocument();
+  });
+
+  it("seleccionar varias activas muestra la cantidad correcta", async () => {
+    const user = userEvent.setup();
+    mocks.getOptions.mockResolvedValue([
+      candidate({ id: "ACTIVE-1", name: "Activa uno", status: "started", canApply: false, canRemove: true }),
+      candidate({ id: "ACTIVE-2", name: "Activa dos", status: "pending", canApply: false, canRemove: true }),
+    ]);
+    render(<PromotionsCatalogClient page={page([publication()])} />);
+
+    await user.click(await screen.findByRole("checkbox", {
+      name: "Seleccionar para dejar de participar Activa uno",
+    }));
+    await user.click(screen.getByRole("checkbox", {
+      name: "Seleccionar para dejar de participar Activa dos",
+    }));
+
+    expect(screen.getByRole("button", { name: "Dejar de participar de 2 promociones" })).toBeInTheDocument();
+  });
+
+  it("las selecciones de participar y dejar de participar no se mezclan", async () => {
+    const user = userEvent.setup();
+    mocks.getOptions.mockResolvedValue([
+      candidate({ id: "CANDIDATE", name: "Nueva propuesta" }),
+      candidate({ id: "ACTIVE", name: "Activa", status: "started", canApply: false, canRemove: true }),
+    ]);
+    render(<PromotionsCatalogClient page={page([publication()])} />);
+
+    const participate = await screen.findByRole("checkbox", { name: "Seleccionar Nueva propuesta" });
+    const remove = screen.getByRole("checkbox", { name: "Seleccionar para dejar de participar Activa" });
+    await user.click(participate);
+    await user.click(remove);
+
+    expect(participate).toBeChecked();
+    expect(remove).toBeChecked();
+    expect(screen.getByText("1 promoción seleccionada")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Dejar de participar de 1 promoción" })).toBeInTheDocument();
+
+    await user.click(remove);
+    expect(participate).toBeChecked();
+    expect(screen.queryByRole("button", { name: /Dejar de participar de 1 promoción/ })).not.toBeInTheDocument();
   });
 
   it("muestra la vigencia debajo del nombre para cualquier estado", async () => {
@@ -111,7 +202,6 @@ describe("vista global de promociones", () => {
   });
 
   it("sólo ofrece baja cuando canRemove y la selección específica son válidos", async () => {
-    const user = userEvent.setup();
     mocks.getOptions.mockResolvedValue([
       candidate({ id: "P-1", name: "Sin permiso", status: "started", canApply: false, canRemove: false }),
       candidate({ id: null, name: "Sin identificador", status: "pending", canApply: false, canRemove: true }),
@@ -121,10 +211,9 @@ describe("vista global de promociones", () => {
 
     const exactRow = (await screen.findByText("Baja exacta")).closest("tr");
     expect(exactRow).not.toBeNull();
-    expect(screen.getAllByRole("button", { name: "Dejar de participar" })).toHaveLength(1);
-    await user.click(within(exactRow!).getByRole("button", { name: "Dejar de participar" }));
-
-    expect(screen.getByRole("dialog")).toHaveTextContent("Baja exacta");
+    expect(within(exactRow!).getByRole("button", { name: "Dejar de participar" })).toBeInTheDocument();
+    expect(screen.queryByText("Sin permiso")).not.toBeInTheDocument();
+    expect(screen.queryByText("Sin identificador")).not.toBeInTheDocument();
   });
 
   it("oculta promociones que no tienen ninguna acción disponible", async () => {

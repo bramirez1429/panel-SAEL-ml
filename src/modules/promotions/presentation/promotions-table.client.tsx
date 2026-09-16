@@ -22,9 +22,6 @@ import type {
   PromotionRow,
   PromotionsPage,
 } from "../domain/promotion.model";
-import {
-  promotionOptionToRemovalSelection,
-} from "../domain/promotion-removal.mapper";
 import type {
   PromotionOption,
 } from "../domain/promotions.repository";
@@ -34,6 +31,10 @@ import {
   PromotionDeactivationModal,
   type PromotionDeactivationSelection,
 } from "./promotion-deactivation-modal.client";
+import {
+  isRemovablePromotionOption,
+  promotionDeactivationKey,
+} from "./promotion-deactivation.helpers";
 import {
   promotionSelection,
   promotionSelectionKey,
@@ -59,6 +60,8 @@ import {
 
 type Props = Readonly<{
   page: PromotionsPage;
+  selectedForRemoval: Readonly<Record<string, PromotionDeactivationSelection>>;
+  onToggleRemoval: (selection: PromotionDeactivationSelection) => void;
 }>;
 
 type DealSelection = Readonly<{
@@ -86,6 +89,8 @@ const missingValue = "—";
 
 export function PromotionsTable({
   page,
+  selectedForRemoval,
+  onToggleRemoval,
 }: Props) {
   const [deal, setDeal] =
     useState<DealSelection | null>(null);
@@ -206,6 +211,8 @@ export function PromotionsTable({
             row={row}
             selections={selections}
             onToggle={toggleSelection}
+            selectedForRemoval={selectedForRemoval}
+            onToggleRemoval={onToggleRemoval}
           />
         ),
     },
@@ -540,6 +547,8 @@ function SelectionCell({
   row,
   selections,
   onToggle,
+  selectedForRemoval,
+  onToggleRemoval,
 }: Readonly<{
   row: DisplayRow;
   selections:
@@ -552,15 +561,24 @@ function SelectionCell({
         typeof promotionSelection
       >,
   ) => void;
+  selectedForRemoval: Readonly<Record<string, PromotionDeactivationSelection>>;
+  onToggleRemoval: (selection: PromotionDeactivationSelection) => void;
 }>) {
   const option = row.option;
 
-  if (
-    !option ||
-    !isSelectable(option)
-  ) {
-    return null;
+  if (!option) return null;
+
+  if (isRemovablePromotionOption(option)) {
+    const selection = { publication: row.publication, option };
+    const key = removalSelectionKey(selection);
+    return <Checkbox
+      aria-label={`Seleccionar para dejar de participar ${optionName(option)}`}
+      checked={Boolean(selectedForRemoval[key])}
+      onChange={() => onToggleRemoval(selection)}
+    />;
   }
+
+  if (!isSelectable(option)) return null;
 
   const selection =
     promotionSelection(
@@ -585,6 +603,10 @@ function SelectionCell({
   );
 }
 
+function removalSelectionKey(selection: PromotionDeactivationSelection): string {
+  return promotionDeactivationKey(selection.publication.itemId, selection.option);
+}
+
 function TaskAction({
   publication,
   option,
@@ -603,12 +625,7 @@ function TaskAction({
   onLegacy: () => void;
 }>) {
   const canDeactivate =
-    (option.status === "started" ||
-      option.status === "pending") &&
-    option.canRemove &&
-    promotionOptionToRemovalSelection(
-      option,
-    );
+    isRemovablePromotionOption(option);
 
   return (
     <div>
@@ -685,12 +702,7 @@ function hasVisibleAction(
     option.status === "started" ||
     option.status === "pending"
   ) {
-    return Boolean(
-      option.canRemove &&
-        promotionOptionToRemovalSelection(
-          option,
-        ),
-    );
+    return isRemovablePromotionOption(option);
   }
 
   /*
