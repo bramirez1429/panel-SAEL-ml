@@ -110,18 +110,43 @@ describe("createAuthenticatedHttpClient", () => {
     expect(deps.get).toHaveBeenCalledWith("/private", { bearerToken: "new-access-jwt" });
   });
 
-  it("detecta AUTHENTICATION_REQUIRED informado en el cuerpo del backend", async () => {
-    session.getRefresh.mockResolvedValue("body-code-refresh-jwt");
+  it("no convierte un 403 del endpoint en logout por el código del cuerpo", async () => {
     const deps = dependencies();
-    deps.get.mockRejectedValueOnce(new ApiError("Sesión requerida", "API_HTTP_ERROR", {
+    const forbiddenError = new ApiError("Operación no permitida", "API_HTTP_ERROR", {
       status: 403,
       responseBody: { code: "AUTHENTICATION_REQUIRED" },
-    })).mockResolvedValueOnce({ ok: true });
-    deps.post.mockResolvedValue(refreshedSession);
+    });
+    deps.get.mockRejectedValueOnce(forbiddenError);
 
-    await expect(createAuthenticatedHttpClient(deps).get("/private")).resolves.toEqual({ ok: true });
-    expect(deps.post).toHaveBeenCalledOnce();
-    expect(deps.get).toHaveBeenCalledTimes(2);
+    await expect(createAuthenticatedHttpClient(deps).get("/private")).rejects.toBe(forbiddenError);
+    expect(deps.post).not.toHaveBeenCalled();
+    expect(deps.get).toHaveBeenCalledOnce();
+    expect(session.remove).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [404, "Not found"],
+    [409, "Conflict"],
+    [422, "Invalid data"],
+    [500, "Internal error"],
+  ])("propaga HTTP %i sin refrescar ni cerrar la sesión", async (status, message) => {
+    const deps = dependencies();
+    const endpointError = new ApiError(message, "API_HTTP_ERROR", { status });
+    deps.get.mockRejectedValueOnce(endpointError);
+
+    await expect(createAuthenticatedHttpClient(deps).get("/private")).rejects.toBe(endpointError);
+    expect(deps.post).not.toHaveBeenCalled();
+    expect(session.remove).not.toHaveBeenCalled();
+  });
+
+  it("propaga timeouts sin refrescar ni cerrar la sesión", async () => {
+    const deps = dependencies();
+    const timeoutError = new ApiError("Timeout", "API_TIMEOUT");
+    deps.get.mockRejectedValueOnce(timeoutError);
+
+    await expect(createAuthenticatedHttpClient(deps).get("/private")).rejects.toBe(timeoutError);
+    expect(deps.post).not.toHaveBeenCalled();
+    expect(session.remove).not.toHaveBeenCalled();
   });
 
   it("comparte un único refresh entre requests simultáneas", async () => {

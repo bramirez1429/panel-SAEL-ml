@@ -29,7 +29,7 @@ export function SalesToolbar({ value, onChange }: Props) {
 
     startTransition(async () => {
       try {
-        const result = await syncSalesAction(48);
+        const result = await syncSalesAction(24);
 
         messageApi.success(
           `ML: ${result.mercadoLibre.found} encontradas · ${result.mercadoLibre.processed} procesadas · ${result.mercadoLibre.failed} fallidas`,

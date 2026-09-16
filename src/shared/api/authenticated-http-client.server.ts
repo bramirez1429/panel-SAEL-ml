@@ -92,10 +92,8 @@ async function renewSessionOrRedirect(httpClient: Pick<HttpClient, "post">): Pro
 }
 
 export function isAuthenticationFailure(error: unknown): boolean {
-  if (error instanceof ApiError && error.status === 401) return true;
-  if (error instanceof AppError && error.code === "AUTHENTICATION_REQUIRED") return true;
-  if (!(error instanceof ApiError) || !isRecord(error.responseBody)) return false;
-  return error.responseBody.code === "AUTHENTICATION_REQUIRED";
+  if (error instanceof ApiError) return error.status === 401;
+  return error instanceof AppError && error.code === "AUTHENTICATION_REQUIRED";
 }
 
 async function clearSessionAndRedirect(): Promise<never> {
@@ -104,8 +102,4 @@ async function clearSessionAndRedirect(): Promise<never> {
   } finally {
     redirect("/login");
   }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }
