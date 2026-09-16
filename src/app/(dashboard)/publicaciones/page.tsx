@@ -39,7 +39,13 @@ async function loadPublications(
       quickFilters: filters.quickFilters,
     });
     const states = await loadTiendanubeStatuses(page.publications.map((publication) => publication.group.key));
-    const categories = await getTiendanubeCategories().catch(() => [] as readonly TiendanubeCategory[]);
+    const categories = await getTiendanubeCategories().catch((error: unknown) => {
+      if (error instanceof AppError) {
+        return [] as readonly TiendanubeCategory[];
+      }
+
+      throw error;
+    });
     return {
       state: page.publications.length === 0 ? "empty" : "success",
       page,
@@ -63,7 +69,11 @@ async function loadTiendanubeStatuses(sourceKeys: readonly string[]): Promise<Re
   try {
     const states = await createGetTiendanubeReplicationStatusQuery().execute(sourceKeys);
     return Object.fromEntries(states.map((state) => [state.sourceKey, state]));
-  } catch {
+  } catch (error: unknown) {
+    if (!(error instanceof AppError)) {
+      throw error;
+    }
+
     return Object.fromEntries(sourceKeys.map((sourceKey) => [sourceKey, {
       sourceKey,
       status: "UNKNOWN" as const,
