@@ -31,7 +31,7 @@ export type Publication = Readonly<{
   stock: number;
   sold: number | null;
   attributes: readonly PublicationAttribute[];
-  /** Variantes reales incluidas por el listado agrupado, cuando existen. */
+  /** Variantes cargadas bajo demanda o incluidas por una lectura de detalle. */
   variants?: readonly PublicationVariant[];
   group: PublicationGroup;
 }>;

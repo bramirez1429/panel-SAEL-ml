@@ -193,5 +193,6 @@ function createRepository(
   return {
     getPublications,
     getById: vi.fn<PublicationsRepository["getById"]>(),
+    getVariants: vi.fn<PublicationsRepository["getVariants"]>(),
   };
 }

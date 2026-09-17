@@ -4,6 +4,7 @@ import { PUBLICATIONS_PAGE_SIZE, type PublicationsUrlState } from "./publication
 import { PublicationsTable } from "./publications-table.client";
 import type { InlineStockUpdateAction } from "./publication-stock-cell.client";
 import type { DeleteVariationAction } from "./publication-product-row.client";
+import type { LoadPublicationVariantsAction } from "@/app/(dashboard)/publicaciones/load-publication-variants.action";
 import type { ReplicatePublicationAction } from "@/modules/tiendanube/presentation/tiendanube-replication-cell.client";
 import type { TiendanubeCategory, TiendanubeReplicationState } from "@/modules/tiendanube/domain/tiendanube-replication.model";
 import styles from "./publications-view.module.css";
@@ -15,6 +16,7 @@ type PublicationsViewProps = Readonly<{
   categories?: readonly TiendanubeCategory[];
   updateAction?: InlineStockUpdateAction;
   deleteVariationAction?: DeleteVariationAction;
+  loadVariantsAction?: LoadPublicationVariantsAction;
 }> & (Readonly<{ state: "loading" }> | Readonly<{ state: "error"; errorMessage: string }> | Readonly<{ state: "empty" | "success"; page: PublicationsPage }>);
 
 /** Presenta modelos de dominio; la lectura se resuelve en el Server Component de la ruta. */
@@ -26,6 +28,7 @@ export function PublicationsView(props: PublicationsViewProps) {
     categories: props.categories,
     updateAction: props.updateAction,
     deleteVariationAction: props.deleteVariationAction,
+    loadVariantsAction: props.loadVariantsAction,
   };
 
   return (

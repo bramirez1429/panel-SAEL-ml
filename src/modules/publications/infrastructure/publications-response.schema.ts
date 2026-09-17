@@ -1,45 +1,6 @@
 import { z } from "zod";
 
 /** DTO real de GET /mercadolibre/direct/publicaciones/agrupadas. */
-const familyAttributeDtoSchema = z.object({
-  id: z.string().min(1),
-  name: z.string().optional(),
-  value_name: z.string().nullable().optional(),
-  values: z
-    .array(
-      z.object({
-        id: z.string().nullable().optional(),
-        name: z.string().nullable().optional(),
-      }),
-    )
-    .optional(),
-});
-
-const familyPictureDtoSchema = z.object({
-  id: z.string().min(1),
-  url: z.string().optional(),
-  secure_url: z.string().optional(),
-});
-
-const familyItemSummaryDtoSchema = z.object({
-  product_id: z.string().uuid().nullable().optional(),
-  itemId: z.string().min(1),
-  title: z.string().nullable(),
-  price: z.number().nullable(),
-  stock: z.number().nonnegative(),
-  sold: z.number().nonnegative(),
-  status: z.string().nullable(),
-  inventoryId: z.string().nullable(),
-  thumbnail: z.string().nullable(),
-  pictures: z.array(familyPictureDtoSchema),
-  attributes: z.array(familyAttributeDtoSchema),
-});
-
-const familyVariantSummaryDtoSchema = z.object({
-  userProductId: z.string().min(1),
-  items: z.array(familyItemSummaryDtoSchema),
-});
-
 const sharedProductDtoSchema = z.object({
   key: z.string().min(1),
   model: z.literal("SHARED"),
@@ -51,7 +12,9 @@ const sharedProductDtoSchema = z.object({
   sold: z.number().nonnegative(),
   status: z.string().nullable(),
   thumbnail: z.string().nullable(),
-  variations: z.array(z.unknown()),
+  permalink: z.string().nullable(),
+  currency: z.string().nullable(),
+  variantsCount: z.number().int().nonnegative(),
 });
 
 const familySummaryDtoSchema = z.object({
@@ -62,7 +25,17 @@ const familySummaryDtoSchema = z.object({
   familyName: z.string().nullable(),
   variantsCount: z.number().int().nonnegative(),
   itemsCount: z.number().int().nonnegative(),
-  variants: z.array(familyVariantSummaryDtoSchema),
+  itemId: z.string().min(1),
+  userProductId: z.string().nullable(),
+  title: z.string().nullable(),
+  priceFrom: z.number().nullable(),
+  priceTo: z.number().nullable(),
+  currency: z.string().nullable(),
+  stock: z.number().nonnegative(),
+  sold: z.number().nonnegative(),
+  status: z.string().nullable(),
+  thumbnail: z.string().nullable(),
+  permalink: z.string().nullable(),
 });
 
 export const groupedPublicationDtoSchema = z.union([

@@ -14,6 +14,7 @@ import type { TiendanubeCategory } from "@/modules/tiendanube/domain/tiendanube-
 import { replicatePublicationAction } from "./tiendanube.action";
 import type { TiendanubeReplicationState } from "@/modules/tiendanube/domain/tiendanube-replication.model";
 import { deletePublicationVariationAction, updatePublicationAction } from "./[id]/update-publication.action";
+import { loadPublicationVariantsAction } from "./load-publication-variants.action";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,13 @@ async function loadPublications(
   filters: PublicationsUrlState,
 ): Promise<PublicationsLoadResult> {
   try {
+    const categoriesPromise = getTiendanubeCategories().catch((error: unknown) => {
+      if (error instanceof AppError) {
+        return [] as readonly TiendanubeCategory[];
+      }
+
+      throw error;
+    });
     const page = await createGetPublicationsQuery().execute({
       page: filters.page,
       pageSize: PUBLICATIONS_PAGE_SIZE,
@@ -38,14 +46,10 @@ async function loadPublications(
       status: filters.status || null,
       quickFilters: filters.quickFilters,
     });
-    const states = await loadTiendanubeStatuses(page.publications.map((publication) => publication.group.key));
-    const categories = await getTiendanubeCategories().catch((error: unknown) => {
-      if (error instanceof AppError) {
-        return [] as readonly TiendanubeCategory[];
-      }
-
-      throw error;
-    });
+    const [states, categories] = await Promise.all([
+      loadTiendanubeStatuses(page.publications.map((publication) => publication.group.key)),
+      categoriesPromise,
+    ]);
     return {
       state: page.publications.length === 0 ? "empty" : "success",
       page,
@@ -89,6 +93,6 @@ export default async function PublicationsPage({
   const result = await loadPublications(filters);
 
   return (
-    <PublicationsView filters={filters} replicateAction={replicatePublicationAction} updateAction={updatePublicationAction} deleteVariationAction={deletePublicationVariationAction} tiendanubeStatusBySourceKey={result.state === "error" ? {} : result.tiendanubeStatusBySourceKey} categories={result.state === "error" ? [] : result.categories} {...result} />
+    <PublicationsView filters={filters} replicateAction={replicatePublicationAction} updateAction={updatePublicationAction} deleteVariationAction={deletePublicationVariationAction} loadVariantsAction={loadPublicationVariantsAction} tiendanubeStatusBySourceKey={result.state === "error" ? {} : result.tiendanubeStatusBySourceKey} categories={result.state === "error" ? [] : result.categories} {...result} />
   );
 }

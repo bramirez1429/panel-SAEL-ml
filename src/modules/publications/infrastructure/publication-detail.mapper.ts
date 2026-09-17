@@ -3,6 +3,7 @@ import type {
   FamilyDetailResponseDto,
   PublicationDetailResponseDto,
 } from "./publication-detail-response.schema";
+import type { FamilyVariantsResponseDto } from "./publication-variants-response.schema";
 
 /** Traduce el detalle real de NestJS al modelo de dominio del frontend. */
 export function mapPublicationDetail(
@@ -113,6 +114,35 @@ export function mapLegacyVariations(variations: readonly unknown[]): Publication
       },
     ];
   });
+}
+
+/** Traduce el resumen existente de familia a las filas lazy del listado. */
+export function mapFamilySummaryVariants(
+  dto: FamilyVariantsResponseDto,
+): PublicationDetail["variants"] {
+  return dto.variants.flatMap((variant) =>
+    variant.items.map((item) => ({
+      id: `${variant.userProductId}:${item.itemId}`,
+      itemId: item.itemId,
+      userProductId: variant.userProductId,
+      label: null,
+      title: item.title,
+      thumbnailUrl: item.thumbnail,
+      status: item.status,
+      price:
+        item.price === null
+          ? null
+          : { amount: item.price, currency: null },
+      stock: item.stock,
+      sold: item.sold,
+      sku: readAttributeValue(item.attributes, "SELLER_SKU"),
+      attributes: item.attributes.map((attribute) => ({
+        id: attribute.id,
+        value: attribute.value_name ?? attribute.values?.[0]?.name ?? null,
+      })),
+      permalink: null,
+    })),
+  );
 }
 
 function readAttributeValue(

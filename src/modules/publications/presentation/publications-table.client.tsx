@@ -12,6 +12,7 @@ import { PublicationsPagination } from "./publications-pagination.client";
 import styles from "./publications-view.module.css";
 import type { ReplicatePublicationAction } from "@/modules/tiendanube/presentation/tiendanube-replication-cell.client";
 import type { TiendanubeCategory, TiendanubeReplicationState } from "@/modules/tiendanube/domain/tiendanube-replication.model";
+import type { LoadPublicationVariantsAction } from "@/app/(dashboard)/publicaciones/load-publication-variants.action";
 
 type PublicationsTableProps = Readonly<{
   page: PublicationsPage;
@@ -21,9 +22,10 @@ type PublicationsTableProps = Readonly<{
   categories?: readonly TiendanubeCategory[];
   updateAction?: InlineStockUpdateAction;
   deleteVariationAction?: DeleteVariationAction;
+  loadVariantsAction?: LoadPublicationVariantsAction;
 }>;
 
-export function PublicationsTable({ page, loading = false, tiendanubeStatusBySourceKey = {}, replicateAction = async () => ({ ok: false as const, message: "La replicación no está disponible." }), categories = [], updateAction, deleteVariationAction }: PublicationsTableProps) {
+export function PublicationsTable({ page, loading = false, tiendanubeStatusBySourceKey = {}, replicateAction = async () => ({ ok: false as const, message: "La replicación no está disponible." }), categories = [], updateAction, deleteVariationAction, loadVariantsAction }: PublicationsTableProps) {
   const searchParams = useSearchParams();
   const [messageApi, messageContext] = message.useMessage();
   const columns: TableColumnsType<Publication> = [{
@@ -36,6 +38,7 @@ export function PublicationsTable({ page, loading = false, tiendanubeStatusBySou
         categories={categories}
         updateAction={updateAction}
         deleteVariationAction={deleteVariationAction}
+        loadVariantsAction={loadVariantsAction}
         detailHref={createDetailHref(publication.id, searchParams)}
         similarHref={createSimilarHref(publication.group.key, searchParams)}
         onStockError={(error) => void messageApi.error(error)}

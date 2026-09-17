@@ -5,19 +5,22 @@ import type { HttpGetClient } from "@/shared/api/http-client.server";
 
 import type {
   PublicationDetail,
+  PublicationVariant,
   PublicationsPage,
 } from "../domain/publication.model";
 import type {
   PublicationsRepository,
   PublicationsRequest,
+  PublicationVariantsRequest,
 } from "../domain/publications.repository";
-import { mapPublicationDetail } from "./publication-detail.mapper";
+import { mapFamilySummaryVariants, mapPublicationDetail } from "./publication-detail.mapper";
 import {
   familyDetailResponseSchema,
   publicationDetailResponseSchema,
 } from "./publication-detail-response.schema";
 import { mapPublicationsResponse } from "./publication.mapper";
 import { publicationsResponseSchema } from "./publications-response.schema";
+import { familyVariantsResponseSchema } from "./publication-variants-response.schema";
 
 const PUBLICATIONS_ENDPOINT =
   "/mercadolibre/direct/publicaciones/agrupadas";
@@ -94,5 +97,41 @@ export class PublicationsApiRepository implements PublicationsRepository {
     }
 
     return mapPublicationDetail(validation.data, familyValidation.data);
+  }
+
+  async getVariants(
+    request: PublicationVariantsRequest,
+  ): Promise<readonly PublicationVariant[]> {
+    if (request.publicationType === "USER_PRODUCT" && request.familyId) {
+      const response = await this.httpClient.get(
+        `${FAMILY_ENDPOINT}/${encodeURIComponent(request.familyId)}/resumen`,
+      );
+      const validation = familyVariantsResponseSchema.safeParse(response);
+
+      if (!validation.success) {
+        throw new ApiError(
+          "El backend devolvió variantes de familia con un formato inválido.",
+          "API_INVALID_RESPONSE",
+          { cause: validation.error },
+        );
+      }
+
+      return mapFamilySummaryVariants(validation.data);
+    }
+
+    const response = await this.httpClient.get(
+      `/mercadolibre/direct/publicaciones/${encodeURIComponent(request.publicationId)}`,
+    );
+    const validation = publicationDetailResponseSchema.safeParse(response);
+
+    if (!validation.success) {
+      throw new ApiError(
+        "El backend devolvió variantes con un formato inválido.",
+        "API_INVALID_RESPONSE",
+        { cause: validation.error },
+      );
+    }
+
+    return mapPublicationDetail(validation.data).variants;
   }
 }

@@ -5,6 +5,7 @@ import { createAuthenticatedHttpClient } from "@/shared/api/authenticated-http-c
 import { HttpClient } from "@/shared/api/http-client.server";
 
 import { GetPublicationByIdQuery } from "./application/get-publication-by-id.query";
+import { GetPublicationVariantsQuery } from "./application/get-publication-variants.query";
 import { GetPublicationsQuery } from "./application/get-publications.query";
 import { PublicationsApiRepository } from "./infrastructure/publications-api.repository.server";
 import { PublicationEditApiRepository } from "./infrastructure/publication-edit-api.repository.server";
@@ -43,6 +44,15 @@ export function createGetPublicationByIdQuery(): GetPublicationByIdQuery {
   const repository = new PublicationsApiRepository(httpClient);
 
   return new GetPublicationByIdQuery(repository);
+}
+
+export function createGetPublicationVariantsQuery(): GetPublicationVariantsQuery {
+  const httpClient = createAuthenticatedHttpClient(
+    new HttpClient(getApiConfig()),
+  );
+  return new GetPublicationVariantsQuery(
+    new PublicationsApiRepository(httpClient),
+  );
 }
 
 export function createUpdatePublicationCommand(): UpdatePublicationCommand {

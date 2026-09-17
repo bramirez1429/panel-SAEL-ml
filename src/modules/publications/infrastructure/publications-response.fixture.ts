@@ -14,7 +14,9 @@ export const legacyPublicationDto = {
   sold: 2,
   status: "active",
   thumbnail: "https://example.com/legacy.jpg",
-  variations: [],
+  permalink: "https://example.com/MLA100",
+  currency: "ARS",
+  variantsCount: 0,
 } as const satisfies GroupedPublicationDto;
 
 export const userProductPublicationDto = {
@@ -24,44 +26,17 @@ export const userProductPublicationDto = {
   familyName: "Familia real",
   variantsCount: 2,
   itemsCount: 2,
-  variants: [
-    {
-      userProductId: "MLAU200",
-      items: [
-        {
-        itemId: "MLA200",
-          product_id: "123e4567-e89b-42d3-a456-426614174001",
-          title: "Variante azul",
-          price: 1500,
-          stock: 2,
-          sold: 7,
-          status: "active",
-          inventoryId: null,
-          thumbnail: "https://example.com/MLA200.jpg",
-          pictures: [],
-          attributes: [{ id: "COLOR", value_name: "Azul" }],
-        },
-      ],
-    },
-    {
-      userProductId: "MLAU201",
-      items: [
-        {
-        itemId: "MLA201",
-          product_id: "123e4567-e89b-42d3-a456-426614174002",
-          title: "Variante roja",
-          price: 1700,
-          stock: 1,
-          sold: 3,
-          status: "active",
-          inventoryId: null,
-          thumbnail: null,
-          pictures: [],
-          attributes: [{ id: "COLOR", value_name: "Rojo" }],
-        },
-      ],
-    },
-  ],
+  itemId: "MLA200",
+  userProductId: "MLAU200",
+  title: "Variante azul",
+  priceFrom: 1500,
+  priceTo: 1700,
+  currency: "ARS",
+  stock: 3,
+  sold: 10,
+  status: "active",
+  thumbnail: "https://example.com/MLA200.jpg",
+  permalink: "https://example.com/MLA200",
 } as const satisfies GroupedPublicationDto;
 
 export function createPublicationsResponse(

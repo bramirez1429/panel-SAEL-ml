@@ -110,7 +110,68 @@ describe("PublicationsTable", () => {
     expect(screen.getByTitle("Imagen no disponible")).toBeInTheDocument();
   });
 
-  it("muestra siempre las variantes USER_PRODUCT, sus IDs copiables y sin expandir", () => {
+  it("no muestra un desplegable para una publicación sin variantes", () => {
+    const loadVariantsAction = vi.fn();
+    render(<PublicationsTable page={pageWithPublication} loadVariantsAction={loadVariantsAction} />);
+    expect(screen.queryByRole("button", { name: /Ver talles y variantes/ })).not.toBeInTheDocument();
+    expect(loadVariantsAction).not.toHaveBeenCalled();
+  });
+
+  it("muestra loading y reutiliza las variantes cargadas al cerrar y reabrir", async () => {
+    const user = userEvent.setup();
+    const pending = deferred<{ ok: true; variants: NonNullable<(typeof pageWithPublication.publications)[number]["variants"]> }>();
+    const variant = { id: "987", itemId: "MLA1", userProductId: null, label: null, title: null, thumbnailUrl: null, status: "active", price: { amount: 1200, currency: "ARS" }, stock: 6, sold: 2, sku: "SKU-M", attributes: [{ id: "SIZE", value: "M" }], permalink: null } as const;
+    const loadVariantsAction = vi.fn(() => pending.promise);
+    const publication = { ...pageWithPublication.publications[0]!, group: { ...pageWithPublication.publications[0]!.group, childrenCount: 1 } };
+    render(<PublicationsTable page={{ ...pageWithPublication, publications: [publication] }} loadVariantsAction={loadVariantsAction} />);
+
+    const toggle = screen.getByRole("button", { name: /Ver talles y variantes.*1/ });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(loadVariantsAction).not.toHaveBeenCalled();
+    await user.click(toggle);
+    expect(screen.getByText("Cargando talles y variantes...")).toBeInTheDocument();
+    expect(loadVariantsAction).toHaveBeenCalledTimes(1);
+
+    pending.resolve({ ok: true, variants: [variant] });
+    expect(await screen.findByText("M")).toBeInTheDocument();
+    await user.click(toggle);
+    expect(screen.queryByRole("table", { name: "Variantes de Publicación real" })).not.toBeInTheDocument();
+    await user.click(toggle);
+    expect(await screen.findByRole("table", { name: "Variantes de Publicación real" })).toBeInTheDocument();
+    expect(loadVariantsAction).toHaveBeenCalledTimes(1);
+  });
+
+  it("mantiene cargas independientes para dos publicaciones", async () => {
+    const user = userEvent.setup();
+    const first = { ...pageWithPublication.publications[0]!, id: "MLA1", title: "Primera", group: { ...pageWithPublication.publications[0]!.group, childrenCount: 1 } };
+    const second = { ...first, id: "MLA2", title: "Segunda", group: { ...first.group, key: "item:MLA2", itemId: "MLA2" } };
+    const loadVariantsAction = vi.fn().mockResolvedValue({ ok: true, variants: [] });
+    render(<PublicationsTable page={{ ...pageWithPublication, publications: [first, second], count: 2 }} loadVariantsAction={loadVariantsAction} />);
+    const toggles = screen.getAllByRole("button", { name: /Ver talles y variantes/ });
+    await user.click(toggles[0]!);
+    expect(loadVariantsAction).toHaveBeenCalledTimes(1);
+    expect(loadVariantsAction).toHaveBeenLastCalledWith(expect.objectContaining({ publicationId: "MLA1" }));
+    await user.click(toggles[1]!);
+    expect(loadVariantsAction).toHaveBeenCalledTimes(2);
+    expect(loadVariantsAction).toHaveBeenLastCalledWith(expect.objectContaining({ publicationId: "MLA2" }));
+  });
+
+  it("muestra error local y Reintentar vuelve a consultar", async () => {
+    const user = userEvent.setup();
+    const loadVariantsAction = vi.fn()
+      .mockResolvedValueOnce({ ok: false, message: "falló" })
+      .mockResolvedValueOnce({ ok: true, variants: [] });
+    const publication = { ...pageWithPublication.publications[0]!, group: { ...pageWithPublication.publications[0]!.group, childrenCount: 1 } };
+    render(<PublicationsTable page={{ ...pageWithPublication, publications: [publication] }} loadVariantsAction={loadVariantsAction} />);
+    await user.click(screen.getByRole("button", { name: /Ver talles y variantes/ }));
+    expect(await screen.findByText("No se pudieron cargar los talles y variantes.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Reintentar" }));
+    expect(loadVariantsAction).toHaveBeenCalledTimes(2);
+    expect(await screen.findByText("Esta publicación no tiene variantes.")).toBeInTheDocument();
+  });
+
+  it("carga USER_PRODUCT bajo demanda y conserva su agrupación", async () => {
+    const user = userEvent.setup();
     const family = {
       ...pageWithPublication.publications[0]!,
       group: { ...pageWithPublication.publications[0]!.group, type: "USER_PRODUCT" as const, familyId: "FAMILY-1", childrenCount: 1 },
@@ -119,10 +180,14 @@ describe("PublicationsTable", () => {
         { id: "UP-1:MLA3", itemId: "MLA3", userProductId: "UP-1", label: null, title: "Talle 42", thumbnailUrl: null, status: "active", price: { amount: 1000, currency: null }, stock: 8, sold: 0, sku: "SKU-42", attributes: [{ id: "SIZE", value: "42" }], permalink: null },
       ],
     };
-    const { container } = render(<PublicationsTable page={{ ...pageWithPublication, publications: [family] }} updateAction={vi.fn()} />);
+    const loadVariantsAction = vi.fn().mockResolvedValue({ ok: true, variants: family.variants! });
+    const { container } = render(<PublicationsTable page={{ ...pageWithPublication, publications: [{ ...family, variants: undefined }] }} updateAction={vi.fn()} loadVariantsAction={loadVariantsAction} />);
 
     expect(container.querySelector(".ant-table-row-expand-icon")).not.toBeInTheDocument();
-    expect(container.querySelector('[aria-label="Variantes de Publicación real"]')).toBeInTheDocument();
+    expect(loadVariantsAction).not.toHaveBeenCalled();
+    expect(container.querySelector('[aria-label="Variantes de Publicación real"]')).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Ver talles y variantes.*1/ }));
+    expect(await screen.findByRole("table", { name: "Variantes de Publicación real" })).toBeInTheDocument();
     expect(screen.getAllByText("42")).toHaveLength(1);
     expect(screen.getByRole("spinbutton", { name: "Stock de 42" })).toHaveValue("8");
     expect(container.querySelector('[aria-label="Copiar Family ID FAMILY-1"]')).toBeInTheDocument();
@@ -146,10 +211,12 @@ describe("PublicationsTable", () => {
     expect(action).not.toHaveBeenCalledWith("123e4567-e89b-42d3-a456-426614174000");
   });
 
-  it("muestra variantes clásicas con stock individual", () => {
+  it("muestra variantes clásicas con stock individual al abrir", async () => {
+    const user = userEvent.setup();
     const legacy = { ...pageWithPublication.publications[0]!, variants: [{ id: "987", itemId: null, userProductId: null, label: null, title: null, thumbnailUrl: null, status: null, price: { amount: 1200, currency: "ARS" }, stock: 6, sold: 2, sku: "SKU-M", attributes: [{ id: "COLOR", value: "Negro" }, { id: "SIZE", value: "M" }], permalink: null }] };
-    render(<PublicationsTable page={{ ...pageWithPublication, publications: [legacy] }} updateAction={vi.fn()} />);
-    expect(screen.getByRole("table", { name: "Variantes de Publicación real" })).toBeInTheDocument();
+    render(<PublicationsTable page={{ ...pageWithPublication, publications: [{ ...legacy, variants: undefined, group: { ...legacy.group, childrenCount: 1 } }] }} updateAction={vi.fn()} loadVariantsAction={vi.fn().mockResolvedValue({ ok: true, variants: legacy.variants! })} />);
+    await user.click(screen.getByRole("button", { name: /Ver talles y variantes/ }));
+    expect(await screen.findByRole("table", { name: "Variantes de Publicación real" })).toBeInTheDocument();
     expect(screen.getByText("Negro / M")).toBeInTheDocument();
     expect(screen.getByRole("spinbutton", { name: "Stock de M" })).toHaveValue("6");
   });
@@ -163,9 +230,10 @@ describe("PublicationsTable", () => {
       status: "closed",
       variants: [{ id: "987", itemId: "MLA1", userProductId: null, label: null, title: null, thumbnailUrl: null, status: "closed", price: { amount: 1200, currency: "ARS" }, stock: 0, sold: 2, sku: "SKU-38", attributes: [{ id: "COLOR", value: "Crema" }, { id: "SIZE", value: "38" }], permalink: null }],
     };
-    render(<PublicationsTable page={{ ...pageWithPublication, publications: [legacy] }} updateAction={vi.fn()} deleteVariationAction={deleteVariationAction} />);
+    render(<PublicationsTable page={{ ...pageWithPublication, publications: [{ ...legacy, variants: undefined, group: { ...legacy.group, childrenCount: 1 } }] }} updateAction={vi.fn()} deleteVariationAction={deleteVariationAction} loadVariantsAction={vi.fn().mockResolvedValue({ ok: true, variants: legacy.variants! })} />);
 
-    const trash = screen.getByRole("button", { name: "Eliminar variante Crema / 38" });
+    await user.click(screen.getByRole("button", { name: /Ver talles y variantes/ }));
+    const trash = await screen.findByRole("button", { name: "Eliminar variante Crema / 38" });
     expect(trash).toBeEnabled();
     await user.click(trash);
     expect(screen.getByRole("dialog")).toHaveTextContent("¿Estás seguro de borrar el talle 38?");
@@ -186,9 +254,10 @@ describe("PublicationsTable", () => {
     const user = userEvent.setup();
     const deleteVariationAction = vi.fn().mockResolvedValue({ ok: false, message: "Mercado Libre no permite eliminar esta variante" });
     const legacy = { ...pageWithPublication.publications[0]!, variants: [{ id: "456", itemId: "MLA1", userProductId: null, label: null, title: null, thumbnailUrl: null, status: "active", price: null, stock: 5, sold: 0, sku: null, attributes: [{ id: "COLOR", value: "Negro" }, { id: "SIZE", value: "46" }], permalink: null }] };
-    render(<PublicationsTable page={{ ...pageWithPublication, publications: [legacy] }} updateAction={vi.fn()} deleteVariationAction={deleteVariationAction} />);
+    render(<PublicationsTable page={{ ...pageWithPublication, publications: [{ ...legacy, variants: undefined, group: { ...legacy.group, childrenCount: 1 } }] }} updateAction={vi.fn()} deleteVariationAction={deleteVariationAction} loadVariantsAction={vi.fn().mockResolvedValue({ ok: true, variants: legacy.variants! })} />);
 
-    await user.click(screen.getByRole("button", { name: "Eliminar variante Negro / 46" }));
+    await user.click(screen.getByRole("button", { name: /Ver talles y variantes/ }));
+    await user.click(await screen.findByRole("button", { name: "Eliminar variante Negro / 46" }));
     await user.click(screen.getByRole("button", { name: "Eliminar" }));
 
     expect(await screen.findByText("Mercado Libre no permite eliminar esta variante")).toBeInTheDocument();
@@ -196,3 +265,9 @@ describe("PublicationsTable", () => {
     expect(navigation.refresh).not.toHaveBeenCalled();
   });
 });
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolver) => { resolve = resolver; });
+  return { promise, resolve };
+}

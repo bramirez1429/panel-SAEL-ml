@@ -99,6 +99,54 @@ describe("PublicationsApiRepository", () => {
     expect(get).toHaveBeenCalledWith("/mercadolibre/direct/familias/200");
   });
 
+  it("loads only the requested USER_PRODUCT family variants", async () => {
+    const get = vi.fn<HttpGetClient["get"]>().mockResolvedValue({
+      key: "family:200",
+      model: "VARIANT_PRICING",
+      familyId: "200",
+      familyName: "Familia real",
+      variantsCount: 1,
+      itemsCount: 1,
+      variants: [{
+        userProductId: "MLAU200",
+        items: [{
+          itemId: "MLA200",
+          title: "Negro M",
+          price: 1500,
+          stock: 4,
+          sold: 2,
+          status: "active",
+          inventoryId: null,
+          thumbnail: null,
+          pictures: [],
+          attributes: [{ id: "SIZE", value_name: "M" }],
+        }],
+      }],
+    });
+    const repository = new PublicationsApiRepository({ get });
+
+    await expect(repository.getVariants({ publicationId: "MLA200", publicationType: "USER_PRODUCT", familyId: "200" }))
+      .resolves.toEqual([expect.objectContaining({ itemId: "MLA200", userProductId: "MLAU200", stock: 4 })]);
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(get).toHaveBeenCalledWith("/mercadolibre/direct/familias/200/resumen");
+  });
+
+  it("loads only the requested LEGACY publication variations", async () => {
+    const get = vi.fn<HttpGetClient["get"]>().mockResolvedValue({
+      ...familyPublicationDetailResponse,
+      model: "SHARED",
+      familyId: null,
+      userProductId: null,
+      variations: [{ id: 987, available_quantity: 6, sold_quantity: 2 }],
+    });
+    const repository = new PublicationsApiRepository({ get });
+
+    await expect(repository.getVariants({ publicationId: "MLA100", publicationType: "LEGACY", familyId: null }))
+      .resolves.toEqual([expect.objectContaining({ id: "987", stock: 6, sold: 2 })]);
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(get).toHaveBeenCalledWith("/mercadolibre/direct/publicaciones/MLA100");
+  });
+
   it("preserves the HTTP 404 so presentation can render not-found", async () => {
     const notFoundError = new ApiError(
       "El backend respondió con HTTP 404.",
