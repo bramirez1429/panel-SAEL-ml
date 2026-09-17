@@ -214,24 +214,133 @@
 
 .variantList {
   display: grid;
-  grid-column: 2 / -1;
   gap: 0;
+  min-width: 0;
+  overflow-x: auto;
+  background: var(--ant-color-bg-container, #ffffff);
+  border: 1px solid var(--ant-color-border-secondary, #e7eaf0);
+  border-radius: 9px;
+}
+
+.variantPanel {
+  display: grid;
+  grid-column: 2 / -1;
+  min-width: 0;
+  gap: 10px;
   margin-top: 18px;
-  overflow: hidden;
+}
+
+.variantToggle:global(.ant-btn) {
+  display: flex;
+  width: 100%;
+  height: auto;
+  min-height: 46px;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 11px 14px;
+  color: var(--ant-color-text, #172033);
+  background: var(--ant-color-fill-quaternary, #f5f5f5);
   border: 1px solid var(--ant-color-border-secondary, #e7eaf0);
   border-radius: 10px;
+  box-shadow: none;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.variantToggle:global(.ant-btn):hover,
+.variantToggle:global(.ant-btn):active {
+  color: var(--ant-color-text, #172033) !important;
+  background: var(--ant-color-fill-tertiary, #f0f0f0) !important;
+  border-color: var(--ant-color-border, #d9d9d9) !important;
+}
+
+.variantToggle:global(.ant-btn):focus-visible {
+  outline: 2px solid var(--ant-color-border, #d9d9d9);
+  outline-offset: 2px;
+}
+
+.variantToggle :global(.ant-btn-icon) {
+  color: var(--ant-color-text-secondary, #667085);
+}
+
+.variantToggleContent {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.variantToggleLabel {
+  overflow: hidden;
+  font-weight: 600;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.variantCount:global(.ant-tag) {
+  min-width: 30px;
+  margin: 0;
+  padding-inline: 8px;
+  color: var(--ant-color-text-secondary, #667085);
+  background: var(--ant-color-bg-container, #ffffff);
+  border: 1px solid var(--ant-color-border-secondary, #e7eaf0);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 20px;
+  text-align: center;
+}
+
+.variantContent {
+  min-width: 0;
+  padding: 10px;
+  background: var(--ant-color-fill-quaternary, #f5f5f5);
+  border: 1px solid var(--ant-color-border-secondary, #e7eaf0);
+  border-radius: 10px;
+}
+
+.variantLoading,
+.variantEmpty {
+  display: flex;
+  min-height: 64px;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 16px;
+  color: var(--ant-color-text-secondary, #667085);
+  background: var(--ant-color-bg-container, #ffffff);
+  border-radius: 8px;
+}
+
+.variantError:global(.ant-alert) {
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 8px;
 }
 
 .variantHeader,
 .variantRow {
   display: grid;
   grid-template-columns: minmax(190px, 2fr) minmax(120px, 0.9fr) repeat(5, minmax(88px, 0.65fr));
+  min-width: 840px;
   gap: 14px;
   align-items: center;
-  padding: 10px 14px;
+  padding: 11px 14px;
 }
 
 .variantHeader {
+  background: var(--ant-color-fill-quaternary, #f7f8fa);
+}
+
+.variantRow {
+  background: var(--ant-color-bg-container, #ffffff);
+  transition: background-color 140ms ease;
+}
+
+.variantRow:hover {
   background: var(--ant-color-fill-quaternary, #f7f8fa);
 }
 

@@ -1,10 +1,10 @@
 "use client";
 
-import { DeleteOutlined, MoreOutlined } from "@ant-design/icons";
-import { Button, Dropdown, Image, Modal, Tag, Tooltip, message } from "antd";
+import { DeleteOutlined, DownOutlined, MoreOutlined, RightOutlined } from "@ant-design/icons";
+import { Alert, Button, Dropdown, Image, Modal, Spin, Tag, Tooltip, message } from "antd";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import type { Publication } from "../domain/publication.model";
 import { PublicationStockCell, type InlineStockUpdateAction } from "./publication-stock-cell.client";
@@ -16,6 +16,7 @@ import styles from "./publications-view.module.css";
 import { TiendanubeReplicationCell, type ReplicatePublicationAction } from "@/modules/tiendanube/presentation/tiendanube-replication-cell.client";
 import type { TiendanubeCategory, TiendanubeReplicationState } from "@/modules/tiendanube/domain/tiendanube-replication.model";
 import { CopyableText } from "@/shared/ui/copyable-text.client";
+import type { LoadPublicationVariantsAction } from "@/app/(dashboard)/publicaciones/load-publication-variants.action";
 
 type Props = Readonly<{
   publication: Publication;
@@ -24,6 +25,7 @@ type Props = Readonly<{
   categories: readonly TiendanubeCategory[];
   updateAction?: InlineStockUpdateAction;
   deleteVariationAction?: DeleteVariationAction;
+  loadVariantsAction?: LoadPublicationVariantsAction;
   detailHref: string;
   similarHref: string;
   onStockError: (message: string) => void;
@@ -38,20 +40,56 @@ export type DeleteVariationAction = (input: Readonly<{
 
 const missingValue = <span title="Dato no disponible">—</span>;
 
-export function PublicationProductRow({ publication, tiendanubeState, replicateAction, categories, updateAction, deleteVariationAction, detailHref, similarHref, onStockError }: Props) {
+type VariantsState =
+  | Readonly<{ status: "idle" | "loading"; variants: readonly [] }>
+  | Readonly<{ status: "success"; variants: NonNullable<Publication["variants"]> }>
+  | Readonly<{ status: "error"; variants: readonly [] }>;
+
+export function PublicationProductRow({ publication, tiendanubeState, replicateAction, categories, updateAction, deleteVariationAction, loadVariantsAction, detailHref, similarHref, onStockError }: Props) {
   const router = useRouter();
   const [modalApi, modalContextHolder] = Modal.useModal();
   const [messageApi, messageContextHolder] = message.useMessage();
   const [deletingVariationId, setDeletingVariationId] = useState<number | null>(null);
-  const rows = createPublicationVariantRows(publication);
+  const [variantsOpen, setVariantsOpen] = useState(false);
+  const [variantsState, setVariantsState] = useState<VariantsState>({ status: "idle", variants: [] });
+  const requestInFlight = useRef(false);
   const isFamily = publication.group.type === "USER_PRODUCT";
-  const hasVariants = Boolean(publication.variants?.length);
-  const variants = isFamily
-    ? groupFamilyRows(rows)
-    : [...rows].sort(compareRows).map((row) => ({ key: row.key, representative: row, offers: [row] }));
-  const mainStockRow = !hasVariants ? rows[0] : undefined;
+  const hasVariants = publication.group.childrenCount > 0;
+  const mainStockRow = !hasVariants ? createPublicationVariantRows(publication)[0] : undefined;
 
-  const onDeleteVariation = (row: (typeof rows)[number]) => {
+  const loadVariants = async () => {
+    if (requestInFlight.current || variantsState.status === "success") return;
+    if (!loadVariantsAction) {
+      setVariantsState({ status: "error", variants: [] });
+      return;
+    }
+    requestInFlight.current = true;
+    setVariantsState({ status: "loading", variants: [] });
+    try {
+      const result = await loadVariantsAction({
+        publicationId: publication.id,
+        publicationType: publication.group.type,
+        familyId: publication.group.familyId,
+      });
+      setVariantsState(
+        result.ok
+          ? { status: "success", variants: result.variants }
+          : { status: "error", variants: [] },
+      );
+    } catch {
+      setVariantsState({ status: "error", variants: [] });
+    } finally {
+      requestInFlight.current = false;
+    }
+  };
+
+  const toggleVariants = () => {
+    const nextOpen = !variantsOpen;
+    setVariantsOpen(nextOpen);
+    if (nextOpen && variantsState.status === "idle") void loadVariants();
+  };
+
+  const onDeleteVariation = (row: ReturnType<typeof createPublicationVariantRows>[number]) => {
     if (!deleteVariationAction || !row.itemId || row.variationId === null || deletingVariationId !== null) return;
     const itemId = row.itemId;
     const variationId = row.variationId;
@@ -111,7 +149,7 @@ export function PublicationProductRow({ publication, tiendanubeState, replicateA
       <aside className={styles.productIdentity}>
         {publication.thumbnailUrl ? <Image alt={`Imagen de ${publication.title}`} height={78} preview={false} src={publication.thumbnailUrl} width={78} /> : <span className={styles.productImagePlaceholder} title="Imagen no disponible">—</span>}
         <TiendanubeReplicationCell action={replicateAction} initialState={tiendanubeState} sourceKey={publication.group.key} categories={categories} />
-        <PublicationStatus status={publication.status ?? rows[0]?.status ?? null} />
+        <PublicationStatus status={publication.status} />
         <Tag>Mercado Libre</Tag>
         <Tag color={isFamily ? "blue" : "default"}>{isFamily ? "Familia" : "Anterior"}</Tag>
         <CopyableId label="Family ID" values={publication.group.familyId ? [publication.group.familyId] : []} />
@@ -126,26 +164,91 @@ export function PublicationProductRow({ publication, tiendanubeState, replicateA
       <SummaryCell label="Precio promocional">{missingValue}</SummaryCell>
       <SummaryCell label="Acciones"><Actions title={publication.title} detailHref={detailHref} similarHref={similarHref} permalink={publication.permalink} /></SummaryCell>
 
-      {hasVariants && variants.length > 0 ? (
-        <div className={styles.variantList} role="table" aria-label={`Variantes de ${publication.title}`}>
-          <div className={styles.variantHeader} role="row">
-            <span>Variante</span><span>MLA</span><span>Vendidos</span><span>Stock</span><span>Precio</span><span>Promocional</span><span>Acciones</span>
-          </div>
-          {variants.map(({ key, representative: row, offers }) => (
-            <div className={styles.variantRow} role="row" key={key}>
-              <span className={styles.variantIdentity}><strong>{variantName(row.color, row.size)}</strong>{updateAction ? <PublicationSkuCell row={row} updateAction={updateAction} onError={onStockError} /> : row.sku ? <CopyableText value={row.sku} label={row.sku} copyLabel="SKU" /> : missingValue}</span>
-              <span className={styles.variantMla}>{unique(offers.map((offer) => offer.itemId ?? offer.publicationId)).map((itemId) => <CopyableText value={itemId} label={itemId} copyLabel="MLA" key={itemId} />)}</span>
-              <span><PublicationSoldCount value={row.sold} compact /></span>
-              <span>{updateAction ? <PublicationStockCell row={row} updateAction={updateAction} onError={onStockError} /> : row.stock ?? missingValue}</span>
-              <span>{formatVariantPrice(row.price)}</span>
-              <span>{missingValue}</span>
-              <span><Tooltip title="Eliminar variante"><Button aria-label={`Eliminar variante ${variantNameText(row.color, row.size)}`} icon={<DeleteOutlined />} loading={deletingVariationId === row.variationId} disabled={!deleteVariationAction || !row.itemId || row.variationId === null || deletingVariationId !== null} onClick={() => onDeleteVariation(row)} size="small" style={{ cursor: "pointer" }} type="text" /></Tooltip></span>
+      {hasVariants ? (
+        <div className={styles.variantPanel}>
+          <Button
+            aria-expanded={variantsOpen}
+            className={styles.variantToggle}
+            icon={variantsOpen ? <DownOutlined /> : <RightOutlined />}
+            onClick={toggleVariants}
+            type="text"
+          >
+            <span className={styles.variantToggleContent}>
+              <span className={styles.variantToggleLabel}>
+                {variantsOpen ? "Ocultar talles y variantes" : "Ver talles y variantes"}
+              </span>
+              <Tag bordered={false} className={styles.variantCount}>
+                {publication.group.childrenCount}
+              </Tag>
+            </span>
+          </Button>
+          {variantsOpen ? (
+            <div className={styles.variantContent}>
+              {variantsState.status === "loading" ? (
+                <div className={styles.variantLoading} role="status"><Spin size="small" /> Cargando talles y variantes...</div>
+              ) : variantsState.status === "error" ? (
+                <Alert
+                  action={<Button onClick={() => void loadVariants()} size="small">Reintentar</Button>}
+                  className={styles.variantError}
+                  message="No se pudieron cargar los talles y variantes."
+                  showIcon
+                  type="error"
+                />
+              ) : variantsState.status === "success" ? (
+                <VariantsTable
+                  publication={publication}
+                  variants={variantsState.variants}
+                  updateAction={updateAction}
+                  deleteVariationAction={deleteVariationAction}
+                  deletingVariationId={deletingVariationId}
+                  onDeleteVariation={onDeleteVariation}
+                  onStockError={onStockError}
+                />
+              ) : null}
             </div>
-          ))}
+          ) : null}
         </div>
       ) : null}
     </article>
     </>
+  );
+}
+
+function VariantsTable({ publication, variants: loadedVariants, updateAction, deleteVariationAction, deletingVariationId, onDeleteVariation, onStockError }: Readonly<{
+  publication: Publication;
+  variants: NonNullable<Publication["variants"]>;
+  updateAction?: InlineStockUpdateAction;
+  deleteVariationAction?: DeleteVariationAction;
+  deletingVariationId: number | null;
+  onDeleteVariation: (row: ReturnType<typeof createPublicationVariantRows>[number]) => void;
+  onStockError: (message: string) => void;
+}>) {
+  if (loadedVariants.length === 0) {
+    return <p className={styles.variantEmpty}>Esta publicación no tiene variantes.</p>;
+  }
+
+  const rows = createPublicationVariantRows({ ...publication, variants: loadedVariants });
+  const groupedRows = publication.group.type === "USER_PRODUCT"
+    ? groupFamilyRows(rows)
+    : [...rows].sort(compareRows).map((row) => ({ key: row.key, representative: row, offers: [row] }));
+
+  return (
+    <div className={styles.variantList} role="table" aria-label={`Variantes de ${publication.title}`}>
+      <div className={styles.variantHeader} role="row">
+        <span>Variante</span><span>MLA</span><span>Vendidos</span><span>Stock</span><span>Precio</span><span>Promocional</span><span>Acciones</span>
+      </div>
+      {groupedRows.map(({ key, representative: row, offers }) => (
+        <div className={styles.variantRow} role="row" key={key}>
+          <span className={styles.variantIdentity}><strong>{variantName(row.color, row.size)}</strong>{updateAction ? <PublicationSkuCell row={row} updateAction={updateAction} onError={onStockError} /> : row.sku ? <CopyableText value={row.sku} label={row.sku} copyLabel="SKU" /> : missingValue}</span>
+          <span className={styles.variantMla}>{unique(offers.map((offer) => offer.itemId ?? offer.publicationId)).map((itemId) => <CopyableText value={itemId} label={itemId} copyLabel="MLA" key={itemId} />)}</span>
+          <span><PublicationSoldCount value={row.sold} compact /></span>
+          <span>{updateAction ? <PublicationStockCell row={row} updateAction={updateAction} onError={onStockError} /> : row.stock ?? missingValue}</span>
+          <span>{formatVariantPrice(row.price)}</span>
+          <span>{missingValue}</span>
+          <span><Tooltip title="Eliminar variante"><Button aria-label={`Eliminar variante ${variantNameText(row.color, row.size)}`} icon={<DeleteOutlined />} loading={deletingVariationId === row.variationId} disabled={!deleteVariationAction || !row.itemId || row.variationId === null || deletingVariationId !== null} onClick={() => onDeleteVariation(row)} size="small" style={{ cursor: "pointer" }} type="text" /></Tooltip></span>
+        </div>
+      ))}
+    </div>
   );
 }
 
