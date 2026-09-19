@@ -22,7 +22,15 @@ export default async function IntegrationsPage() {
 }
 
 async function readMercadoLibre(): Promise<{ status: IntegrationStatus; sellerId: number | null }> {
-  try { const result = await createMercadoLibreApiRepository().getConnection(); return result.connected ? { status: "connected", sellerId: result.sellerId } : { status: "not-connected", sellerId: null }; }
+  try {
+    const result = await createMercadoLibreApiRepository().getConnection();
+    if (result.reconnectRequired) {
+      return { status: "reconnect-required", sellerId: result.sellerId };
+    }
+    return result.connected
+      ? { status: "connected", sellerId: result.sellerId }
+      : { status: "not-connected", sellerId: null };
+  }
   catch { return { status: "unknown", sellerId: null }; }
 }
 

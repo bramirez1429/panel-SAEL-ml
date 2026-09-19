@@ -3,6 +3,10 @@ import "server-only";
 import { ApiError } from "@/shared/api/api-error";
 import type { AuthenticatedHttpClient } from "@/shared/api/authenticated-http-client.server";
 import type { HttpResponse } from "@/shared/api/http-client.server";
+import {
+  mercadoLibreConnectionSchema,
+  type MercadoLibreConnectionDto,
+} from "./integration-response.schema";
 
 const CONNECT_ENDPOINT = "/mercadolibre/connect";
 
@@ -36,16 +40,16 @@ export class MercadoLibreApiRepository {
     }
   }
 
-  async getConnection(): Promise<{ connected: false } | { connected: true; sellerId: number }> {
+  async getConnection(): Promise<MercadoLibreConnectionDto> {
     const body = await this.httpClient.get("/mercadolibre/connection");
-    if (!isObject(body) || typeof body.connected !== "boolean") {
-      throw new ApiError("El backend devolvió un estado Mercado Libre inválido.", "API_INVALID_RESPONSE");
+    const parsed = mercadoLibreConnectionSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new ApiError(
+        "El backend devolvió un estado Mercado Libre inválido.",
+        "API_INVALID_RESPONSE",
+      );
     }
-    if (!body.connected) return { connected: false };
-    if (typeof body.sellerId !== "number" || !Number.isInteger(body.sellerId)) {
-      throw new ApiError("El backend devolvió un sellerId inválido.", "API_INVALID_RESPONSE");
-    }
-    return { connected: true, sellerId: body.sellerId };
+    return parsed.data;
   }
 
   async disconnect(): Promise<void> {

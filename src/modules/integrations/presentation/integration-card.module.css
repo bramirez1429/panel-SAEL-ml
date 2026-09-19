@@ -5,5 +5,5 @@
 .identity h2 { margin: 0; font-size: 18px; }
 .identity p, .detail { margin: 4px 0 0; color: #667085; }
 .detail { margin-top: 20px; }
-.actions { margin-top: 24px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
 .muted { color: #667085; }

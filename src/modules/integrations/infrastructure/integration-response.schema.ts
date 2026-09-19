@@ -1,8 +1,20 @@
 import { z } from "zod";
 
-export const mercadoLibreConnectionSchema = z.discriminatedUnion("connected", [
-  z.object({ connected: z.literal(true), sellerId: z.number().int() }),
-  z.object({ connected: z.literal(false) }),
+export const mercadoLibreConnectionSchema = z.union([
+  z.object({
+    connected: z.literal(true),
+    reconnectRequired: z.literal(false).optional(),
+    sellerId: z.number().int(),
+  }),
+  z.object({
+    connected: z.literal(false),
+    reconnectRequired: z.literal(true),
+    sellerId: z.number().int(),
+  }),
+  z.object({
+    connected: z.literal(false),
+    reconnectRequired: z.literal(false).optional(),
+  }),
 ]);
 
 export const tiendanubeConnectionSchema = z.discriminatedUnion("connected", [

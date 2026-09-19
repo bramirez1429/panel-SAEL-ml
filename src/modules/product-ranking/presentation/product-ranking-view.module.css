@@ -1,0 +1,26 @@
+.page { display: grid; gap: 24px; }
+.header { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.title { margin: 0; font-size: 30px; font-weight: 700; line-height: 1.2; }
+.description { color: var(--ant-color-text-secondary); margin: 4px 0 0; }
+.summary { display: grid; grid-template-columns: repeat(2, minmax(180px, 260px)); gap: 16px; }
+.controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+.table :global(.ant-table-cell) { vertical-align: top; }
+.identifier { display: grid; gap: 4px; }
+.identifier details summary { cursor: pointer; color: var(--ant-color-text-secondary); }
+.productCell { display: flex; align-items: flex-start; gap: 12px; min-width: 280px; }
+.thumbnail { object-fit: contain; border: 1px solid var(--ant-color-border-secondary); border-radius: 8px; background: var(--ant-color-bg-container); }
+.thumbnailPlaceholder { display: grid; place-items: center; width: 64px; height: 64px; flex: 0 0 64px; border: 1px solid var(--ant-color-border-secondary); border-radius: 8px; color: var(--ant-color-text-secondary); background: var(--ant-color-fill-quaternary); }
+.productDetails { display: flex; min-width: 0; flex-direction: column; align-items: flex-start; gap: 5px; }
+.typeTag { margin: 0; }
+.familyLine { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; font-size: 12px; }
+.sold { font-size: 18px; }
+.variantPanel { overflow: hidden; border: 1px solid var(--ant-color-border-secondary); border-radius: 10px; background: var(--ant-color-bg-container); }
+.variantRows { max-height: 440px; overflow: auto; }
+.variantRow { display: grid; grid-template-columns: minmax(220px, 1.5fr) minmax(150px, 1fr) minmax(150px, 1fr) 100px; align-items: center; gap: 16px; min-width: 760px; padding: 11px 14px; border-bottom: 1px solid var(--ant-color-border-secondary); }
+.variantRows .variantRow:last-child { border-bottom: 0; }
+.variantHeader { color: var(--ant-color-text-secondary); background: var(--ant-color-fill-quaternary); font-size: 12px; font-weight: 600; }
+.variantIdentity { display: flex; align-items: center; gap: 10px; }
+.variantIdentity > span { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.variantLoading { display: flex; justify-content: center; align-items: center; gap: 10px; min-height: 96px; color: var(--ant-color-text-secondary); }
+.empty { padding: 48px 0; }
+@media (max-width: 640px) { .summary { grid-template-columns: 1fr; } }

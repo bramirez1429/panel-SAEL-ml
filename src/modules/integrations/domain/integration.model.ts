@@ -1,4 +1,8 @@
-export type IntegrationStatus = "connected" | "not-connected" | "unknown";
+export type IntegrationStatus =
+  | "connected"
+  | "reconnect-required"
+  | "not-connected"
+  | "unknown";
 
 export type MercadoLibreConnection = Readonly<{
   status: IntegrationStatus;

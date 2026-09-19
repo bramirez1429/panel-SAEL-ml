@@ -26,10 +26,16 @@ export function IntegrationCard({ name, description, icon, status, detail, conne
     try { const result = await disconnectAction(); if (result.ok) router.refresh(); else messageApi.error(result.message); }
     finally { setLoading(false); }
   };
-  const label = status === "connected" ? "Conectado" : status === "not-connected" ? "No conectado" : "No se pudo verificar el estado";
+  const label = status === "connected"
+    ? "Conectado"
+    : status === "reconnect-required"
+      ? "Requiere reconexión"
+      : status === "not-connected"
+        ? "No conectado"
+        : "No se pudo verificar el estado";
   return <>{contextHolder}<Card className={styles.card}>
-    <div className={styles.heading}><div className={styles.identity}><span className={styles.icon} aria-hidden>{icon}</span><div><h2>{name}</h2><p>{description}</p></div></div><Tag color={status === "connected" ? "success" : status === "unknown" ? "warning" : undefined}>{label}</Tag></div>
+    <div className={styles.heading}><div className={styles.identity}><span className={styles.icon} aria-hidden>{icon}</span><div><h2>{name}</h2><p>{description}</p></div></div><Tag color={status === "connected" ? "success" : status === "reconnect-required" ? "error" : status === "unknown" ? "warning" : undefined}>{label}</Tag></div>
     {detail ? <p className={styles.detail}>{detail}</p> : null}
-    <div className={styles.actions}>{status === "connected" ? <Button loading={loading} onClick={disconnect}>Desconectar</Button> : status === "not-connected" ? <Button href={connectHref} type="primary">{`Conectar ${name}`}</Button> : <span className={styles.muted}>Reintentá más tarde.</span>}</div>
+    <div className={styles.actions}>{status === "connected" ? <Button loading={loading} onClick={disconnect}>Desconectar</Button> : status === "reconnect-required" ? <><Button href={connectHref} type="primary">{`Reconectar ${name}`}</Button><Button loading={loading} onClick={disconnect}>Desconectar</Button></> : status === "not-connected" ? <Button href={connectHref} type="primary">{`Conectar ${name}`}</Button> : <span className={styles.muted}>Reintentá más tarde.</span>}</div>
   </Card></>;
 }
