@@ -1,12 +1,13 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { DownOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
 import { Alert, Button, Empty, Image, Input, Select, Skeleton, Space, Spin, Table, Tag, Typography } from 'antd';
 import { CopyableText } from '@/shared/ui/copyable-text.client';
 import type { LoadProductRankingVariantsAction } from '@/app/(dashboard)/ranking-productos/load-product-ranking-variants.action';
 import type { ProductRankingResponse, ProductRankingItem, ProductRankingVariant } from '../domain/product-ranking.model';
 import styles from './product-ranking-view.module.css';
+import { DEFAULT_PRODUCT_RANKING_VISIT_PERIOD } from '../domain/product-ranking-period';
 
 type Props = {
   data?: ProductRankingResponse;
@@ -29,6 +30,10 @@ export function ProductRankingTable({ data, error, loading, loadVariantsAction }
   const [expandedKeys, setExpandedKeys] = useState<readonly string[]>([]);
   const [variantStates, setVariantStates] = useState<Record<string, VariantState>>({});
   const products = data?.products ?? [];
+  const visitPeriodDays = data?.visitPeriodDays ?? DEFAULT_PRODUCT_RANKING_VISIT_PERIOD;
+  useEffect(() => {
+    setExpandedKeys([]);
+  }, [visitPeriodDays]);
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     const result = normalized ? products.filter((product) => [product.title, ...product.itemIds, product.familyId ?? '', ...product.userProductIds].some((value) => value.toLowerCase().includes(normalized))) : [...products];
@@ -46,7 +51,7 @@ export function ProductRankingTable({ data, error, loading, loadVariantsAction }
       : { type: 'item' as const, id: product.itemIds[0] ?? '' };
     if (!target.id) return;
     setVariantStates((current) => ({ ...current, [key]: { status: 'loading' } }));
-    const result = await loadVariantsAction(target);
+    const result = await loadVariantsAction({ ...target, days: visitPeriodDays });
     setVariantStates((current) => ({ ...current, [key]: result.ok
       ? { status: 'success', variants: [...result.variants].sort((a, b) => b.sold - a.sold || a.label.localeCompare(b.label)) }
       : { status: 'error' } }));
@@ -55,9 +60,10 @@ export function ProductRankingTable({ data, error, loading, loadVariantsAction }
   function toggleVariants(product: ProductRankingItem) {
     if (product.variantsCount === 0) return;
     const key = productKey(product);
+    const cacheKey = `${key}:${visitPeriodDays}`;
     const isOpen = expandedKeys.includes(key);
     setExpandedKeys((current) => isOpen ? current.filter((candidate) => candidate !== key) : [...current, key]);
-    if (!isOpen && !variantStates[key]) void requestVariants(product, key);
+    if (!isOpen && !variantStates[cacheKey]) void requestVariants(product, cacheKey);
   }
 
   if (loading) return <Skeleton active paragraph={{ rows: 8 }} />;
@@ -68,6 +74,7 @@ export function ProductRankingTable({ data, error, loading, loadVariantsAction }
     { title: '#', key: 'position', width: 64, render: (_: unknown, __: ProductRankingItem, index: number) => index + 1 },
     { title: 'Producto', key: 'product', render: (_: unknown, product: ProductRankingItem) => <ProductCell product={product} /> },
     { title: 'Vendidos', dataIndex: 'sold', key: 'sold', width: 120, render: (sold: number) => <Typography.Text className={styles.sold} strong>{formatNumber(sold)}</Typography.Text> },
+    { title: <span>Visitas<br /><small>{`últimos ${visitPeriodDays} días`}</small></span>, dataIndex: 'visits', key: 'visits', width: 145, render: (visits: number | null) => <Space orientation="vertical" size={0}><Typography.Text className={styles.visits} strong>{visits === null ? '—' : formatNumber(visits)}</Typography.Text><Typography.Text type="secondary">{`${visitPeriodDays} días`}</Typography.Text></Space> },
     { title: 'MLA', key: 'mla', width: 210, render: (_: unknown, product: ProductRankingItem) => <MlaSummary product={product} /> },
     { title: 'Variantes', key: 'variants', width: 180, render: (_: unknown, product: ProductRankingItem) => {
       const key = productKey(product);
@@ -89,13 +96,14 @@ export function ProductRankingTable({ data, error, loading, loadVariantsAction }
       columns={columns}
       dataSource={visible}
       pagination={false}
-      scroll={{ x: 900 }}
+      scroll={{ x: 1045 }}
       expandable={{
         expandedRowKeys: [...expandedKeys],
         showExpandColumn: false,
         expandedRowRender: (product) => <VariantsPanel
-          state={variantStates[productKey(product)]}
-          onRetry={() => void requestVariants(product, productKey(product))}
+          state={variantStates[`${productKey(product)}:${visitPeriodDays}`]}
+          visitPeriodDays={visitPeriodDays}
+          onRetry={() => void requestVariants(product, `${productKey(product)}:${visitPeriodDays}`)}
         />,
       }}
     />}
@@ -124,23 +132,27 @@ function MlaSummary({ product }: { product: ProductRankingItem }) {
   </Space>;
 }
 
-function VariantsPanel({ state, onRetry }: { state?: VariantState; onRetry: () => void }) {
+function VariantsPanel({ state, onRetry, visitPeriodDays }: { state?: VariantState; onRetry: () => void; visitPeriodDays: number }) {
   if (!state || state.status === 'loading') return <div className={styles.variantLoading}><Spin size="small" /><span>Cargando variantes…</span></div>;
   if (state.status === 'error') return <Alert type="error" title="No se pudieron cargar las variantes." action={<Button size="small" onClick={onRetry}>Reintentar</Button>} />;
   if (state.variants.length === 0) return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No se encontraron variantes." />;
   const maxSold = Math.max(...state.variants.map(({ sold }) => sold));
+  const availableVisits = state.variants.flatMap(({ visits }) => visits === null ? [] : [visits]);
+  const maxVisits = availableVisits.length ? Math.max(...availableVisits) : 0;
   return <div className={styles.variantPanel}>
-    <div className={`${styles.variantRow} ${styles.variantHeader}`}><span>Variante</span><span>MLA</span><span>MLAU</span><span>Vendidos</span></div>
+    <div className={`${styles.variantRow} ${styles.variantHeader}`}><span>Variante</span><span>MLA</span><span>MLAU</span><span>Vendidos</span><span>{`Visitas (${visitPeriodDays} días)`}</span></div>
     <div className={styles.variantRows}>{state.variants.map((variant) => {
       const bestSeller = maxSold > 0 && variant.sold === maxSold;
+      const mostViewed = maxVisits > 0 && variant.visits === maxVisits;
       return <div className={styles.variantRow} key={variant.id}>
         <span className={styles.variantIdentity}>
           {variant.thumbnailUrl ? <Image alt={variant.label} height={40} preview={false} src={variant.thumbnailUrl} width={40} /> : null}
-          <span><Typography.Text strong>{variant.label}</Typography.Text>{bestSeller ? <Tag color="gold">Más vendida</Tag> : null}</span>
+          <span><Typography.Text strong>{variant.label}</Typography.Text><span className={styles.variantTags}>{bestSeller ? <Tag color="gold">Más vendida</Tag> : null}{mostViewed ? <Tag color="blue">Más vista</Tag> : null}</span></span>
         </span>
         <span>{variant.itemId ? <CopyableText value={variant.itemId} label={variant.itemId} copyLabel="MLA" /> : '—'}</span>
         <span>{variant.userProductId ? <CopyableText value={variant.userProductId} label={variant.userProductId} copyLabel="MLAU" /> : '—'}</span>
         <Typography.Text strong>{formatNumber(variant.sold)}</Typography.Text>
+        <Typography.Text>{variant.visits === null ? '—' : formatNumber(variant.visits)}</Typography.Text>
       </div>;
     })}</div>
   </div>;

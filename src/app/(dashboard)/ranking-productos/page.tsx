@@ -4,12 +4,20 @@ import { unstable_rethrow } from 'next/navigation';
 import { createGetProductRankingQueryServer } from '@/modules/product-ranking/product-ranking.composition.server';
 import { ProductRankingView } from '@/modules/product-ranking/presentation/product-ranking-view';
 import { loadProductRankingVariantsAction } from './load-product-ranking-variants.action';
+import { parseProductRankingVisitPeriod } from '@/modules/product-ranking/domain/product-ranking-period';
 
 export const dynamic = 'force-dynamic';
 
-export default async function ProductRankingPage() {
+type Props = Readonly<{
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}>;
+
+export default async function ProductRankingPage({ searchParams }: Props = {}) {
+  const days = parseProductRankingVisitPeriod(
+    searchParams ? (await searchParams).days : undefined,
+  );
   try {
-    const data = await createGetProductRankingQueryServer().execute();
+    const data = await createGetProductRankingQueryServer().execute(days);
     return <ProductRankingView data={data} loadVariantsAction={loadProductRankingVariantsAction} />;
   } catch (error) {
     unstable_rethrow(error);
@@ -22,6 +30,6 @@ export default async function ProductRankingPage() {
             ? { name: error.name, message: error.message }
             : { message: 'Unknown error' });
     }
-    return <ProductRankingView error />;
+    return <ProductRankingView error visitPeriodDays={days} />;
   }
 }

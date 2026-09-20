@@ -18,6 +18,16 @@ import ProductRankingPage from './page';
 describe('ProductRankingPage', () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it('usa 30 días por default y respeta days=90', async () => {
+    mocks.execute.mockResolvedValue({});
+
+    await ProductRankingPage();
+    expect(mocks.execute).toHaveBeenLastCalledWith(30);
+
+    await ProductRankingPage({ searchParams: Promise.resolve({ days: '90' }) });
+    expect(mocks.execute).toHaveBeenLastCalledWith(90);
+  });
+
   it('vuelve a lanzar los errores de control interno de Next', async () => {
     const redirectError = new Error('redirect');
     mocks.execute.mockRejectedValue(redirectError);
