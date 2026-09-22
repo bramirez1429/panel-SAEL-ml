@@ -8,6 +8,20 @@ import {
 } from "./bulk-stock.validation";
 
 describe("bulk stock validation", () => {
+  it("mantiene el productType interno aunque la etiqueta sea visual", () => {
+    expect(validateBulkStockForm({
+      productType: "REMERA_MUJER",
+      sizes: ["38"],
+      quantityBySize: { "38": 0 },
+    })).toEqual({
+      valid: true,
+      request: {
+        productType: "REMERA_MUJER",
+        sizes: [{ size: "38", quantity: 0 }],
+      },
+    });
+  });
+
   it("acepta quantity 0, quantity 3 y múltiples talles", () => {
     const result = validateBulkStockForm({
       productType: "BUZO_MUJER",

@@ -8,7 +8,10 @@ import {
   validateBulkStockForm,
   type BulkStockFormValues,
 } from "../application/bulk-stock.validation";
-import { BULK_STOCK_SIZE_OPTIONS_BY_TYPE } from "../bulk-stock.config";
+import {
+  BULK_STOCK_PRODUCT_TYPE_OPTIONS,
+  BULK_STOCK_SIZE_OPTIONS_BY_TYPE,
+} from "../bulk-stock.config";
 import type { BulkStockPreviewRequest, BulkStockProductType } from "../domain/bulk-stock.model";
 
 type BulkStockFormProps = Readonly<{
@@ -53,20 +56,23 @@ export function BulkStockForm({ loading, error, onSubmit }: BulkStockFormProps) 
       {error ? <Alert message={error} showIcon style={{ marginBottom: 20 }} type="error" /> : null}
       <Form.Item
         help={fieldErrors.productType}
-        label="Tipo"
+        label="Producto"
         required
         validateStatus={fieldErrors.productType ? "error" : undefined}
       >
         <Select
-          aria-label="Tipo"
-          options={[...productTypeOptions]}
-          placeholder="Seleccionar tipo"
+          aria-label="Producto"
+          options={[...BULK_STOCK_PRODUCT_TYPE_OPTIONS]}
+          placeholder="Seleccionar producto"
           value={values.productType ?? undefined}
           onChange={(productType: BulkStockProductType) => {
             setValues({ productType, sizes: [], quantityBySize: {} });
             setFieldErrors({});
           }}
         />
+        <Typography.Text type="secondary" style={{ display: "block", fontSize: 12, marginTop: 4 }}>
+          Las publicaciones se filtran por categoría y público configurados en Mercado Libre.
+        </Typography.Text>
       </Form.Item>
 
       <Form.Item
@@ -125,13 +131,6 @@ export function BulkStockForm({ loading, error, onSubmit }: BulkStockFormProps) 
     </Form>
   );
 }
-
-const productTypeOptions: readonly Readonly<{ label: string; value: BulkStockProductType }>[] = [
-  { label: "Buzo mujer", value: "BUZO_MUJER" },
-  { label: "Buzo nena", value: "BUZO_NENA" },
-  { label: "Remera mujer", value: "REMERA_MUJER" },
-  { label: "Remera nena", value: "REMERA_NENA" },
-];
 
 function withoutStockErrors(
   errors: Readonly<Record<string, string>>,

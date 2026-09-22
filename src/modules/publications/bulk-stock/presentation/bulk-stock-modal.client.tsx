@@ -7,6 +7,7 @@ import type {
   BulkStockJob,
   BulkStockPreview,
   BulkStockPreviewRequest,
+  BulkStockProductType,
   BulkStockJobItem,
   BulkStockJobTarget,
   BulkStockVariant,
@@ -43,6 +44,7 @@ export function BulkStockModal({
 }: BulkStockModalProps) {
   const [phase, setPhase] = useState<Phase>("configuration");
   const [preview, setPreview] = useState<BulkStockPreview | null>(null);
+  const [previewProductType, setPreviewProductType] = useState<BulkStockProductType | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<ReadonlySet<string>>(new Set());
   const [jobId, setJobId] = useState<string | null>(null);
   const [job, setJob] = useState<BulkStockJob | null>(null);
@@ -104,6 +106,7 @@ export function BulkStockModal({
       return;
     }
     setPreview(result.data);
+    setPreviewProductType(request.productType);
     setSelectedKeys(new Set(result.data.variants.filter(isSelectable).map((variant) => variant.key)));
     setPhase("preview");
   };
@@ -147,6 +150,7 @@ export function BulkStockModal({
     window.localStorage.removeItem(ACTIVE_JOB_STORAGE_KEY);
     setPhase("configuration");
     setPreview(null);
+    setPreviewProductType(null);
     setSelectedKeys(new Set());
     setJobId(null);
     setJob(null);
@@ -190,6 +194,7 @@ export function BulkStockModal({
           {error ? <Alert message={error} showIcon style={{ marginBottom: 16 }} type="error" /> : null}
           <BulkStockPreviewView
             preview={preview}
+            productType={previewProductType ?? undefined}
             selectedKeys={selectedKeys}
             submitting={loading}
             onBack={() => {

@@ -5,6 +5,31 @@ export type BulkStockSizeOption = Readonly<{
   value: string;
 }>;
 
+export type BulkStockProductTypeOption = Readonly<{
+  label: string;
+  value: BulkStockProductType;
+}>;
+
+export const BULK_STOCK_PRODUCT_TYPE_LABELS: Readonly<
+  Record<BulkStockProductType, string>
+> = {
+  REMERA_MUJER: "Remera de mujer",
+  BUZO_MUJER: "Buzo de mujer",
+  REMERA_NENA: "Remera de niña",
+  BUZO_NENA: "Buzo de niña",
+};
+
+export const BULK_STOCK_PRODUCT_TYPE_OPTIONS: readonly BulkStockProductTypeOption[] = [
+  { label: "Remera de mujer", value: "REMERA_MUJER" },
+  { label: "Buzo de mujer", value: "BUZO_MUJER" },
+  { label: "Remera de niña", value: "REMERA_NENA" },
+  { label: "Buzo de niña", value: "BUZO_NENA" },
+];
+
+export function getBulkStockProductTypeLabel(productType: BulkStockProductType): string {
+  return BULK_STOCK_PRODUCT_TYPE_LABELS[productType];
+}
+
 const womenSizeOptions: readonly BulkStockSizeOption[] = [
   { label: "S (38)", value: "38" },
   { label: "M (40)", value: "40" },

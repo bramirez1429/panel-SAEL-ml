@@ -6,11 +6,13 @@ import { useMemo, useState, type MouseEvent } from "react";
 
 import { getPublicationFormatLabel } from "../application/bulk-stock-format";
 import { matchesBulkStockSearch, normalizeSearchText } from "../application/bulk-stock-search";
-import type { BulkStockPreview, BulkStockVariant } from "../domain/bulk-stock.model";
+import { getBulkStockProductTypeLabel } from "../bulk-stock.config";
+import type { BulkStockPreview, BulkStockProductType, BulkStockVariant } from "../domain/bulk-stock.model";
 import { BulkStockSummary } from "./bulk-stock-summary.client";
 
 type BulkStockPreviewProps = Readonly<{
   preview: BulkStockPreview;
+  productType?: BulkStockProductType;
   selectedKeys: ReadonlySet<string>;
   submitting: boolean;
   onBack: () => void;
@@ -20,6 +22,7 @@ type BulkStockPreviewProps = Readonly<{
 
 export function BulkStockPreviewView({
   preview,
+  productType,
   selectedKeys,
   submitting,
   onBack,
@@ -68,6 +71,11 @@ export function BulkStockPreviewView({
     <Flex vertical gap={12} style={{ flex: "1 1 auto", minHeight: 0 }}>
       {contextHolder}
       <BulkStockSummary summary={preview.summary} />
+      {productType ? (
+        <Typography.Text strong>
+          Producto: {getBulkStockProductTypeLabel(productType)}
+        </Typography.Text>
+      ) : null}
       <Flex align="center" gap={12} wrap>
         <Input.Search
           allowClear
