@@ -177,7 +177,7 @@ export function PublicationProductRow({ publication, tiendanubeState, replicateA
               <span className={styles.variantToggleLabel}>
                 {variantsOpen ? "Ocultar talles y variantes" : "Ver talles y variantes"}
               </span>
-              <Tag bordered={false} className={styles.variantCount}>
+              <Tag variant="filled" className={styles.variantCount}>
                 {publication.group.childrenCount}
               </Tag>
             </span>

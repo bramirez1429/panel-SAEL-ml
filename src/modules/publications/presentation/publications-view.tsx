@@ -8,6 +8,12 @@ import type { LoadPublicationVariantsAction } from "@/app/(dashboard)/publicacio
 import type { ReplicatePublicationAction } from "@/modules/tiendanube/presentation/tiendanube-replication-cell.client";
 import type { TiendanubeCategory, TiendanubeReplicationState } from "@/modules/tiendanube/domain/tiendanube-replication.model";
 import styles from "./publications-view.module.css";
+import { BulkStockButton } from "../bulk-stock/presentation/bulk-stock-button.client";
+import type {
+  CreateBulkStockJobAction,
+  GetBulkStockJobAction,
+  PreviewBulkStockAction,
+} from "../bulk-stock/domain/bulk-stock.model";
 
 type PublicationsViewProps = Readonly<{
   filters: PublicationsUrlState;
@@ -17,6 +23,9 @@ type PublicationsViewProps = Readonly<{
   updateAction?: InlineStockUpdateAction;
   deleteVariationAction?: DeleteVariationAction;
   loadVariantsAction?: LoadPublicationVariantsAction;
+  previewBulkStockAction?: PreviewBulkStockAction;
+  createBulkStockJobAction?: CreateBulkStockJobAction;
+  getBulkStockJobAction?: GetBulkStockJobAction;
 }> & (Readonly<{ state: "loading" }> | Readonly<{ state: "error"; errorMessage: string }> | Readonly<{ state: "empty" | "success"; page: PublicationsPage }>);
 
 /** Presenta modelos de dominio; la lectura se resuelve en el Server Component de la ruta. */
@@ -33,6 +42,15 @@ export function PublicationsView(props: PublicationsViewProps) {
 
   return (
     <div className={styles.view} data-dashboard-full-width="true">
+      {props.previewBulkStockAction && props.createBulkStockJobAction && props.getBulkStockJobAction ? (
+        <div className={styles.bulkStockAction}>
+          <BulkStockButton
+            createJobAction={props.createBulkStockJobAction}
+            getJobAction={props.getBulkStockJobAction}
+            previewAction={props.previewBulkStockAction}
+          />
+        </div>
+      ) : null}
       <PublicationsFilters filters={props.filters} />
       {props.state === "error" ? <section className={styles.error} role="alert"><strong>No se pudieron cargar las publicaciones.</strong><p>{props.errorMessage}</p></section> : null}
       {props.state === "loading" ? <><p className={styles.summaryText}>Cargando publicaciones…</p><PublicationsTable page={emptyPage} loading {...tableProps} /></> : null}
