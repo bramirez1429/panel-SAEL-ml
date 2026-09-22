@@ -16,6 +16,7 @@ import { UploadSimilarPublicationPictureCommand } from "./application/upload-sim
 import { SimilarPublicationApiRepository } from "./infrastructure/similar-publication-api.repository.server";
 import { createPromotionsRepository } from "@/modules/promotions/promotions.composition.server";
 import { searchPublicationsByFamily } from "@/modules/promotions/application/search-publications-by-family";
+import { BulkStockApiRepository } from "./bulk-stock/infrastructure/bulk-stock-api.repository.server";
 
 /**
  * Punto de composición server-only: conecta el caso de uso con infraestructura
@@ -79,4 +80,12 @@ export function createCreateSimilarPublicationCommand(): CreateSimilarPublicatio
 
 export function createUploadSimilarPublicationPictureCommand(): UploadSimilarPublicationPictureCommand {
   return new UploadSimilarPublicationPictureCommand(createSimilarPublicationRepository());
+}
+
+export function createBulkStockRepository(): BulkStockApiRepository {
+  const httpClient = createAuthenticatedHttpClient(new HttpClient(getApiConfig()));
+  return new BulkStockApiRepository({
+    get: httpClient.get,
+    post: httpClient.post,
+  });
 }

@@ -15,6 +15,11 @@ import { replicatePublicationAction } from "./tiendanube.action";
 import type { TiendanubeReplicationState } from "@/modules/tiendanube/domain/tiendanube-replication.model";
 import { deletePublicationVariationAction, updatePublicationAction } from "./[id]/update-publication.action";
 import { loadPublicationVariantsAction } from "./load-publication-variants.action";
+import {
+  createBulkStockJobAction,
+  getBulkStockJobAction,
+  previewBulkStockAction,
+} from "./bulk-stock.action";
 
 export const dynamic = "force-dynamic";
 
@@ -93,6 +98,6 @@ export default async function PublicationsPage({
   const result = await loadPublications(filters);
 
   return (
-    <PublicationsView filters={filters} replicateAction={replicatePublicationAction} updateAction={updatePublicationAction} deleteVariationAction={deletePublicationVariationAction} loadVariantsAction={loadPublicationVariantsAction} tiendanubeStatusBySourceKey={result.state === "error" ? {} : result.tiendanubeStatusBySourceKey} categories={result.state === "error" ? [] : result.categories} {...result} />
+    <PublicationsView filters={filters} replicateAction={replicatePublicationAction} updateAction={updatePublicationAction} deleteVariationAction={deletePublicationVariationAction} loadVariantsAction={loadPublicationVariantsAction} previewBulkStockAction={previewBulkStockAction} createBulkStockJobAction={createBulkStockJobAction} getBulkStockJobAction={getBulkStockJobAction} tiendanubeStatusBySourceKey={result.state === "error" ? {} : result.tiendanubeStatusBySourceKey} categories={result.state === "error" ? [] : result.categories} {...result} />
   );
 }

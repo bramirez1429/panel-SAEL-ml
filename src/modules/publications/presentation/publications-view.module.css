@@ -4,6 +4,11 @@
   gap: 20px;
 }
 
+.bulkStockAction {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .toolbar {
   position: sticky;
   top: var(--dashboard-header-height, 64px);
