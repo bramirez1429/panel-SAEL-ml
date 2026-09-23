@@ -23,6 +23,7 @@ type Props = Readonly<{
   tiendanubeState: TiendanubeReplicationState;
   replicateAction: ReplicatePublicationAction;
   categories: readonly TiendanubeCategory[];
+  categoriesError?: string | null;
   updateAction?: InlineStockUpdateAction;
   deleteVariationAction?: DeleteVariationAction;
   loadVariantsAction?: LoadPublicationVariantsAction;
@@ -45,7 +46,7 @@ type VariantsState =
   | Readonly<{ status: "success"; variants: NonNullable<Publication["variants"]> }>
   | Readonly<{ status: "error"; variants: readonly [] }>;
 
-export function PublicationProductRow({ publication, tiendanubeState, replicateAction, categories, updateAction, deleteVariationAction, loadVariantsAction, detailHref, similarHref, onStockError }: Props) {
+export function PublicationProductRow({ publication, tiendanubeState, replicateAction, categories, categoriesError, updateAction, deleteVariationAction, loadVariantsAction, detailHref, similarHref, onStockError }: Props) {
   const router = useRouter();
   const [modalApi, modalContextHolder] = Modal.useModal();
   const [messageApi, messageContextHolder] = message.useMessage();
@@ -148,7 +149,7 @@ export function PublicationProductRow({ publication, tiendanubeState, replicateA
     <article className={styles.productBlock} aria-label={`Publicación ${publication.title}`}>
       <aside className={styles.productIdentity}>
         {publication.thumbnailUrl ? <Image alt={`Imagen de ${publication.title}`} height={78} preview={false} src={publication.thumbnailUrl} width={78} /> : <span className={styles.productImagePlaceholder} title="Imagen no disponible">—</span>}
-        <TiendanubeReplicationCell action={replicateAction} initialState={tiendanubeState} sourceKey={publication.group.key} categories={categories} />
+        <TiendanubeReplicationCell action={replicateAction} initialState={tiendanubeState} sourceKey={publication.group.key} categories={categories} categoriesError={categoriesError} />
         <PublicationStatus status={publication.status} />
         <Tag>Mercado Libre</Tag>
         <Tag color={isFamily ? "blue" : "default"}>{isFamily ? "Familia" : "Anterior"}</Tag>

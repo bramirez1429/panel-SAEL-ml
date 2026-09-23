@@ -28,16 +28,19 @@ type PublicationsPageProps = Readonly<{
 }>;
 
 type PublicationsLoadResult =
-  | Readonly<{ state: "empty" | "success"; page: PublicationsPage; tiendanubeStatusBySourceKey: Readonly<Record<string, TiendanubeReplicationState>>; categories: readonly TiendanubeCategory[] }>
+  | Readonly<{ state: "empty" | "success"; page: PublicationsPage; tiendanubeStatusBySourceKey: Readonly<Record<string, TiendanubeReplicationState>>; categories: readonly TiendanubeCategory[]; categoriesError: string | null }>
   | Readonly<{ state: "error"; errorMessage: string }>;
 
 async function loadPublications(
   filters: PublicationsUrlState,
 ): Promise<PublicationsLoadResult> {
   try {
-    const categoriesPromise = getTiendanubeCategories().catch((error: unknown) => {
+    const categoriesPromise = getTiendanubeCategories().then((categories) => ({
+      categories,
+      categoriesError: null,
+    })).catch((error: unknown) => {
       if (error instanceof AppError) {
-        return [] as readonly TiendanubeCategory[];
+        return { categories: [] as readonly TiendanubeCategory[], categoriesError: "No se pudieron cargar las categorías de Tiendanube." };
       }
 
       throw error;
@@ -51,7 +54,7 @@ async function loadPublications(
       status: filters.status || null,
       quickFilters: filters.quickFilters,
     });
-    const [states, categories] = await Promise.all([
+    const [states, categoriesResult] = await Promise.all([
       loadTiendanubeStatuses(page.publications.map((publication) => publication.group.key)),
       categoriesPromise,
     ]);
@@ -59,7 +62,8 @@ async function loadPublications(
       state: page.publications.length === 0 ? "empty" : "success",
       page,
       tiendanubeStatusBySourceKey: states,
-      categories,
+      categories: categoriesResult.categories,
+      categoriesError: categoriesResult.categoriesError,
     };
   } catch (error: unknown) {
     if (error instanceof AppError) {
@@ -98,6 +102,6 @@ export default async function PublicationsPage({
   const result = await loadPublications(filters);
 
   return (
-    <PublicationsView filters={filters} replicateAction={replicatePublicationAction} updateAction={updatePublicationAction} deleteVariationAction={deletePublicationVariationAction} loadVariantsAction={loadPublicationVariantsAction} previewBulkStockAction={previewBulkStockAction} createBulkStockJobAction={createBulkStockJobAction} getBulkStockJobAction={getBulkStockJobAction} tiendanubeStatusBySourceKey={result.state === "error" ? {} : result.tiendanubeStatusBySourceKey} categories={result.state === "error" ? [] : result.categories} {...result} />
+    <PublicationsView filters={filters} replicateAction={replicatePublicationAction} updateAction={updatePublicationAction} deleteVariationAction={deletePublicationVariationAction} loadVariantsAction={loadPublicationVariantsAction} previewBulkStockAction={previewBulkStockAction} createBulkStockJobAction={createBulkStockJobAction} getBulkStockJobAction={getBulkStockJobAction} tiendanubeStatusBySourceKey={result.state === "error" ? {} : result.tiendanubeStatusBySourceKey} categories={result.state === "error" ? [] : result.categories} categoriesError={result.state === "error" ? null : result.categoriesError} {...result} />
   );
 }

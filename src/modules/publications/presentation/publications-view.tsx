@@ -20,6 +20,7 @@ type PublicationsViewProps = Readonly<{
   tiendanubeStatusBySourceKey?: Readonly<Record<string, TiendanubeReplicationState>>;
   replicateAction?: ReplicatePublicationAction;
   categories?: readonly TiendanubeCategory[];
+  categoriesError?: string | null;
   updateAction?: InlineStockUpdateAction;
   deleteVariationAction?: DeleteVariationAction;
   loadVariantsAction?: LoadPublicationVariantsAction;
@@ -35,6 +36,7 @@ export function PublicationsView(props: PublicationsViewProps) {
     tiendanubeStatusBySourceKey: props.tiendanubeStatusBySourceKey,
     replicateAction: props.replicateAction,
     categories: props.categories,
+    categoriesError: props.categoriesError,
     updateAction: props.updateAction,
     deleteVariationAction: props.deleteVariationAction,
     loadVariantsAction: props.loadVariantsAction,

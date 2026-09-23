@@ -20,12 +20,13 @@ type PublicationsTableProps = Readonly<{
   tiendanubeStatusBySourceKey?: Readonly<Record<string, TiendanubeReplicationState>>;
   replicateAction?: ReplicatePublicationAction;
   categories?: readonly TiendanubeCategory[];
+  categoriesError?: string | null;
   updateAction?: InlineStockUpdateAction;
   deleteVariationAction?: DeleteVariationAction;
   loadVariantsAction?: LoadPublicationVariantsAction;
 }>;
 
-export function PublicationsTable({ page, loading = false, tiendanubeStatusBySourceKey = {}, replicateAction = async () => ({ ok: false as const, message: "La replicación no está disponible." }), categories = [], updateAction, deleteVariationAction, loadVariantsAction }: PublicationsTableProps) {
+export function PublicationsTable({ page, loading = false, tiendanubeStatusBySourceKey = {}, replicateAction = async () => ({ ok: false as const, message: "La replicación no está disponible." }), categories = [], categoriesError, updateAction, deleteVariationAction, loadVariantsAction }: PublicationsTableProps) {
   const searchParams = useSearchParams();
   const [messageApi, messageContext] = message.useMessage();
   const columns: TableColumnsType<Publication> = [{
@@ -36,6 +37,7 @@ export function PublicationsTable({ page, loading = false, tiendanubeStatusBySou
         tiendanubeState={tiendanubeStatusBySourceKey[publication.group.key] ?? { sourceKey: publication.group.key, status: "NOT_REPLICATED", tiendanubeProductId: null }}
         replicateAction={replicateAction}
         categories={categories}
+        categoriesError={categoriesError}
         updateAction={updateAction}
         deleteVariationAction={deleteVariationAction}
         loadVariantsAction={loadVariantsAction}
