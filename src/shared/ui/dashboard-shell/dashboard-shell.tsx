@@ -13,7 +13,16 @@ import styles from "./dashboard-shell.module.css";
 type DashboardShellProps = Readonly<{
   children: ReactNode;
   logoutAction: () => Promise<void>;
+  currentUser?: Readonly<{ name: string | null; email: string }> | null;
 }>;
+
+export function getCurrentUserLabel(user: Readonly<{ name: string | null; email: string }>): string {
+  return user.name?.trim() || user.email;
+}
+
+export function getCurrentUserInitial(user: Readonly<{ name: string | null; email: string }>): string {
+  return Array.from(getCurrentUserLabel(user))[0]?.toLocaleUpperCase("es") ?? "?";
+}
 
 function Brand() {
   return (
@@ -26,7 +35,7 @@ function Brand() {
   );
 }
 
-export function DashboardShell({ children, logoutAction }: DashboardShellProps) {
+export function DashboardShell({ children, logoutAction, currentUser }: DashboardShellProps) {
   return (
     <div className={styles.shell}>
       <aside className={styles.sidebar}>
@@ -54,6 +63,12 @@ export function DashboardShell({ children, logoutAction }: DashboardShellProps) 
           <Brand />
         </Link>
         <DashboardHeaderTitle />
+        {currentUser ? (
+          <div className={styles.currentUser} aria-label={`Usuario autenticado: ${getCurrentUserLabel(currentUser)}`}>
+            <span className={styles.currentUserAvatar} aria-hidden="true">{getCurrentUserInitial(currentUser)}</span>
+            <span className={styles.currentUserName}>{getCurrentUserLabel(currentUser)}</span>
+          </div>
+        ) : null}
         <DashboardMobileNavigation logoutAction={logoutAction} />
       </header>
 

@@ -132,6 +132,38 @@
   white-space: nowrap;
 }
 
+.currentUser {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  margin-inline-start: auto;
+}
+
+.currentUserAvatar {
+  display: grid;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  color: #ffffff;
+  background: var(--ant-color-primary, #2563eb);
+  border-radius: 50%;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.currentUserName {
+  max-width: 220px;
+  overflow: hidden;
+  color: var(--ant-color-text, #172033);
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .mobileBrand,
 .mobileNavigation {
   display: none;
@@ -180,6 +212,10 @@
   .mobileBrand,
   .mobileNavigation {
     display: flex;
+  }
+
+  .currentUser {
+    display: none;
   }
 
   .mobileBrand .brandMark {
