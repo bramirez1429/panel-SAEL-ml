@@ -13,7 +13,7 @@ import styles from "./dashboard-shell.module.css";
 type DashboardShellProps = Readonly<{
   children: ReactNode;
   logoutAction: () => Promise<void>;
-  currentUser?: Readonly<{ name: string | null; email: string }> | null;
+  currentUser?: ReactNode;
 }>;
 
 export function getCurrentUserLabel(user: Readonly<{ name: string | null; email: string }>): string {
@@ -22,6 +22,22 @@ export function getCurrentUserLabel(user: Readonly<{ name: string | null; email:
 
 export function getCurrentUserInitial(user: Readonly<{ name: string | null; email: string }>): string {
   return Array.from(getCurrentUserLabel(user))[0]?.toLocaleUpperCase("es") ?? "?";
+}
+
+export function DashboardCurrentUser({
+  user,
+}: Readonly<{
+  user: Readonly<{ name: string | null; email: string }> | null;
+}>) {
+  if (!user) return null;
+  const label = getCurrentUserLabel(user);
+
+  return (
+    <div className={styles.currentUser} aria-label={`Usuario autenticado: ${label}`}>
+      <span className={styles.currentUserAvatar} aria-hidden="true">{getCurrentUserInitial(user)}</span>
+      <span className={styles.currentUserName}>{label}</span>
+    </div>
+  );
 }
 
 function Brand() {
@@ -63,12 +79,7 @@ export function DashboardShell({ children, logoutAction, currentUser }: Dashboar
           <Brand />
         </Link>
         <DashboardHeaderTitle />
-        {currentUser ? (
-          <div className={styles.currentUser} aria-label={`Usuario autenticado: ${getCurrentUserLabel(currentUser)}`}>
-            <span className={styles.currentUserAvatar} aria-hidden="true">{getCurrentUserInitial(currentUser)}</span>
-            <span className={styles.currentUserName}>{getCurrentUserLabel(currentUser)}</span>
-          </div>
-        ) : null}
+        {currentUser}
         <DashboardMobileNavigation logoutAction={logoutAction} />
       </header>
 

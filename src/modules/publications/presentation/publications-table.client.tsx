@@ -27,6 +27,7 @@ type PublicationsTableProps = Readonly<{
 
 export function PublicationsTable({ page, loading = false, tiendanubeStatusBySourceKey = {}, replicateAction = async () => ({ ok: false as const, message: "La replicación no está disponible." }), categories = [], updateAction, deleteVariationAction, loadVariantsAction }: PublicationsTableProps) {
   const searchParams = useSearchParams();
+  const returnTo = createReturnTo(searchParams);
   const [messageApi, messageContext] = message.useMessage();
   const columns: TableColumnsType<Publication> = [{
     key: "publication",
@@ -39,8 +40,8 @@ export function PublicationsTable({ page, loading = false, tiendanubeStatusBySou
         updateAction={updateAction}
         deleteVariationAction={deleteVariationAction}
         loadVariantsAction={loadVariantsAction}
-        detailHref={createDetailHref(publication.id, searchParams)}
-        similarHref={createSimilarHref(publication.group.key, searchParams)}
+        detailHref={createDetailHrefFromReturnTo(publication.id, returnTo)}
+        similarHref={createSimilarHrefFromReturnTo(publication.group.key, returnTo)}
         onStockError={(error) => void messageApi.error(error)}
       />
     ),
@@ -64,14 +65,23 @@ export function PublicationsTable({ page, loading = false, tiendanubeStatusBySou
 }
 
 export function createDetailHref(publicationId: string, searchParams: URLSearchParams): string {
-  const query = searchParams.toString();
-  const returnTo = query ? `/publicaciones?${query}` : "/publicaciones";
+  return createDetailHrefFromReturnTo(publicationId, createReturnTo(searchParams));
+}
+
+function createDetailHrefFromReturnTo(publicationId: string, returnTo: string): string {
   return `/publicaciones/${encodeURIComponent(publicationId)}?returnTo=${encodeURIComponent(returnTo)}`;
 }
 
 export function createSimilarHref(sourceKey: string, searchParams: URLSearchParams): string {
-  const query = searchParams.toString();
-  const returnTo = query ? `/publicaciones?${query}` : "/publicaciones";
+  return createSimilarHrefFromReturnTo(sourceKey, createReturnTo(searchParams));
+}
+
+function createSimilarHrefFromReturnTo(sourceKey: string, returnTo: string): string {
   const params = new URLSearchParams({ sourceKey, returnTo });
   return `/publicaciones/similar?${params.toString()}`;
+}
+
+function createReturnTo(searchParams: URLSearchParams): string {
+  const query = searchParams.toString();
+  return query ? `/publicaciones?${query}` : "/publicaciones";
 }

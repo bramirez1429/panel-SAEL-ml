@@ -1,6 +1,9 @@
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 
-import { DashboardShell } from "@/shared/ui/dashboard-shell/dashboard-shell";
+import {
+  DashboardCurrentUser,
+  DashboardShell,
+} from "@/shared/ui/dashboard-shell/dashboard-shell";
 import { createGetCurrentUserQuery } from "@/modules/auth/auth.composition.server";
 import { getAccessToken } from "@/modules/auth/infrastructure/session/auth-session.server";
 import { AppError } from "@/shared/errors/app-error";
@@ -11,12 +14,29 @@ type DashboardLayoutProps = Readonly<{
   children: ReactNode;
 }>;
 
-export default async function DashboardLayout({ children }: DashboardLayoutProps) {
-  const currentUser = await loadCurrentUser();
+export default function DashboardLayout({ children }: DashboardLayoutProps) {
+  const currentUserPromise = loadCurrentUser();
 
   return (
-    <DashboardShell logoutAction={logoutAction} currentUser={currentUser}>{children}</DashboardShell>
+    <DashboardShell
+      logoutAction={logoutAction}
+      currentUser={(
+        <Suspense fallback={null}>
+          <CurrentUser userPromise={currentUserPromise} />
+        </Suspense>
+      )}
+    >
+      {children}
+    </DashboardShell>
   );
+}
+
+async function CurrentUser({
+  userPromise,
+}: Readonly<{
+  userPromise: Promise<Readonly<{ name: string | null; email: string }> | null>;
+}>) {
+  return <DashboardCurrentUser user={await userPromise} />;
 }
 
 async function loadCurrentUser(): Promise<Readonly<{ name: string | null; email: string }> | null> {

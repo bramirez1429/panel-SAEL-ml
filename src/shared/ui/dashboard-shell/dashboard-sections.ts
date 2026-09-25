@@ -5,6 +5,7 @@ export type DashboardSection = Readonly<{
 
 export const dashboardSections = [
   { href: "/dashboard", title: "Dashboard" },
+  { href: "/sincronizacion", title: "Sincronización" },
   { href: "/publicaciones", title: "Publicaciones" },
   { href: "/ranking-productos", title: "Ranking productos" },
   { href: "/promociones", title: "Promociones" },

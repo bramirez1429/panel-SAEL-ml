@@ -39,6 +39,7 @@ export type DeleteVariationAction = (input: Readonly<{
 }>) => Promise<Readonly<{ ok: true } | { ok: false; code?: string; message: string }>>;
 
 const missingValue = <span title="Dato no disponible">—</span>;
+const amountFormatter = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 });
 
 type VariantsState =
   | Readonly<{ status: "idle" | "loading"; variants: readonly [] }>
@@ -275,6 +276,6 @@ function formatPrice(price: Publication["price"]): React.ReactNode {
   return formatAmount(price.from ?? price.to!, price.currency);
 }
 function formatAmount(value: number, currency: string | null): string {
-  const amount = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 }).format(value);
+  const amount = amountFormatter.format(value);
   return currency ? `${currency} ${amount}` : amount;
 }

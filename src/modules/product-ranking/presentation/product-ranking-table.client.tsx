@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { DownOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
 import { Alert, Button, Empty, Image, Input, Select, Skeleton, Space, Spin, Table, Tag, Typography } from 'antd';
 import { CopyableText } from '@/shared/ui/copyable-text.client';
@@ -21,19 +21,22 @@ type VariantState =
   | { status: 'success'; variants: readonly ProductRankingVariant[] }
   | { status: 'error' };
 
-const formatNumber = (value: number) => new Intl.NumberFormat('es-AR').format(value);
+const numberFormatter = new Intl.NumberFormat('es-AR');
+const formatNumber = (value: number) => numberFormatter.format(value);
 const productKey = (product: ProductRankingItem) => product.familyId ? `family:${product.familyId}` : `item:${product.itemIds[0] ?? product.title}`;
+const emptyProducts: readonly ProductRankingItem[] = [];
 
 export function ProductRankingTable({ data, error, loading, loadVariantsAction }: Props) {
   const [query, setQuery] = useState('');
   const [limit, setLimit] = useState<'10' | '20' | '50' | 'all'>('20');
-  const [expandedKeys, setExpandedKeys] = useState<readonly string[]>([]);
+  const [expansion, setExpansion] = useState<Readonly<{
+    visitPeriodDays: number;
+    keys: readonly string[];
+  }> | null>(null);
   const [variantStates, setVariantStates] = useState<Record<string, VariantState>>({});
-  const products = data?.products ?? [];
+  const products = data?.products ?? emptyProducts;
   const visitPeriodDays = data?.visitPeriodDays ?? DEFAULT_PRODUCT_RANKING_VISIT_PERIOD;
-  useEffect(() => {
-    setExpandedKeys([]);
-  }, [visitPeriodDays]);
+  const expandedKeys = expansion?.visitPeriodDays === visitPeriodDays ? expansion.keys : [];
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     const result = normalized ? products.filter((product) => [product.title, ...product.itemIds, product.familyId ?? '', ...product.userProductIds].some((value) => value.toLowerCase().includes(normalized))) : [...products];
@@ -62,7 +65,15 @@ export function ProductRankingTable({ data, error, loading, loadVariantsAction }
     const key = productKey(product);
     const cacheKey = `${key}:${visitPeriodDays}`;
     const isOpen = expandedKeys.includes(key);
-    setExpandedKeys((current) => isOpen ? current.filter((candidate) => candidate !== key) : [...current, key]);
+    setExpansion((current) => {
+      const currentKeys = current?.visitPeriodDays === visitPeriodDays ? current.keys : [];
+      return {
+        visitPeriodDays,
+        keys: isOpen
+          ? currentKeys.filter((candidate) => candidate !== key)
+          : [...currentKeys, key],
+      };
+    });
     if (!isOpen && !variantStates[cacheKey]) void requestVariants(product, cacheKey);
   }
 

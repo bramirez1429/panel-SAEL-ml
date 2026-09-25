@@ -17,8 +17,8 @@ type Props = Readonly<{
   visitPeriodDays?: ProductRankingVisitPeriod;
 }>;
 
-const formatNumber = (value: number) =>
-  new Intl.NumberFormat('es-AR').format(value);
+const numberFormatter = new Intl.NumberFormat('es-AR');
+const formatNumber = (value: number) => numberFormatter.format(value);
 
 export function ProductRankingView({
   data,
