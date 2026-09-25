@@ -17,7 +17,7 @@ import { SyncCircularProgress } from "./sync-circular-progress";
 import { SyncErrorBanner } from "./sync-error-banner";
 import { SyncNowButton } from "./sync-now-button.client";
 
-const POLLING_INTERVAL_MS = 3_000;
+const POLLING_INTERVAL_MS = 30_000;
 
 export type GetSyncOverviewAction = () => Promise<SyncActionResult<SyncOverview>>;
 export type GetSyncStatus = (
