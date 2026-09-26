@@ -5,6 +5,7 @@ import { ApiError } from "@/shared/api/api-error";
 
 import type { SyncRepository } from "../domain/sync.repository";
 import type {
+  CancelSyncResult,
   RetrySyncErrorsResult,
   StartSyncResult,
   SyncError,
@@ -12,6 +13,7 @@ import type {
   SyncOverview,
 } from "../domain/sync.model";
 import {
+  cancelSyncResponseSchema,
   retrySyncErrorsResponseSchema,
   startSyncResponseSchema,
   syncErrorsResponseSchema,
@@ -58,6 +60,18 @@ export class SyncApiRepository implements SyncRepository {
       syncId: parsed.data.syncId,
       status: parsed.data.status,
       created: parsed.data.created,
+    };
+  }
+
+  async cancelSync(syncId: string): Promise<CancelSyncResult> {
+    const parsed = cancelSyncResponseSchema.safeParse(
+      await this.http.post(`${SYNC_PATH}/${encodeURIComponent(syncId)}/cancel`),
+    );
+    if (!parsed.success) throw invalidResponse();
+    return {
+      syncId: parsed.data.syncId,
+      status: parsed.data.status,
+      hasMore: parsed.data.hasMore,
     };
   }
 

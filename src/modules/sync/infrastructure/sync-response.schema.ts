@@ -34,6 +34,13 @@ export const startSyncResponseSchema = z.object({
   created: z.boolean(),
 });
 
+export const cancelSyncResponseSchema = z.object({
+  ok: z.literal(true),
+  syncId: z.uuid(),
+  status: z.literal("CANCELLED"),
+  hasMore: z.literal(false),
+});
+
 export const syncStatusResponseSchema = z.object({
   ok: z.literal(true),
   syncId: z.uuid(),

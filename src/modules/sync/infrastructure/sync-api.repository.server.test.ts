@@ -79,6 +79,26 @@ describe("SyncApiRepository", () => {
     expect(http.get).toHaveBeenCalledWith("/mercadolibre/publicaciones/sync/overview");
   });
 
+  it("cancela una sincronización activa con el endpoint existente", async () => {
+    const http = client();
+    http.post.mockResolvedValue({
+      ok: true,
+      syncId,
+      status: "CANCELLED",
+      hasMore: false,
+    });
+    const repository = new SyncApiRepository(http as unknown as AuthenticatedHttpClient);
+
+    await expect(repository.cancelSync(syncId)).resolves.toEqual({
+      syncId,
+      status: "CANCELLED",
+      hasMore: false,
+    });
+    expect(http.post).toHaveBeenCalledWith(
+      `/mercadolibre/publicaciones/sync/${syncId}/cancel`,
+    );
+  });
+
   it("mapea errores y usa los endpoints de retry existentes", async () => {
     const http = client();
     http.get.mockResolvedValue([{

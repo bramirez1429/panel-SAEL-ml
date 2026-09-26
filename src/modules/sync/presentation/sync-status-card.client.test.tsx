@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { SyncActionResult, SyncJob, SyncOverview } from "../domain/sync.model";
@@ -64,6 +64,39 @@ describe("SyncStatusCard", () => {
     expect(startAction).toHaveBeenCalledOnce();
     resolveStart?.({ ok: false, message: "cancelado" });
   });
+
+  it("confirma la cancelación, detiene el polling y vuelve a habilitar sincronizar", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const running = job({ status: "RUNNING" });
+    const cancelled = job({ status: "CANCELLED" });
+    const cancelAction = vi.fn().mockResolvedValue({
+      ok: true,
+      data: { syncId: running.id, status: "CANCELLED", hasMore: false },
+    });
+    const getOverviewAction = vi.fn().mockResolvedValue({
+      ok: true,
+      data: overview(cancelled),
+    });
+    const getStatus = vi.fn().mockResolvedValue({ ok: true, data: running });
+
+    renderCard(overview(running), {
+      cancelAction,
+      getOverviewAction,
+      getStatus,
+      pollingIntervalMs: 20,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar sincronización" }));
+    expect(cancelAction).not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole("button", { name: "Sí, cancelar" }));
+
+    await waitFor(() => expect(cancelAction).toHaveBeenCalledWith(running.id));
+    expect(await screen.findByText("Cancelada")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Sincronizar ahora/i })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "Cancelar sincronización" })).not.toBeInTheDocument();
+    const requestsAfterCancellation = getStatus.mock.calls.length;
+    await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+    expect(getStatus).toHaveBeenCalledTimes(requestsAfterCancellation);
+  });
 });
 
 function renderCard(
@@ -72,6 +105,7 @@ function renderCard(
 ) {
   return render(
     <SyncStatusCard
+      cancelAction={vi.fn().mockResolvedValue({ ok: true, data: { syncId: crypto.randomUUID(), status: "CANCELLED", hasMore: false } })}
       getOverviewAction={vi.fn().mockResolvedValue({ ok: true, data: initialOverview })}
       getStatus={vi.fn().mockResolvedValue({ ok: true, data: initialOverview.activeSync })}
       initialOverview={initialOverview}

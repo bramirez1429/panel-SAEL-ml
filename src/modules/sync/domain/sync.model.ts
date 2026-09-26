@@ -4,6 +4,7 @@ export const SYNC_STATUSES = [
   "COMPLETED",
   "COMPLETED_WITH_ERRORS",
   "FAILED",
+  "CANCELLED",
 ] as const;
 
 export type SyncStatus = (typeof SYNC_STATUSES)[number];
@@ -66,6 +67,12 @@ export type StartSyncResult = Readonly<{
   syncId: string;
   status: "PENDING" | "RUNNING";
   created: boolean;
+}>;
+
+export type CancelSyncResult = Readonly<{
+  syncId: string;
+  status: "CANCELLED";
+  hasMore: false;
 }>;
 
 export type RetrySyncErrorsResult = Readonly<{

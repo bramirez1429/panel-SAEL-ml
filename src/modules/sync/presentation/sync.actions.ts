@@ -4,6 +4,7 @@ import { AppError } from "@/shared/errors/app-error";
 
 import { createSyncRepository } from "../sync.composition.server";
 import type {
+  CancelSyncResult,
   RetrySyncErrorsResult,
   StartSyncResult,
   SyncActionResult,
@@ -17,6 +18,12 @@ export async function getSyncOverviewAction(): Promise<SyncActionResult<SyncOver
 
 export async function startSyncAction(): Promise<SyncActionResult<StartSyncResult>> {
   return safely(() => createSyncRepository().startFullSync());
+}
+
+export async function cancelSyncAction(
+  syncId: string,
+): Promise<SyncActionResult<CancelSyncResult>> {
+  return safely(() => createSyncRepository().cancelSync(syncId));
 }
 
 export async function getOpenSyncErrorsAction(

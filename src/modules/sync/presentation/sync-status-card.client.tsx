@@ -1,10 +1,11 @@
 "use client";
 
-import { Alert, Card, Flex, Space, Typography, message } from "antd";
+import { Alert, Button, Card, Flex, Popconfirm, Space, Typography, message } from "antd";
 import { useEffect, useRef, useState } from "react";
 
 import { getDisplayedSync } from "../application/sync-progress";
 import type {
+  CancelSyncResult,
   StartSyncResult,
   SyncActionResult,
   SyncJob,
@@ -25,8 +26,12 @@ export type GetSyncStatus = (
   signal?: AbortSignal,
 ) => Promise<SyncActionResult<SyncJob>>;
 export type StartSyncAction = () => Promise<SyncActionResult<StartSyncResult>>;
+export type CancelSyncAction = (
+  syncId: string,
+) => Promise<SyncActionResult<CancelSyncResult>>;
 
 export function SyncStatusCard({
+  cancelAction,
   initialOverview,
   getOverviewAction,
   getStatus = fetchSyncStatus,
@@ -34,6 +39,7 @@ export function SyncStatusCard({
   pollingIntervalMs = POLLING_INTERVAL_MS,
 }: Readonly<{
   initialOverview: SyncOverview | null;
+  cancelAction: CancelSyncAction;
   getOverviewAction: GetSyncOverviewAction;
   getStatus?: GetSyncStatus;
   startAction: StartSyncAction;
@@ -42,8 +48,10 @@ export function SyncStatusCard({
   const [overview, setOverview] = useState(initialOverview);
   const [job, setJob] = useState<SyncJob | null>(initialOverview ? getDisplayedSync(initialOverview) : null);
   const [starting, setStarting] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [pollingError, setPollingError] = useState<string | null>(null);
   const startingRef = useRef(false);
+  const cancellingRef = useRef(false);
   const [messageApi, contextHolder] = message.useMessage();
   const activeSyncId = job && isSyncActive(job.status) ? job.id : null;
 
@@ -111,6 +119,31 @@ export function SyncStatusCard({
     }
   };
 
+  const cancel = async () => {
+    if (!job || !isSyncActive(job.status) || cancellingRef.current) return;
+    cancellingRef.current = true;
+    setCancelling(true);
+    try {
+      const result = await cancelAction(job.id);
+      if (!result.ok) {
+        messageApi.error(result.message);
+        return;
+      }
+
+      setJob((current) => current && current.id === result.data.syncId
+        ? { ...current, status: "CANCELLED" }
+        : current);
+      const refreshed = await getOverviewAction();
+      if (refreshed.ok) {
+        setOverview(refreshed.data);
+        setJob(getDisplayedSync(refreshed.data));
+      }
+    } finally {
+      cancellingRef.current = false;
+      setCancelling(false);
+    }
+  };
+
   const errorCount = overview?.openErrorsCount ?? job?.failedItems ?? 0;
   const reviewSyncId = job?.id ?? overview?.latestSync?.id;
 
@@ -139,11 +172,27 @@ export function SyncStatusCard({
         ) : (
           <Typography.Text type="secondary">Todavía no hay sincronizaciones registradas.</Typography.Text>
         )}
-        <SyncNowButton
-          disabled={starting || Boolean(job && isSyncActive(job.status))}
-          loading={starting}
-          onClick={() => void start()}
-        />
+        <Space wrap>
+          <SyncNowButton
+            disabled={starting || cancelling || Boolean(job && isSyncActive(job.status))}
+            loading={starting}
+            onClick={() => void start()}
+          />
+          {job && isSyncActive(job.status) ? (
+            <Popconfirm
+              cancelText="Volver"
+              description="La sincronización en curso se detendrá."
+              okButtonProps={{ danger: true, loading: cancelling }}
+              okText="Sí, cancelar"
+              title="¿Cancelar sincronización?"
+              onConfirm={() => void cancel()}
+            >
+              <Button danger disabled={cancelling} loading={cancelling}>
+                Cancelar sincronización
+              </Button>
+            </Popconfirm>
+          ) : null}
+        </Space>
       </Space>
     </Card>
   );
@@ -156,6 +205,7 @@ function statusLabel(status: SyncJob["status"]): string {
     COMPLETED: "Completada",
     COMPLETED_WITH_ERRORS: "Completada con errores",
     FAILED: "Fallida",
+    CANCELLED: "Cancelada",
   };
   return labels[status];
 }
