@@ -7,6 +7,7 @@ import { createSyncRepository } from "@/modules/sync/sync.composition.server";
 import type { SyncOverview } from "@/modules/sync/domain/sync.model";
 import { SyncStatusCard } from "@/modules/sync/presentation/sync-status-card.client";
 import {
+  cancelSyncAction,
   getSyncOverviewAction,
   startSyncAction,
 } from "@/modules/sync/presentation/sync.actions";
@@ -38,6 +39,7 @@ export default async function DashboardPage() {
       />
       <BackendStatusView status={backendStatus} />
       <SyncStatusCard
+        cancelAction={cancelSyncAction}
         getOverviewAction={getSyncOverviewAction}
         initialOverview={syncOverview}
         startAction={startSyncAction}
