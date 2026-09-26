@@ -32,6 +32,8 @@ describe("SyncApiRepository", () => {
       childrenSaved: 30,
       errorsCount: 4,
       lastError: null,
+      startedAt: "2026-09-25T10:00:00.000Z",
+      finishedAt: null,
       hasMore: true,
     });
     const repository = new SyncApiRepository(http as unknown as AuthenticatedHttpClient);
@@ -66,6 +68,7 @@ describe("SyncApiRepository", () => {
         startedAt: "2026-09-25T10:00:00.000Z",
       },
       latestSync: null,
+      lastSuccessfulSyncAt: "2026-09-21T12:00:00.000Z",
       nextAutomaticSyncAt: "2026-09-29T10:00:00.000Z",
       openErrorsCount: 4,
       openIntegrationEventsCount: 1,
@@ -74,6 +77,7 @@ describe("SyncApiRepository", () => {
     await expect(new SyncApiRepository(http as unknown as AuthenticatedHttpClient).getOverview()).resolves.toMatchObject({
       activeSync: { id: syncId, processedItems: 145, failedItems: 4 },
       openErrorsCount: 4,
+      lastSuccessfulSyncAt: "2026-09-21T12:00:00.000Z",
       integrationEvents: [{ type: "POSSIBLE_API_CHANGE", count: 1 }],
     });
     expect(http.get).toHaveBeenCalledWith("/mercadolibre/publicaciones/sync/overview");

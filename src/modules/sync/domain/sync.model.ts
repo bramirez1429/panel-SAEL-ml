@@ -35,6 +35,7 @@ export type IntegrationEvent = Readonly<{
 export type SyncOverview = Readonly<{
   activeSync: SyncJob | null;
   latestSync: SyncJob | null;
+  lastSuccessfulSyncAt: string | null;
   nextAutomaticSyncAt: string;
   openErrorsCount: number;
   integrationEvents: readonly IntegrationEvent[];

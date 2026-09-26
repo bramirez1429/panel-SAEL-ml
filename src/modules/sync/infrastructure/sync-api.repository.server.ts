@@ -43,6 +43,7 @@ export class SyncApiRepository implements SyncRepository {
         lastError: null,
         startedAt: null,
       } : null,
+      lastSuccessfulSyncAt: parsed.data.lastSuccessfulSyncAt,
       nextAutomaticSyncAt: parsed.data.nextAutomaticSyncAt,
       openErrorsCount: parsed.data.openErrorsCount,
       integrationEvents: openIntegrationEventsCount > 0
@@ -87,8 +88,8 @@ export class SyncApiRepository implements SyncRepository {
       processedItems: parsed.data.processedItems,
       successfulItems: parsed.data.successfulItems,
       failedItems: parsed.data.failedItems,
-      startedAt: null,
-      finishedAt: null,
+      startedAt: parsed.data.startedAt,
+      finishedAt: parsed.data.finishedAt,
       lastError: parsed.data.lastError,
     };
   }

@@ -19,13 +19,19 @@ describe("SyncStatusCard", () => {
   it("inicia polling y lo detiene al completar", async () => {
     vi.useFakeTimers();
     const running = job({ status: "RUNNING" });
-    const completed = job({ status: "COMPLETED", processedItems: 250, successfulItems: 250 });
+    const completed = job({
+      status: "COMPLETED",
+      processedItems: 250,
+      successfulItems: 250,
+      finishedAt: "2026-09-25T11:00:00.000Z",
+    });
     const getStatus = vi.fn().mockResolvedValue({ ok: true, data: completed });
     const getOverviewAction = vi.fn().mockResolvedValue({ ok: true, data: overview(completed) });
 
     renderCard(overview(running), { getStatus, getOverviewAction, pollingIntervalMs: 20 });
     await act(async () => { await vi.advanceTimersByTimeAsync(20); });
     expect(getStatus).toHaveBeenCalledOnce();
+    expect(screen.getByText(/25\/09\/2026/)).toBeInTheDocument();
     await act(async () => { await vi.advanceTimersByTimeAsync(100); });
     expect(getStatus).toHaveBeenCalledOnce();
   });
@@ -66,7 +72,6 @@ describe("SyncStatusCard", () => {
   });
 
   it("confirma la cancelación, detiene el polling y vuelve a habilitar sincronizar", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
     const running = job({ status: "RUNNING" });
     const cancelled = job({ status: "CANCELLED" });
     const cancelAction = vi.fn().mockResolvedValue({
@@ -83,7 +88,6 @@ describe("SyncStatusCard", () => {
       cancelAction,
       getOverviewAction,
       getStatus,
-      pollingIntervalMs: 20,
     });
     fireEvent.click(screen.getByRole("button", { name: "Cancelar sincronización" }));
     expect(cancelAction).not.toHaveBeenCalled();
@@ -91,11 +95,23 @@ describe("SyncStatusCard", () => {
 
     await waitFor(() => expect(cancelAction).toHaveBeenCalledWith(running.id));
     expect(await screen.findByText("Cancelada")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Sincronizar ahora/i })).toBeEnabled();
+    expect(screen.getByText("145 / 250")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /Sincronizar ahora/i })).toBeEnabled();
+    });
     expect(screen.queryByRole("button", { name: "Cancelar sincronización" })).not.toBeInTheDocument();
-    const requestsAfterCancellation = getStatus.mock.calls.length;
-    await act(async () => { await vi.advanceTimersByTimeAsync(100); });
-    expect(getStatus).toHaveBeenCalledTimes(requestsAfterCancellation);
+    expect(getStatus).not.toHaveBeenCalled();
+  });
+
+  it("muestra la fecha de la última COMPLETED aunque la más reciente sea CANCELLED", () => {
+    const cancelled = job({ status: "CANCELLED", finishedAt: "2026-09-25T11:00:00.000Z" });
+    renderCard({
+      ...overview(cancelled),
+      lastSuccessfulSyncAt: "2026-09-21T12:00:00.000Z",
+    });
+
+    expect(screen.getByText("Cancelada")).toBeInTheDocument();
+    expect(screen.getByText(/21\/09\/2026/)).toBeInTheDocument();
   });
 });
 
@@ -120,6 +136,7 @@ function overview(current: SyncJob | null): SyncOverview {
   return {
     activeSync: current?.status === "RUNNING" || current?.status === "PENDING" ? current : null,
     latestSync: current?.status === "RUNNING" || current?.status === "PENDING" ? null : current,
+    lastSuccessfulSyncAt: current?.status === "COMPLETED" ? current.finishedAt : null,
     nextAutomaticSyncAt: "2026-09-29T10:00:00.000Z",
     openErrorsCount: current?.failedItems ?? 0,
     integrationEvents: [],

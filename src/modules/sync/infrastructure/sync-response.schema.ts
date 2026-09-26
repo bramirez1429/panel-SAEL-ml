@@ -22,6 +22,7 @@ export const syncOverviewResponseSchema = z.object({
   latestSync: overviewJobSchema.extend({
     finishedAt: z.iso.datetime().nullable(),
   }).nullable(),
+  lastSuccessfulSyncAt: z.iso.datetime().nullable(),
   nextAutomaticSyncAt: z.iso.datetime(),
   openErrorsCount: nonNegativeInteger,
   openIntegrationEventsCount: nonNegativeInteger,
@@ -54,6 +55,8 @@ export const syncStatusResponseSchema = z.object({
   childrenSaved: nonNegativeInteger,
   errorsCount: nonNegativeInteger,
   lastError: z.string().nullable(),
+  startedAt: z.iso.datetime().nullable(),
+  finishedAt: z.iso.datetime().nullable(),
   hasMore: z.boolean(),
 });
 

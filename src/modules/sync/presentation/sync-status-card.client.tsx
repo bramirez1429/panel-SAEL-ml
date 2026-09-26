@@ -14,7 +14,7 @@ import type {
 import { isSyncActive } from "../domain/sync.model";
 import { fetchSyncStatus } from "../infrastructure/sync-status-api.client";
 import { IntegrationEventBanner } from "./integration-event-banner";
-import { SyncCircularProgress } from "./sync-circular-progress";
+import { EmptySyncCircularProgress, SyncCircularProgress } from "./sync-circular-progress";
 import { SyncErrorBanner } from "./sync-error-banner";
 import { SyncNowButton } from "./sync-now-button.client";
 
@@ -146,6 +146,9 @@ export function SyncStatusCard({
 
   const errorCount = overview?.openErrorsCount ?? job?.failedItems ?? 0;
   const reviewSyncId = job?.id ?? overview?.latestSync?.id;
+  const lastSuccessfulSyncAt = job?.status === "COMPLETED"
+    ? job.finishedAt ?? overview?.lastSuccessfulSyncAt ?? null
+    : overview?.lastSuccessfulSyncAt ?? null;
 
   return (
     <Card style={{ marginTop: 24 }} title="Sincronización Mercado Libre">
@@ -159,7 +162,7 @@ export function SyncStatusCard({
             <SyncCircularProgress job={job} />
             <Space orientation="vertical" size={4}>
               <Typography.Text><strong>Estado:</strong> {statusLabel(job.status)}</Typography.Text>
-              <Typography.Text><strong>Última sincronización:</strong> {formatDate(job.finishedAt ?? overview?.latestSync?.finishedAt ?? null)}</Typography.Text>
+              <Typography.Text><strong>Última sincronización:</strong> {formatDate(lastSuccessfulSyncAt)}</Typography.Text>
               <Typography.Text><strong>Próxima automática:</strong> {formatNextSync(overview?.nextAutomaticSyncAt)}</Typography.Text>
               {job.status === "COMPLETED_WITH_ERRORS" ? (
                 <Typography.Text type="warning">{job.failedItems} publicaciones necesitan revisión</Typography.Text>
@@ -170,7 +173,10 @@ export function SyncStatusCard({
             </Space>
           </Flex>
         ) : (
-          <Typography.Text type="secondary">Todavía no hay sincronizaciones registradas.</Typography.Text>
+          <Flex align="center" gap={24} justify="space-between" wrap>
+            <EmptySyncCircularProgress />
+            <Typography.Text type="secondary"><strong>Estado:</strong> Sin sincronización activa</Typography.Text>
+          </Flex>
         )}
         <Space wrap>
           <SyncNowButton
@@ -201,17 +207,28 @@ export function SyncStatusCard({
 function statusLabel(status: SyncJob["status"]): string {
   const labels: Readonly<Record<SyncJob["status"], string>> = {
     PENDING: "Pendiente",
-    RUNNING: "En proceso",
+    RUNNING: "Sincronizando",
     COMPLETED: "Completada",
     COMPLETED_WITH_ERRORS: "Completada con errores",
-    FAILED: "Fallida",
+    FAILED: "Error",
     CANCELLED: "Cancelada",
   };
   return labels[status];
 }
 
 function formatDate(value: string | null): string {
-  return value ? new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value)) : "—";
+  if (!value) return "—";
+  const parts = new Intl.DateTimeFormat("es-AR", {
+    day: "2-digit",
+    hour: "2-digit",
+    hour12: false,
+    minute: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).formatToParts(new Date(value));
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((entry) => entry.type === type)?.value ?? "";
+  return `${part("day")}/${part("month")}/${part("year")} ${part("hour")}:${part("minute")}`;
 }
 
 function formatNextSync(value: string | undefined): string {
