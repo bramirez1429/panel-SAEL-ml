@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { createPublicationsResponse } from "./publications-response.fixture";
+import {
+  createPublicationsResponse,
+  userProductPublicationDto,
+} from "./publications-response.fixture";
 import { publicationsResponseSchema } from "./publications-response.schema";
 
 describe("publicationsResponseSchema", () => {
@@ -8,6 +11,22 @@ describe("publicationsResponseSchema", () => {
     expect(
       publicationsResponseSchema.safeParse(createPublicationsResponse()).success,
     ).toBe(true);
+  });
+
+  it("accepts a Direct family without a representative itemId", () => {
+    expect(
+      publicationsResponseSchema.safeParse(
+        createPublicationsResponse([userProductPublicationDto]),
+      ).success,
+    ).toBe(true);
+  });
+
+  it("rejects the Supabase snapshot response contract", () => {
+    expect(publicationsResponseSchema.safeParse({
+      paging: { total: 1, offset: 0, limit: 20 },
+      count: 1,
+      publications: [],
+    }).success).toBe(false);
   });
 
   it("rejects unsupported grouped models", () => {

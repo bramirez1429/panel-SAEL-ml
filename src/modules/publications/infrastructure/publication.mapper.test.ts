@@ -26,7 +26,7 @@ describe("mapPublicationsResponse", () => {
         group: expect.objectContaining({ type: "LEGACY", childrenCount: 0 }),
       }),
       expect.objectContaining({
-        id: "MLA200",
+        id: "200",
         title: "Familia real",
         stock: 3,
         sold: 10,

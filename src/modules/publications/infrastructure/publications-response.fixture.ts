@@ -26,7 +26,7 @@ export const userProductPublicationDto = {
   familyName: "Familia real",
   variantsCount: 2,
   itemsCount: 2,
-  itemId: "MLA200",
+  itemId: null,
   userProductId: "MLAU200",
   title: "Variante azul",
   priceFrom: 1500,

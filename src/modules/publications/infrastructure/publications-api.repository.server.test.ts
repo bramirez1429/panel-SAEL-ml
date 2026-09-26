@@ -10,7 +10,10 @@ import {
   familyPublicationDetailResponse,
 } from "./publication-detail-response.fixture";
 import { PublicationsApiRepository } from "./publications-api.repository.server";
-import { createPublicationsResponse } from "./publications-response.fixture";
+import {
+  createPublicationsResponse,
+  userProductPublicationDto,
+} from "./publications-response.fixture";
 
 describe("PublicationsApiRepository", () => {
   it("requests the active grouped NestJS endpoint with its cursor", async () => {
@@ -39,6 +42,25 @@ describe("PublicationsApiRepository", () => {
     get.mockResolvedValue(createPublicationsResponse());
     await new PublicationsApiRepository({ get }).getPublications({ pageSize: 20, cursor: null });
     expect(get).toHaveBeenCalledWith("/mercadolibre/direct/publicaciones/agrupadas?limit=20", { timeoutMs: 60_000 });
+  });
+
+  it("accepts the grouped Direct contract when a family has no representative MLA", async () => {
+    const get = vi.fn<HttpGetClient["get"]>();
+    get.mockResolvedValue(
+      createPublicationsResponse([userProductPublicationDto]),
+    );
+
+    await expect(
+      new PublicationsApiRepository({ get }).getPublications({
+        pageSize: 20,
+        cursor: null,
+      }),
+    ).resolves.toMatchObject({
+      publications: [expect.objectContaining({
+        id: "200",
+        group: expect.objectContaining({ familyId: "200", itemId: null }),
+      })],
+    });
   });
 
   it("translates an invalid payload into a controlled API error", async () => {

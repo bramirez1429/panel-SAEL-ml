@@ -25,7 +25,7 @@ const familySummaryDtoSchema = z.object({
   familyName: z.string().nullable(),
   variantsCount: z.number().int().nonnegative(),
   itemsCount: z.number().int().nonnegative(),
-  itemId: z.string().min(1),
+  itemId: z.string().min(1).nullable(),
   userProductId: z.string().nullable(),
   title: z.string().nullable(),
   priceFrom: z.number().nullable(),

@@ -39,8 +39,8 @@ function mapSharedProduct(dto: SharedProductDto): Publication {
 
 function mapFamilySummary(dto: FamilySummaryDto): Publication {
   return {
-    id: dto.itemId,
-    title: dto.familyName ?? dto.title ?? dto.itemId,
+    id: dto.itemId ?? dto.familyId,
+    title: dto.familyName ?? dto.title ?? dto.itemId ?? dto.familyId,
     channel: "MERCADO_LIBRE",
     status: null,
     thumbnailUrl: dto.thumbnail,
