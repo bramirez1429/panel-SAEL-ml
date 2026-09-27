@@ -13,12 +13,20 @@ export async function searchWorkspacePublications(
     return { status: "success", searchType: "TITLE", query: "", items: [] };
   }
 
-  const limit = criteria.type === "MLA" ? 1 : 4;
-  const items = await repository.search({
-    query: criteria.value,
-    limit,
-  });
-
+  const limit = criteria.type === "MLA"
+    ? 1
+    : criteria.type === "TITLE"
+      ? 4
+      : 20;
+  let items: Awaited<ReturnType<PublicationWorkspaceRepository["search"]>>;
+  try {
+    items = await repository.search({
+      query: criteria.value,
+      limit,
+    });
+  } catch {
+    return { status: "error" };
+  }
   return {
     status: "success",
     searchType: criteria.type,

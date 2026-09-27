@@ -71,7 +71,7 @@ describe("PublicationWorkspaceApiRepository", () => {
     });
   });
 
-  it("rechaza el contrato anterior que omitía userProductId", async () => {
+  it("interpreta un userProductId faltante como null", async () => {
     const itemWithoutUserProductId = searchItem(
       "MLA1",
       "MLAU1",
@@ -92,7 +92,12 @@ describe("PublicationWorkspaceApiRepository", () => {
         get,
         patch: vi.fn(),
       }).search({ query: "4998600864813595", limit: 4 }),
-    ).rejects.toMatchObject({ code: "API_INVALID_RESPONSE" });
+    ).resolves.toEqual([
+      expect.objectContaining({
+        itemId: "MLA1",
+        userProductId: null,
+      }),
+    ]);
   });
 
   it("usa la primera secure_url del detalle como imagen principal", async () => {
@@ -103,8 +108,10 @@ describe("PublicationWorkspaceApiRepository", () => {
       familyId: "456",
       status: "active",
       sku: "SKU-1",
-      stock: { available: 2 },
-      price: { current: 100, currency: "ARS" },
+      stock: { available: 2, sold: 7 },
+      price: commercialPrice(),
+      friendly: commercialFriendly(true, 20),
+      installmentLabel: "6 cuotas",
       thumbnail: "https://img/thumbnail.jpg",
       pictures: [{
         secure_url: "https://img/secure.jpg",
@@ -120,39 +127,88 @@ describe("PublicationWorkspaceApiRepository", () => {
       "/mercadolibre/direct/publicaciones/MLA123",
     );
     expect(result.imageUrl).toBe("https://img/secure.jpg");
+    expect(result).toMatchObject({
+      price: 45_000,
+      sold: 7,
+      hasActivePromotion: true,
+      promotionDiscountPercent: 20,
+      installmentLabel: "6 cuotas",
+    });
   });
 
-  it("mapea todos los MLA de una familia", async () => {
+  it("mapea los datos comerciales de todos los MLA desde el detalle de familia", async () => {
     const get = vi.fn<HttpGetClient["get"]>().mockResolvedValue({
       model: "VARIANT_PRICING",
       familyId: "456",
       familyName: "Remeras Miami",
-      variants: [{
-        userProductId: "MLAU1",
-        items: [familyChild("MLA1", "active"), familyChild("MLA2", "paused")],
-      }],
+      itemsCount: 2,
+      variants: [
+        familyChild("MLA1", "active", true),
+        familyChild("MLA2", "paused", false),
+      ],
     });
-    const loadSku = vi.fn().mockImplementation(async (target) => `SKU-${target.itemId}`);
 
-    const result = await new PublicationWorkspaceApiRepository({ get, patch: vi.fn() }, loadSku).getFamily("456");
+    const result = await new PublicationWorkspaceApiRepository({ get, patch: vi.fn() }).getFamily("456");
 
-    expect(get).toHaveBeenCalledWith("/mercadolibre/direct/familias/456/resumen");
+    expect(get).toHaveBeenCalledWith("/mercadolibre/direct/familias/456");
     expect(result.children).toEqual([
-      expect.objectContaining({ itemId: "MLA1", sku: "SKU-MLA1" }),
-      expect.objectContaining({ itemId: "MLA2", sku: "SKU-MLA2" }),
+      expect.objectContaining({
+        itemId: "MLA1",
+        sku: "SKU-MLA1",
+        price: 45_000,
+        sold: 12,
+        hasActivePromotion: true,
+        promotionDiscountPercent: 20,
+        installmentLabel: "6 cuotas",
+      }),
+      expect.objectContaining({
+        itemId: "MLA2",
+        sku: "SKU-MLA2",
+        sold: 4,
+        hasActivePromotion: false,
+      }),
     ]);
   });
 });
 
-function familyChild(itemId: string, status: string) {
+function familyChild(itemId: string, status: string, promoted: boolean) {
   return {
     itemId,
+    userProductId: `MLAU-${itemId}`,
     title: `Remera ${itemId}`,
     status,
-    stock: 2,
-    price: 100,
+    stock: { available: 2, sold: itemId === "MLA1" ? 12 : 4 },
+    sku: { sellerCustomField: `SKU-${itemId}`, inventoryId: null },
+    price: commercialPrice(),
+    friendly: commercialFriendly(promoted, promoted ? 20 : 0),
+    installmentLabel: promoted ? "6 cuotas" : null,
     thumbnail: null,
     pictures: [],
+  };
+}
+
+function commercialPrice() {
+  return {
+    current: 45_000,
+    regular: 56_250,
+    standard: 56_250,
+    currency: "ARS",
+  };
+}
+
+function commercialFriendly(hasPromotion: boolean, discountPercent: number) {
+  return {
+    pricing: {
+      ...commercialPrice(),
+      hasDiscount: discountPercent > 0,
+      discountPercent,
+    },
+    promotion: {
+      hasActivePromotion: hasPromotion,
+      activeCount: hasPromotion ? 1 : 0,
+      candidateCount: 0,
+      pendingCount: 0,
+    },
   };
 }
 

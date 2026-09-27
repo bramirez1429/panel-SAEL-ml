@@ -117,7 +117,7 @@ export function PublicationPromotionWorkspace({ onSearch, onSelect, onSave, onSt
       {viewState === "searching" && <WorkspaceMessage>Consultando publicación...</WorkspaceMessage>}
       {viewState === "empty" && <WorkspaceMessage>No encontramos publicaciones.</WorkspaceMessage>}
       {viewState === "error" && <WorkspaceMessage>No pudimos consultar la publicación.</WorkspaceMessage>}
-      {viewState === "results" && <PublicationMatches items={matches} onSelect={(item) => loadSelection(item.familyId ? { familyId: item.familyId } : { itemId: item.itemId })} />}
+      {viewState === "results" && <PublicationMatches items={matches} onSelect={(item) => loadSelection({ itemId: item.itemId })} />}
       {viewState === "selected" && selection && (
         <WorkspaceTabs selection={selection} onSave={onSave} onStatusChange={onStatusChange} onTitleSave={onTitleSave} />
       )}
@@ -192,6 +192,8 @@ function FamilyWorkspace({ family, onSave, onStatusChange, onTitleSave }: Readon
   onStatusChange: WorkspaceStatusAction;
   onTitleSave: WorkspaceTitleAction;
 }>) {
+  const totalSold = family.children.reduce((total, child) => total + child.sold, 0);
+
   return (
     <section className={styles.familyWorkspace}>
       <Card>
@@ -205,6 +207,7 @@ function FamilyWorkspace({ family, onSave, onStatusChange, onTitleSave }: Readon
               <EditableWorkspaceTitle initialTitle={family.familyName ?? `Familia ${family.familyId}`} onSave={onTitleSave} target={{ type: "family", familyId: family.familyId }} />
             </div>
             <Typography.Text>{family.familyId}</Typography.Text>
+            <div><Typography.Text strong>Total vendidos: {totalSold}</Typography.Text></div>
           </div>
         </div>
       </Card>

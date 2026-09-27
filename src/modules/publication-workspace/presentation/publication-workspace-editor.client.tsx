@@ -186,6 +186,21 @@ export function PublicationWorkspaceEditor({ publication, onSave, onStatusChange
             <SaveIndicator field="stock" savedField={savedField} savingField={savingField} />
           </span>
         </label>
+        <div className={styles.commercialDetails}>
+          <CommercialDetail
+            label="Precio contado"
+            value={formatPrice(publication.price, publication.currency)}
+          />
+          <CommercialDetail
+            label="Precio en cuotas"
+            value={publication.installmentLabel ?? "No informado"}
+          />
+          <CommercialDetail
+            label="Promoción"
+            value={promotionLabel(publication)}
+          />
+          <CommercialDetail label="Vendidos" value={String(publication.sold)} />
+        </div>
         <Space className={styles.childActions} wrap>
           {publication.imageUrl && <Button onClick={() => setShowLargeImage((visible) => !visible)}>{showLargeImage ? "Ocultar imagen" : "Ver imagen"}</Button>}
         </Space>
@@ -193,6 +208,35 @@ export function PublicationWorkspaceEditor({ publication, onSave, onStatusChange
       {showLargeImage && publication.imageUrl && <div className={styles.expandedImage}><Image alt={publication.title} className={styles.image} preview={{ src: publication.imageUrl }} src={publication.imageUrl} /></div>}
     </Card>
   );
+}
+
+function CommercialDetail({ label, value }: Readonly<{ label: string; value: string }>) {
+  return (
+    <span className={styles.commercialDetail}>
+      <Typography.Text type="secondary">{label}</Typography.Text>
+      <Typography.Text strong>{value}</Typography.Text>
+    </span>
+  );
+}
+
+function promotionLabel(publication: PublicationWorkspaceItem): string {
+  if (!publication.hasActivePromotion) return "Sin promoción";
+  return publication.promotionDiscountPercent && publication.promotionDiscountPercent > 0
+    ? `${publication.promotionDiscountPercent}% OFF`
+    : "Promoción activa";
+}
+
+function formatPrice(value: number | null, currency: string | null): string {
+  if (value === null) return "Sin información";
+  try {
+    return new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency: currency ?? "ARS",
+      maximumFractionDigits: 0,
+    }).format(value);
+  } catch {
+    return String(value);
+  }
 }
 
 export function EditableWorkspaceTitle({ initialTitle, onSave, target }: Readonly<{

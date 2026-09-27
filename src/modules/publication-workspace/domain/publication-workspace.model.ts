@@ -8,8 +8,13 @@ export type PublicationWorkspaceItem = Readonly<{
   sku: string | null;
   status: string;
   stock: number;
+  sold: number;
   price: number | null;
+  regularPrice: number | null;
   currency: string | null;
+  hasActivePromotion: boolean;
+  promotionDiscountPercent: number | null;
+  installmentLabel: string | null;
 }>;
 
 export type PublicationWorkspaceFamily = Readonly<{

@@ -15,8 +15,13 @@ const publication: PublicationWorkspaceItem = {
   sku: "SKU-1",
   status: "active",
   stock: 12,
-  price: 100,
+  sold: 7,
+  price: 45_000,
+  regularPrice: 56_250,
   currency: "ARS",
+  hasActivePromotion: true,
+  promotionDiscountPercent: 20,
+  installmentLabel: "6 cuotas",
 };
 
 const update = vi.fn(async (input) => ({
@@ -40,6 +45,28 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("PublicationWorkspaceEditor", () => {
+  it("muestra precio, cuotas, promoción y vendidos reales", () => {
+    renderEditor();
+
+    expect(screen.getByText("$ 45.000")).toBeInTheDocument();
+    expect(screen.getByText("6 cuotas")).toBeInTheDocument();
+    expect(screen.getByText("20% OFF")).toBeInTheDocument();
+    expect(screen.getByText("7")).toBeInTheDocument();
+  });
+
+  it("muestra Sin promoción cuando el MLA no tiene una activa", () => {
+    render(
+      <PublicationWorkspaceEditor
+        publication={{ ...publication, hasActivePromotion: false, promotionDiscountPercent: null }}
+        onSave={update}
+        onStatusChange={updateStatus}
+        onTitleSave={updateTitle}
+      />,
+    );
+
+    expect(screen.getByText("Sin promoción")).toBeInTheDocument();
+  });
+
   it("copia el MLA", async () => {
     const user = userEvent.setup();
     const clipboardWrite = vi.spyOn(navigator.clipboard, "writeText");

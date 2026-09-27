@@ -11,7 +11,12 @@ afterEach(cleanup);
 const child = (itemId: string, status: string): PublicationWorkspaceItem => ({
   imageUrl: null, thumbnailUrl: null, title: `Remera ${itemId}`, itemId,
   familyId: "456", model: "VARIANT_PRICING", sku: `SKU-${itemId}`,
-  status, stock: itemId === "MLA1" ? 4 : 2, price: 19990, currency: "ARS",
+  status, stock: itemId === "MLA1" ? 4 : 2,
+  sold: itemId === "MLA1" ? 12 : 4,
+  price: 45_000, regularPrice: 56_250, currency: "ARS",
+  hasActivePromotion: itemId === "MLA1",
+  promotionDiscountPercent: itemId === "MLA1" ? 20 : null,
+  installmentLabel: itemId === "MLA1" ? "6 cuotas" : null,
 });
 
 const successfulSave = vi.fn().mockResolvedValue({ ok: true, confirmed: {} });
@@ -89,6 +94,11 @@ describe("PublicationPromotionWorkspace", () => {
     expect(screen.getByText("Remera MLA1")).toBeInTheDocument();
     expect(screen.getByRole("switch", { name: "Estado de MLA1" })).toBeChecked();
     expect(screen.getByRole("switch", { name: "Estado de MLA2" })).not.toBeChecked();
+    expect(screen.getByText("Total vendidos: 16")).toBeInTheDocument();
+    expect(screen.getAllByText("$ 45.000")).toHaveLength(2);
+    expect(screen.getByText("20% OFF")).toBeInTheDocument();
+    expect(screen.getByText("Sin promoción")).toBeInTheDocument();
+    expect(screen.getByText("6 cuotas")).toBeInTheDocument();
   });
 
   it("una búsqueda por MLA muestra solamente esa publicación", async () => {
@@ -102,6 +112,49 @@ describe("PublicationPromotionWorkspace", () => {
     expect(onSelect).toHaveBeenCalledWith({ itemId: "MLA1" });
     expect(await screen.findByText("MLA1")).toBeInTheDocument();
     expect(screen.queryByText("Publicaciones de la familia")).not.toBeInTheDocument();
+  });
+
+  it("una búsqueda por MLAU abre sus MLA asociados", async () => {
+    const user = userEvent.setup();
+    const onSearch = vi.fn().mockResolvedValue({
+      status: "success",
+      searchType: "MLAU",
+      query: "MLAU123",
+      items: [
+        { itemId: "MLA1", familyId: "456", userProductId: "MLAU123", title: "Remera 1", imageUrl: null, price: 1, currency: "ARS", status: "active", stock: 4 },
+        { itemId: "MLA2", familyId: "456", userProductId: "MLAU123", title: "Remera 2", imageUrl: null, price: 1, currency: "ARS", status: "active", stock: 2 },
+      ],
+    });
+    const onSelect = vi.fn().mockResolvedValue({
+      status: "success",
+      selection: { type: "family", familyId: "456", familyName: "Remeras", imageUrl: null, children: [child("MLA1", "active"), child("MLA2", "active")] },
+    });
+    renderWorkspace(onSearch, onSelect);
+
+    await search(user, "MLAU123");
+
+    expect(onSelect).toHaveBeenCalledWith({ familyId: "456", itemIds: ["MLA1", "MLA2"] });
+    expect(await screen.findByText("Publicaciones de la familia")).toBeInTheDocument();
+  });
+
+  it("al elegir por título abre solamente el MLA seleccionado", async () => {
+    const user = userEvent.setup();
+    const matches = [
+      { itemId: "MLA1", familyId: "456", userProductId: "MLAU1", title: "Remera feminismo negra", imageUrl: null, price: 1, currency: "ARS", status: "active", stock: 4 },
+      { itemId: "MLA2", familyId: "456", userProductId: "MLAU2", title: "Remera feminismo blanca", imageUrl: null, price: 1, currency: "ARS", status: "active", stock: 2 },
+    ];
+    const onSearch = vi.fn().mockResolvedValue({ status: "success", searchType: "TITLE", query: "feminismo", items: matches });
+    const onSelect = vi.fn().mockResolvedValue({
+      status: "success",
+      selection: { type: "publication", publication: child("MLA2", "active") },
+    });
+    renderWorkspace(onSearch, onSelect);
+    await search(user, "feminismo");
+
+    await user.click(await screen.findByRole("button", { name: /Remera feminismo blanca/ }));
+
+    expect(onSelect).toHaveBeenCalledWith({ itemId: "MLA2" });
+    expect(onSelect).not.toHaveBeenCalledWith(expect.objectContaining({ familyId: "456" }));
   });
 
   it("la tab Promoción no dispara consultas adicionales", async () => {

@@ -2,7 +2,6 @@ import "server-only";
 
 import { ApiError } from "@/shared/api/api-error";
 import type { AuthenticatedHttpClient } from "@/shared/api/authenticated-http-client.server";
-import type { PublicationEditTarget } from "@/modules/publications/domain/publication-edit.repository";
 
 import { getBestPublicationImage } from "../application/get-best-publication-image";
 import type { PublicationWorkspaceRepository, PublicationWorkspaceSearchRequest } from "../domain/publication-workspace.repository";
@@ -19,7 +18,6 @@ export class PublicationWorkspaceApiRepository
 {
   constructor(
     private readonly httpClient: Pick<AuthenticatedHttpClient, "get" | "patch">,
-    private readonly loadSku: (target: PublicationEditTarget) => Promise<string | null> = async () => null,
   ) {}
 
   async search(request: PublicationWorkspaceSearchRequest) {
@@ -45,7 +43,7 @@ export class PublicationWorkspaceApiRepository
     return validation.data.items.map((item) => ({
       itemId: item.itemId,
       familyId: item.familyId,
-      userProductId: item.userProductId,
+      userProductId: item.userProductId ?? null,
       title: item.title ?? item.itemId,
       imageUrl: item.thumbnail,
       price: item.price,
@@ -80,14 +78,19 @@ export class PublicationWorkspaceApiRepository
       sku: publication.sku,
       status: publication.status ?? "Sin estado",
       stock: publication.stock.available,
+      sold: publication.stock.sold,
       price: publication.price.current,
+      regularPrice: publication.price.regular,
       currency: publication.price.currency,
+      hasActivePromotion: publication.friendly.promotion.hasActivePromotion,
+      promotionDiscountPercent: publication.friendly.pricing.discountPercent,
+      installmentLabel: publication.installmentLabel ?? null,
     };
   }
 
   async getFamily(familyId: string) {
     const response = await this.httpClient.get(
-      `/mercadolibre/direct/familias/${encodeURIComponent(familyId)}/resumen`,
+      `/mercadolibre/direct/familias/${encodeURIComponent(familyId)}`,
     );
     const validation = publicationWorkspaceFamilyResponseSchema.safeParse(response);
 
@@ -100,21 +103,24 @@ export class PublicationWorkspaceApiRepository
     }
 
     const family = validation.data;
-    const children = await Promise.all(
-      family.variants.flatMap((variant) => variant.items).map(async (item) => ({
+    const children = family.variants.map((item) => ({
         imageUrl: getBestPublicationImage(item),
         thumbnailUrl: item.thumbnail,
         title: item.title ?? item.itemId,
         itemId: item.itemId,
         familyId: family.familyId,
         model: "VARIANT_PRICING" as const,
-        sku: await this.loadSku({ type: "family", familyId: family.familyId, itemId: item.itemId }),
+        sku: item.sku.sellerCustomField,
         status: item.status ?? "Sin estado",
-        stock: item.stock,
-        price: item.price,
-        currency: null,
-      })),
-    );
+        stock: item.stock.available,
+        sold: item.stock.sold,
+        price: item.price.current,
+        regularPrice: item.price.regular,
+        currency: item.price.currency,
+        hasActivePromotion: item.friendly.promotion.hasActivePromotion,
+        promotionDiscountPercent: item.friendly.pricing.discountPercent,
+        installmentLabel: item.installmentLabel ?? null,
+      }));
 
     return {
       type: "family" as const,

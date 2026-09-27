@@ -11,10 +11,14 @@ import { createPublicationWorkspaceRepository } from "../publication-workspace.c
 export async function searchWorkspacePublicationsAction(
   term: string,
 ): Promise<PublicationWorkspaceSearchResult> {
-  return searchWorkspacePublications(
-    createPublicationWorkspaceRepository(),
-    term,
-  );
+  try {
+    return await searchWorkspacePublications(
+      createPublicationWorkspaceRepository(),
+      term,
+    );
+  } catch {
+    return { status: "error" };
+  }
 }
 
 export async function selectWorkspacePublicationAction(

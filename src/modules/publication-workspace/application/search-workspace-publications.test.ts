@@ -33,7 +33,7 @@ describe("searchWorkspacePublications", () => {
     expect(search).toHaveBeenCalledWith({ query: "MLA123456789", limit: 1 });
   });
 
-  it("conserva todos los hijos de una Family ID", async () => {
+  it("conserva todos los hijos activos de una Family ID", async () => {
     const paused = { ...activeItem("MLA1"), status: "paused" };
     const { repository } = createRepository([
       paused,
@@ -41,14 +41,13 @@ describe("searchWorkspacePublications", () => {
       activeItem("MLA3"),
     ]);
 
-    const result = await searchWorkspacePublications(repository, "123456789");
+    const result = await searchWorkspacePublications(repository, "118836408244533");
 
     expect(result).toMatchObject({
       status: "success",
       searchType: "FAMILY",
-      query: "123456789",
+      query: "118836408244533",
       items: [
-        { itemId: "MLA1", status: "paused" },
         { itemId: "MLA2", status: "active" },
         { itemId: "MLA3", status: "active" },
       ],
@@ -66,7 +65,7 @@ describe("searchWorkspacePublications", () => {
     expect(result.status === "success" && result.items).toHaveLength(4);
   });
 
-  it("consulta MLAU con limit 4 y conserva todos sus resultados", async () => {
+  it("consulta MLAU sin limitar sus asociados y conserva solamente los activos", async () => {
     const { repository, search } = createRepository([
       { ...activeItem("MLA1"), userProductId: "MLAU123" },
       { ...activeItem("MLA2"), userProductId: "MLAU123", status: "paused" },
@@ -74,13 +73,12 @@ describe("searchWorkspacePublications", () => {
 
     const result = await searchWorkspacePublications(repository, "mlau123");
 
-    expect(search).toHaveBeenCalledWith({ query: "MLAU123", limit: 4 });
+    expect(search).toHaveBeenCalledWith({ query: "MLAU123", limit: 20 });
     expect(result).toMatchObject({
       status: "success",
       searchType: "MLAU",
       items: [
         { itemId: "MLA1", userProductId: "MLAU123" },
-        { itemId: "MLA2", userProductId: "MLAU123", status: "paused" },
       ],
     });
   });
@@ -96,12 +94,12 @@ describe("searchWorkspacePublications", () => {
     });
   });
 
-  it("propaga un error real del repositorio", async () => {
+  it("convierte un error real del repositorio en status error", async () => {
     const { repository, search } = createRepository([]);
     search.mockRejectedValue(new Error("Backend unavailable"));
 
     await expect(
       searchWorkspacePublications(repository, "Remera"),
-    ).rejects.toThrow("Backend unavailable");
+    ).resolves.toEqual({ status: "error" });
   });
 });
