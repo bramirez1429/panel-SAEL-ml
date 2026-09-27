@@ -20,6 +20,7 @@ import {
   type WorkspaceStatusAction,
   type WorkspaceTitleAction,
 } from "./publication-workspace-editor.client";
+import { PublicationWorkspacePromotions } from "./publication-workspace-promotions.client";
 import styles from "./publication-promotion-workspace.module.css";
 
 type Props = Readonly<{
@@ -166,8 +167,18 @@ function WorkspaceTabs({ selection, onSave, onStatusChange, onTitleSave }: Reado
   onStatusChange: WorkspaceStatusAction;
   onTitleSave: WorkspaceTitleAction;
 }>) {
+  const [activeTab, setActiveTab] = useState("publication");
+  const [promotionOpened, setPromotionOpened] = useState(false);
+
+  function changeTab(key: string): void {
+    setActiveTab(key);
+    if (key === "promotion") setPromotionOpened(true);
+  }
+
   return (
     <Tabs
+      activeKey={activeTab}
+      onChange={changeTab}
       items={[
         {
           key: "publication",
@@ -179,7 +190,9 @@ function WorkspaceTabs({ selection, onSave, onStatusChange, onTitleSave }: Reado
         {
           key: "promotion",
           label: "Promoción",
-          children: <Card><Typography.Text type="secondary">Las promociones todavía no están disponibles en este workspace.</Typography.Text></Card>,
+          children: promotionOpened
+            ? <PublicationWorkspacePromotions selection={selection} />
+            : null,
         },
       ]}
     />

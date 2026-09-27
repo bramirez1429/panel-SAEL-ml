@@ -20,9 +20,10 @@ type Props = Readonly<{
   selection: PromotionDeactivationSelection | null;
   open: boolean;
   onClose: () => void;
+  onCompleted?: () => void;
 }>;
 
-export function PromotionDeactivationModal({ selection, open, onClose }: Props) {
+export function PromotionDeactivationModal({ selection, open, onClose, onCompleted }: Props) {
   const router = useRouter();
   const submission = useSingleSubmission();
   const [failure, setFailure] = useState<PromotionActionFailure | null>(null);
@@ -42,6 +43,7 @@ export function PromotionDeactivationModal({ selection, open, onClose }: Props) 
     }
 
     invalidateOptions([selection.publication.itemId]);
+    onCompleted?.();
     router.refresh();
     onClose();
     message.success("Dejaste de participar de la promoción.");

@@ -30,12 +30,12 @@ export type PromotionRow = Readonly<{
   stock: number | null;
   freeShipping: boolean | null;
   installmentLabel: string | null;
-  productGroup: PromotionProductGroup;
-  price: number;
+  productGroup?: PromotionProductGroup;
+  price: number | null;
   currentPromotion: PromotionDetails | null;
   hasActivePromotion: boolean;
-  availablePromotionsCount: number;
-  promotionStatus: PromotionStatus;
+  availablePromotionsCount?: number;
+  promotionStatus?: PromotionStatus;
 }>;
 
 export type PromotionsPage = Readonly<{

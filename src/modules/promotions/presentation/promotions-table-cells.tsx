@@ -57,11 +57,13 @@ export function PublicationCell({
           />
         </div>
 
-        <div style={{ marginTop: 2 }}>
-          <Typography.Text strong>
-            {money(publication.price)}
-          </Typography.Text>
-        </div>
+        {publication.price !== null ? (
+          <div style={{ marginTop: 2 }}>
+            <Typography.Text strong>
+              {money(publication.price)}
+            </Typography.Text>
+          </div>
+        ) : null}
 
         {publication.stock !== null ? (
           <div>
