@@ -35,7 +35,7 @@ type Props = Readonly<{
   open: boolean;
   row: PromotionRow | null;
   onClose: () => void;
-  onCompleted?: () => void;
+  onCompleted?: () => void | Promise<void>;
 }>;
 
 type OptionsState = "idle" | "loading" | "success" | "error";
@@ -113,11 +113,15 @@ export function PromotionOptionsModal({ open, row, onClose, onCompleted }: Props
       {
         showSuccess: (text) => message.success(text),
         showPartial: setPartial,
-        close: onClose,
-        refresh: () => router.refresh(),
+        close: () => undefined,
+        refresh: () => undefined,
       },
     );
-    if (outcome === "SUCCESS") onCompleted?.();
+    if (attempt.value.result.successfulItems > 0) await onCompleted?.();
+    if (outcome === "SUCCESS") {
+      onClose();
+      router.refresh();
+    }
   }
 
   const closeSafely = () => {
@@ -143,10 +147,7 @@ export function PromotionOptionsModal({ open, row, onClose, onCompleted }: Props
       ) : partial ? (
         <Space direction="vertical" size="middle" style={{ width: "100%" }}>
           <PromotionExecutionStatus result={partial} operation="apply" />
-          <Button onClick={() => {
-            onCompleted?.();
-            onClose();
-          }}>Cerrar</Button>
+          <Button onClick={onClose}>Cerrar</Button>
         </Space>
       ) : selected ? (
         <SelectedPromotion

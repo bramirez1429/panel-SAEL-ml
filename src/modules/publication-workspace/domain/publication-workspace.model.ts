@@ -1,3 +1,9 @@
+export type PublicationWorkspaceAttribute = Readonly<{
+  id: string;
+  name: string | null;
+  value: string | null;
+}>;
+
 export type PublicationWorkspaceItem = Readonly<{
   imageUrl: string | null;
   thumbnailUrl: string | null;
@@ -15,6 +21,7 @@ export type PublicationWorkspaceItem = Readonly<{
   hasActivePromotion: boolean;
   promotionDiscountPercent: number | null;
   installmentLabel: string | null;
+  attributes?: readonly PublicationWorkspaceAttribute[];
 }>;
 
 export type PublicationWorkspaceFamily = Readonly<{

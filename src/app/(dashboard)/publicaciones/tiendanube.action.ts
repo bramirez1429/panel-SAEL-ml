@@ -2,8 +2,14 @@
 
 import { ApiError } from "@/shared/api/api-error";
 import { AppError } from "@/shared/errors/app-error";
-import { createReplicatePublicationCommand } from "@/modules/tiendanube/tiendanube.composition.server";
-import type { ReplicationOptions } from "@/modules/tiendanube/domain/tiendanube-replication.model";
+import {
+  createGetTiendanubeReplicationStatusQuery,
+  createReplicatePublicationCommand,
+} from "@/modules/tiendanube/tiendanube.composition.server";
+import type {
+  ReplicationOptions,
+  TiendanubeReplicationState,
+} from "@/modules/tiendanube/domain/tiendanube-replication.model";
 
 export type ReplicatePublicationActionResult =
   | Readonly<{ ok: true; action: "created" | "updated" }>
@@ -21,5 +27,27 @@ export async function replicatePublicationAction(sourceKey: string, options: Rep
     }
     if (error instanceof AppError) return { ok: false, message: error.message };
     return { ok: false, message: "No se pudo replicar la publicación en Tiendanube." };
+  }
+}
+
+export async function getTiendanubeReplicationStateAction(
+  sourceKey: string,
+): Promise<TiendanubeReplicationState> {
+  const fallback: TiendanubeReplicationState = {
+    sourceKey,
+    status: "UNKNOWN",
+    tiendanubeProductId: null,
+  };
+  if (!sourceKey.trim()) return fallback;
+
+  try {
+    const states = await createGetTiendanubeReplicationStatusQuery().execute([sourceKey]);
+    return states.find((state) => state.sourceKey === sourceKey) ?? {
+      sourceKey,
+      status: "NOT_REPLICATED",
+      tiendanubeProductId: null,
+    };
+  } catch {
+    return fallback;
   }
 }

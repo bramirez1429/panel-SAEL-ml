@@ -46,6 +46,7 @@ export type WorkspaceTitleAction = (input: Readonly<{
 
 type Props = Readonly<{
   publication: PublicationWorkspaceItem;
+  onChanged?: () => void | Promise<void>;
   onSave: WorkspaceSaveAction;
   onStatusChange: WorkspaceStatusAction;
   onTitleSave: WorkspaceTitleAction;
@@ -53,7 +54,7 @@ type Props = Readonly<{
   titleTarget?: WorkspaceTitleTarget;
 }>;
 
-export function PublicationWorkspaceEditor({ publication, onSave, onStatusChange, onTitleSave, showFamilyId = false, titleTarget }: Props) {
+export function PublicationWorkspaceEditor({ publication, onChanged, onSave, onStatusChange, onTitleSave, showFamilyId = false, titleTarget }: Props) {
   const [messageApi, contextHolder] = message.useMessage();
   const [sku, setSku] = useState(publication.sku ?? "");
   const [stock, setStock] = useState<number | null>(publication.stock);
@@ -87,6 +88,7 @@ export function PublicationWorkspaceEditor({ publication, onSave, onStatusChange
       }
       setSku(nextSku);
       setSavedSku(nextSku);
+      await onChanged?.();
       showSaved("sku");
     } catch {
       rollbackSku("No se pudo actualizar el SKU.");
@@ -117,6 +119,7 @@ export function PublicationWorkspaceEditor({ publication, onSave, onStatusChange
         return;
       }
       setSavedStock(nextStock);
+      await onChanged?.();
       showSaved("stock");
     } catch {
       rollbackStock("No se pudo actualizar el stock.");
@@ -188,8 +191,10 @@ export function PublicationWorkspaceEditor({ publication, onSave, onStatusChange
                 setStatusSaving(true);
                 try {
                   const result = await onStatusChange({ publicationId: publication.itemId, target, status: nextStatus });
-                  if (result.ok) setStatus(result.confirmed);
-                  else messageApi.error(result.message);
+                  if (result.ok) {
+                    setStatus(result.confirmed);
+                    await onChanged?.();
+                  } else messageApi.error(result.message);
                 } finally {
                   setStatusSaving(false);
                 }

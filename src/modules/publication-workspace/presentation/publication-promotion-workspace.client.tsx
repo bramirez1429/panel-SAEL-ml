@@ -1,12 +1,21 @@
 "use client";
 
 import { PictureOutlined } from "@ant-design/icons";
-import { Button, Card, Image, Input, List, Tabs, Typography } from "antd";
+import { Button, Card, Divider, Image, Input, List, Tabs, Typography } from "antd";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { parsePublicationSearch } from "@/shared/lib/publication-search";
-import { comparePublicationTitlesBySize } from "@/shared/lib/publication-size";
+import { groupPublicationsByVariant } from "@/shared/lib/publication-variant";
+import type {
+  TiendanubeCategory,
+  TiendanubeReplicationState,
+} from "@/modules/tiendanube/domain/tiendanube-replication.model";
+import {
+  TiendanubeReplicationCell,
+  type GetTiendanubeReplicationStateAction,
+  type ReplicatePublicationAction,
+} from "@/modules/tiendanube/presentation/tiendanube-replication-cell.client";
 
 import type {
   PublicationWorkspaceSearchItem,
@@ -31,14 +40,27 @@ type Props = Readonly<{
   onSave: WorkspaceSaveAction;
   onStatusChange: WorkspaceStatusAction;
   onTitleSave: WorkspaceTitleAction;
+  getTiendanubeStateAction?: GetTiendanubeReplicationStateAction;
+  replicateTiendanubeAction?: ReplicatePublicationAction;
+  tiendanubeCategories?: readonly TiendanubeCategory[];
 }>;
 
 type ViewState = "initial" | "searching" | "results" | "empty" | "error" | "selected";
 
-export function PublicationPromotionWorkspace({ onSearch, onSelect, onSave, onStatusChange, onTitleSave }: Props) {
+export function PublicationPromotionWorkspace({
+  getTiendanubeStateAction,
+  onSearch,
+  onSelect,
+  onSave,
+  onStatusChange,
+  onTitleSave,
+  replicateTiendanubeAction,
+  tiendanubeCategories = [],
+}: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const hydratedSearchRef = useRef(false);
+  const selectionRequestRef = useRef<PublicationWorkspaceSelectionRequest | null>(null);
   const [query, setQuery] = useState("");
   const [selection, setSelection] = useState<PublicationWorkspaceSelection | null>(null);
   const [matches, setMatches] = useState<readonly PublicationWorkspaceSearchItem[]>([]);
@@ -126,6 +148,7 @@ export function PublicationPromotionWorkspace({ onSearch, onSelect, onSave, onSt
   }, []);
 
   async function loadSelection(request: PublicationWorkspaceSelectionRequest) {
+    selectionRequestRef.current = request;
     setViewState("searching");
     try {
       const result = await onSelect(request);
@@ -138,9 +161,26 @@ export function PublicationPromotionWorkspace({ onSearch, onSelect, onSave, onSt
     }
   }
 
+  async function refreshCurrentSelection(): Promise<void> {
+    const request = selectionRequestRef.current;
+    if (!request) return;
+
+    try {
+      const result = await onSelect(request);
+      if (result.status === "error") return;
+      if (selectionRequestRef.current !== request) return;
+      setSelection(result.selection);
+    } catch {
+      // La operación ya fue confirmada; conservamos el estado optimista si falla el refresh.
+    }
+  }
+
   const handleTitleSave: WorkspaceTitleAction = async (input) => {
     const result = await onTitleSave(input);
-    if (result.ok && result.family) setSelection(result.family);
+    if (result.ok) {
+      if (result.family) setSelection(result.family);
+      await refreshCurrentSelection();
+    }
     return result;
   };
 
@@ -180,7 +220,16 @@ export function PublicationPromotionWorkspace({ onSearch, onSelect, onSave, onSt
       {viewState === "error" && <WorkspaceMessage>No pudimos consultar la publicación.</WorkspaceMessage>}
       {viewState === "results" && <PublicationMatches items={matches} onSelect={(item) => loadSelection({ itemId: item.itemId })} />}
       {viewState === "selected" && selection && (
-        <WorkspaceTabs selection={selection} onSave={onSave} onStatusChange={onStatusChange} onTitleSave={handleTitleSave} />
+        <WorkspaceTabs
+          selection={selection}
+          getTiendanubeStateAction={getTiendanubeStateAction}
+          onChanged={refreshCurrentSelection}
+          onSave={onSave}
+          onStatusChange={onStatusChange}
+          onTitleSave={handleTitleSave}
+          replicateTiendanubeAction={replicateTiendanubeAction}
+          tiendanubeCategories={tiendanubeCategories}
+        />
       )}
     </main>
   );
@@ -221,11 +270,24 @@ function PublicationMatches({ items, onSelect }: Readonly<{
   );
 }
 
-function WorkspaceTabs({ selection, onSave, onStatusChange, onTitleSave }: Readonly<{
+function WorkspaceTabs({
+  selection,
+  getTiendanubeStateAction,
+  onChanged,
+  onSave,
+  onStatusChange,
+  onTitleSave,
+  replicateTiendanubeAction,
+  tiendanubeCategories,
+}: Readonly<{
   selection: PublicationWorkspaceSelection;
+  getTiendanubeStateAction?: GetTiendanubeReplicationStateAction;
+  onChanged: () => Promise<void>;
   onSave: WorkspaceSaveAction;
   onStatusChange: WorkspaceStatusAction;
   onTitleSave: WorkspaceTitleAction;
+  replicateTiendanubeAction?: ReplicatePublicationAction;
+  tiendanubeCategories: readonly TiendanubeCategory[];
 }>) {
   const [activeTab, setActiveTab] = useState("publication");
   const [promotionOpened, setPromotionOpened] = useState(false);
@@ -243,15 +305,24 @@ function WorkspaceTabs({ selection, onSave, onStatusChange, onTitleSave }: Reado
         {
           key: "publication",
           label: "Publicación",
-          children: selection.type === "family"
-            ? <FamilyWorkspace family={selection} onSave={onSave} onStatusChange={onStatusChange} onTitleSave={onTitleSave} />
-            : <PublicationWorkspaceEditor publication={selection.publication} onSave={onSave} onStatusChange={onStatusChange} onTitleSave={onTitleSave} showFamilyId titleTarget={selection.publication.model === "SHARED" ? { type: "publication", itemId: selection.publication.itemId } : undefined} />,
+          children: (
+            <PublicationTab
+              selection={selection}
+              getTiendanubeStateAction={getTiendanubeStateAction}
+              onChanged={onChanged}
+              onSave={onSave}
+              onStatusChange={onStatusChange}
+              onTitleSave={onTitleSave}
+              replicateTiendanubeAction={replicateTiendanubeAction}
+              tiendanubeCategories={tiendanubeCategories}
+            />
+          ),
         },
         {
           key: "promotion",
           label: "Promoción",
           children: promotionOpened
-            ? <PublicationWorkspacePromotions selection={selection} />
+            ? <PublicationWorkspacePromotions selection={selection} onChanged={onChanged} />
             : null,
         },
       ]}
@@ -259,16 +330,79 @@ function WorkspaceTabs({ selection, onSave, onStatusChange, onTitleSave }: Reado
   );
 }
 
-function FamilyWorkspace({ family, onSave, onStatusChange, onTitleSave }: Readonly<{
+function PublicationTab({
+  selection,
+  getTiendanubeStateAction,
+  onChanged,
+  onSave,
+  onStatusChange,
+  onTitleSave,
+  replicateTiendanubeAction,
+  tiendanubeCategories,
+}: Readonly<{
+  selection: PublicationWorkspaceSelection;
+  getTiendanubeStateAction?: GetTiendanubeReplicationStateAction;
+  onChanged: () => Promise<void>;
+  onSave: WorkspaceSaveAction;
+  onStatusChange: WorkspaceStatusAction;
+  onTitleSave: WorkspaceTitleAction;
+  replicateTiendanubeAction?: ReplicatePublicationAction;
+  tiendanubeCategories: readonly TiendanubeCategory[];
+}>) {
+  const sourceKey = tiendanubeSourceKey(selection);
+  const initialState: TiendanubeReplicationState = {
+    sourceKey,
+    status: "UNKNOWN",
+    tiendanubeProductId: null,
+  };
+
+  return (
+    <>
+      {replicateTiendanubeAction && getTiendanubeStateAction ? (
+        <div style={{ marginBottom: 16 }}>
+          <TiendanubeReplicationCell
+            key={sourceKey}
+            action={replicateTiendanubeAction}
+            categories={tiendanubeCategories}
+            getStateAction={getTiendanubeStateAction}
+            initialState={initialState}
+            sourceKey={sourceKey}
+          />
+        </div>
+      ) : null}
+      {selection.type === "family" ? (
+        <FamilyWorkspace family={selection} onChanged={onChanged} onSave={onSave} onStatusChange={onStatusChange} onTitleSave={onTitleSave} />
+      ) : (
+        <PublicationWorkspaceEditor
+          publication={selection.publication}
+          onChanged={onChanged}
+          onSave={onSave}
+          onStatusChange={onStatusChange}
+          onTitleSave={onTitleSave}
+          showFamilyId
+          titleTarget={selection.publication.model === "SHARED" ? { type: "publication", itemId: selection.publication.itemId } : undefined}
+        />
+      )}
+    </>
+  );
+}
+
+function tiendanubeSourceKey(selection: PublicationWorkspaceSelection): string {
+  if (selection.type === "family") return `family:${selection.familyId}`;
+  return selection.publication.familyId
+    ? `family:${selection.publication.familyId}`
+    : `item:${selection.publication.itemId}`;
+}
+
+function FamilyWorkspace({ family, onChanged, onSave, onStatusChange, onTitleSave }: Readonly<{
   family: Extract<PublicationWorkspaceSelection, { type: "family" }>;
+  onChanged: () => Promise<void>;
   onSave: WorkspaceSaveAction;
   onStatusChange: WorkspaceStatusAction;
   onTitleSave: WorkspaceTitleAction;
 }>) {
   const totalSold = family.children.reduce((total, child) => total + child.sold, 0);
-  const orderedChildren = [...family.children].sort((left, right) => (
-    comparePublicationTitlesBySize(left.title, right.title)
-  ));
+  const variantGroups = groupPublicationsByVariant(family.children);
 
   return (
     <section className={styles.familyWorkspace}>
@@ -287,17 +421,23 @@ function FamilyWorkspace({ family, onSave, onStatusChange, onTitleSave }: Readon
         </div>
       </Card>
       <Typography.Title level={4}>Publicaciones de la familia</Typography.Title>
-      <div className={styles.familyChildren}>
-        {orderedChildren.map((child) => (
-          <PublicationWorkspaceEditor
-            key={child.itemId}
-            publication={child}
-            onSave={onSave}
-            onStatusChange={onStatusChange}
-            onTitleSave={onTitleSave}
-          />
-        ))}
-      </div>
+      {variantGroups.map((group) => (
+        <section key={group.key}>
+          <Divider orientation="left">{group.label}</Divider>
+          <div className={styles.familyChildren}>
+            {group.publications.map((child) => (
+              <PublicationWorkspaceEditor
+                key={child.itemId}
+                publication={child}
+                onChanged={onChanged}
+                onSave={onSave}
+                onStatusChange={onStatusChange}
+                onTitleSave={onTitleSave}
+              />
+            ))}
+          </div>
+        </section>
+      ))}
     </section>
   );
 }

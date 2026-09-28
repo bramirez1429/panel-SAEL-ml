@@ -33,6 +33,12 @@ const pictureSchema = z.object({
   url: z.string().nullable().optional(),
 });
 
+const attributeSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().nullable().optional(),
+  value_name: z.string().nullable().optional(),
+});
+
 const commercialPriceSchema = z.object({
   current: z.number().nullable(),
   regular: z.number().nullable(),
@@ -99,6 +105,7 @@ export const publicationWorkspaceFamilyResponseSchema = z.object({
       installmentLabel: z.string().min(1).nullable().optional(),
       thumbnail: z.string().nullable(),
       pictures: z.array(pictureSchema),
+      attributes: z.array(attributeSchema).default([]),
     }),
   ),
 });

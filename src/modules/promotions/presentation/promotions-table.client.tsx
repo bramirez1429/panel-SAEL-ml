@@ -47,6 +47,7 @@ import {
   enqueuePromotionOptionsLoad,
 } from "./promotion-options.queue.client";
 import { PromotionOptionsModal } from "./promotion-options-modal.client";
+import { PromotionIndividualApplicationModal } from "./promotion-individual-application-modal.client";
 import {
   DiscountCell,
   FinalPriceCell,
@@ -64,13 +65,20 @@ type Props = Readonly<{
   page: PromotionsPage;
   selectedForRemoval: Readonly<Record<string, PromotionDeactivationSelection>>;
   onToggleRemoval: (selection: PromotionDeactivationSelection) => void;
+  onChanged?: () => void | Promise<void>;
   compact?: boolean;
+  directParticipation?: boolean;
   loadAllOnMount?: boolean;
 }>;
 
 type DealSelection = Readonly<{
   campaign: PromotionCampaign;
   item: PromotionCampaignItem;
+}>;
+
+type IndividualSelection = Readonly<{
+  publication: PromotionRow;
+  option: PromotionOption;
 }>;
 
 type DisplayState =
@@ -95,7 +103,9 @@ export function PromotionsTable({
   page,
   selectedForRemoval,
   onToggleRemoval,
+  onChanged,
   compact = false,
+  directParticipation = false,
   loadAllOnMount = false,
 }: Props) {
   const [deal, setDeal] =
@@ -108,6 +118,9 @@ export function PromotionsTable({
     useState<PromotionDeactivationSelection | null>(
       null,
     );
+
+  const [individualSelection, setIndividualSelection] =
+    useState<IndividualSelection | null>(null);
 
   const optionsByItem =
     usePromotionGlobalStore(
@@ -182,6 +195,11 @@ export function PromotionsTable({
   function reloadOptions(publication: PromotionRow): void {
     invalidateOptions([publication.itemId]);
     loadOptions(publication);
+  }
+
+  async function completePromotion(publication: PromotionRow): Promise<void> {
+    reloadOptions(publication);
+    await onChanged?.();
   }
 
   const rows = displayRows(
@@ -334,6 +352,9 @@ export function PromotionsTable({
               })
             }
             onDeal={setDeal}
+            onParticipate={directParticipation
+              ? (option) => setIndividualSelection({ publication: row.publication, option })
+              : undefined}
             onLegacy={() =>
               setLegacyRow(
                 row.publication,
@@ -359,6 +380,16 @@ export function PromotionsTable({
         scroll={{ x: compact ? 1325 : 1367 }}
       />
 
+      {individualSelection ? (
+        <PromotionIndividualApplicationModal
+          key={promotionSelectionKey(individualSelection.publication.itemId, individualSelection.option)}
+          publication={individualSelection.publication}
+          option={individualSelection.option}
+          onClose={() => setIndividualSelection(null)}
+          onCompleted={() => completePromotion(individualSelection.publication)}
+        />
+      ) : null}
+
       <PromotionDeactivationModal
         key={
           `deactivate:${
@@ -379,8 +410,8 @@ export function PromotionsTable({
         onClose={() =>
           setDeactivating(null)
         }
-        onCompleted={() => {
-          if (deactivating) reloadOptions(deactivating.publication);
+        onCompleted={async () => {
+          if (deactivating) await completePromotion(deactivating.publication);
         }}
       />
 
@@ -395,8 +426,8 @@ export function PromotionsTable({
         onClose={() =>
           setLegacyRow(null)
         }
-        onCompleted={() => {
-          if (legacyRow) reloadOptions(legacyRow);
+        onCompleted={async () => {
+          if (legacyRow) await completePromotion(legacyRow);
         }}
       />
 
@@ -408,11 +439,11 @@ export function PromotionsTable({
           onClose={() =>
             setDeal(null)
           }
-          onCompleted={() => {
+          onCompleted={async () => {
             const publication = page.publications.find(
               ({ itemId }) => itemId === deal.item.itemId,
             );
-            if (publication) reloadOptions(publication);
+            if (publication) await completePromotion(publication);
           }}
         />
       ) : null}
@@ -651,6 +682,7 @@ function TaskAction({
   onDeactivate,
   onDeal,
   onLegacy,
+  onParticipate,
 }: Readonly<{
   publication: PromotionRow;
   option: PromotionOption;
@@ -661,6 +693,7 @@ function TaskAction({
     selection: DealSelection,
   ) => void;
   onLegacy: () => void;
+  onParticipate?: (option: PromotionOption) => void;
 }>) {
   const canDeactivate =
     isRemovablePromotionOption(option);
@@ -692,13 +725,15 @@ function TaskAction({
           size="small"
           type="primary"
           onClick={() =>
-            onDeal(
-              dealSelection(
-                publication,
-                option,
-                option.id!,
-              ),
-            )
+            onParticipate
+              ? onParticipate(option)
+              : onDeal(
+                  dealSelection(
+                    publication,
+                    option,
+                    option.id!,
+                  ),
+                )
           }
         >
           Participar
@@ -712,7 +747,7 @@ function TaskAction({
         <Button
           size="small"
           type="primary"
-          onClick={onLegacy}
+          onClick={() => onParticipate ? onParticipate(option) : onLegacy()}
         >
           Participar
         </Button>

@@ -94,7 +94,7 @@ export function PromotionBulkPriceEditor({
               <CommonRange range={commonPromotionPriceRange(campaignSelections)} />
               <Typography.Text strong>Modificar precio para esta campaña</Typography.Text>
               <Space wrap>
-                <CurrencyInput
+                <PromotionCurrencyInput
                   aria-label={`Precio campaña ${promotionName(campaignSelections[0]!)}`}
                   controls={false}
                   min={0}
@@ -211,7 +211,7 @@ function PromotionPriceRow({
               Rango permitido: {money(selection.option.minPromotionPrice)} - {money(selection.option.maxPromotionPrice)}
             </Typography.Text>
             <Typography.Text>Precio a aplicar</Typography.Text>
-            <CurrencyInput
+            <PromotionCurrencyInput
               aria-label={`Precio a aplicar ${selection.itemId}`}
               controls={false}
               min={selection.option.minPromotionPrice ?? undefined}
@@ -286,7 +286,7 @@ function CampaignApplicationSummary({
   );
 }
 
-function CurrencyInput(props: InputNumberProps<number>) {
+export function PromotionCurrencyInput(props: InputNumberProps<number>) {
   return (
     <Space.Compact style={{ width: props.style?.width }}>
       <Button disabled>$</Button>

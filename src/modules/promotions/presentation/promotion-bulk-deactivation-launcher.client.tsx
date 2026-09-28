@@ -15,12 +15,14 @@ import { usePromotionGlobalStore } from "./promotion-global.store";
 type Props = Readonly<{
   publications: readonly PromotionRow[];
   selectedForRemoval: Readonly<Record<string, PromotionDeactivationSelection>>;
+  onCompleted?: () => void | Promise<void>;
   onSuccessfulRemoval: (selections: readonly PromotionDeactivationSelection[]) => void;
 }>;
 
 export function PromotionBulkDeactivationLauncher({
   publications,
   selectedForRemoval,
+  onCompleted,
   onSuccessfulRemoval,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -61,6 +63,7 @@ export function PromotionBulkDeactivationLauncher({
       <PromotionBulkDeactivationModal
         selections={reviewSelections}
         initialSelectedKeys={Object.keys(selectedForRemoval)}
+        onCompleted={onCompleted}
         onSuccessfulRemoval={onSuccessfulRemoval}
         onClose={() => setOpen(false)}
       />

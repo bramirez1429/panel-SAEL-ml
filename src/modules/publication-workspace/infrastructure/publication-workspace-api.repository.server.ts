@@ -128,6 +128,11 @@ export class PublicationWorkspaceApiRepository
         hasActivePromotion: item.friendly.promotion.hasActivePromotion,
         promotionDiscountPercent: item.friendly.pricing.discountPercent,
         installmentLabel: item.installmentLabel ?? null,
+        attributes: item.attributes.map((attribute) => ({
+          id: attribute.id,
+          name: attribute.name ?? null,
+          value: attribute.value_name ?? null,
+        })),
       }));
 
     return {

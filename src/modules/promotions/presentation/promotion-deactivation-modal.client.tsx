@@ -20,7 +20,7 @@ type Props = Readonly<{
   selection: PromotionDeactivationSelection | null;
   open: boolean;
   onClose: () => void;
-  onCompleted?: () => void;
+  onCompleted?: () => void | Promise<void>;
 }>;
 
 export function PromotionDeactivationModal({ selection, open, onClose, onCompleted }: Props) {
@@ -43,7 +43,7 @@ export function PromotionDeactivationModal({ selection, open, onClose, onComplet
     }
 
     invalidateOptions([selection.publication.itemId]);
-    onCompleted?.();
+    await onCompleted?.();
     router.refresh();
     onClose();
     message.success("Dejaste de participar de la promoción.");

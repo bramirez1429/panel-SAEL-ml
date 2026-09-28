@@ -28,9 +28,10 @@ import { usePromotionGlobalStore } from "./promotion-global.store";
 type Props = Readonly<{
   selections: readonly SelectedPromotion[];
   onClose: () => void;
+  onCompleted?: () => void | Promise<void>;
 }>;
 
-export function PromotionBulkApplicationModal({ selections, onClose }: Props) {
+export function PromotionBulkApplicationModal({ selections, onClose, onCompleted }: Props) {
   const router = useRouter();
   const activeRef = useRef(false);
   const [running, setRunning] = useState(false);
@@ -157,9 +158,13 @@ export function PromotionBulkApplicationModal({ selections, onClose }: Props) {
       const successfulKeys = completed
         .filter((execution) => execution.status === "success")
         .map((execution) => execution.selection.key);
+      const successfulItemIds = completed
+        .filter((execution) => execution.status === "success")
+        .map((execution) => execution.selection.itemId);
 
       removeSelections(successfulKeys);
-      invalidateOptions([...new Set(selections.map((selection) => selection.itemId))]);
+      invalidateOptions([...new Set(successfulItemIds)]);
+      if (successfulItemIds.length > 0) await onCompleted?.();
       setFinished(true);
       router.refresh();
     } finally {

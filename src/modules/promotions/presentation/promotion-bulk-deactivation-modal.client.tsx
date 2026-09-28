@@ -12,6 +12,7 @@ import { usePromotionGlobalStore } from "./promotion-global.store";
 type Props = Readonly<{
   selections: readonly PromotionDeactivationSelection[];
   initialSelectedKeys?: readonly string[];
+  onCompleted?: () => void | Promise<void>;
   onSuccessfulRemoval?: (selections: readonly PromotionDeactivationSelection[]) => void;
   onClose: () => void;
 }>;
@@ -27,6 +28,7 @@ type DeactivationExecution = Readonly<{
 export function PromotionBulkDeactivationModal({
   selections,
   initialSelectedKeys = [],
+  onCompleted,
   onSuccessfulRemoval,
   onClose,
 }: Props) {
@@ -103,6 +105,7 @@ export function PromotionBulkDeactivationModal({
           .filter((execution) => execution.status === "success")
           .map((execution) => execution.selection),
       );
+      if (successfulItemIds.length > 0) await onCompleted?.();
       router.refresh();
       setPhase("finished");
     } finally {

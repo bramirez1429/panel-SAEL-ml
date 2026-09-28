@@ -8,8 +8,10 @@ import type { SelectedPromotion } from "./promotion-global.store";
 import { usePromotionGlobalStore } from "./promotion-global.store";
 
 export function PromotionSelectionSummary({
+  onCompleted,
   selectionKeys,
 }: Readonly<{
+  onCompleted?: () => void | Promise<void>;
   selectionKeys?: readonly string[];
 }> = {}) {
   const [open, setOpen] = useState(false);
@@ -32,6 +34,6 @@ export function PromotionSelectionSummary({
       <Typography.Text strong>{selections.length} {selections.length === 1 ? "promoción seleccionada" : "promociones seleccionadas"}</Typography.Text>
       <Button type="primary" onClick={openReview}>Participar en las seleccionadas</Button>
     </Space> : null}
-    {open ? <PromotionBulkApplicationModal selections={reviewSelections} onClose={() => setOpen(false)} /> : null}
+    {open ? <PromotionBulkApplicationModal selections={reviewSelections} onClose={() => setOpen(false)} onCompleted={onCompleted} /> : null}
   </>;
 }

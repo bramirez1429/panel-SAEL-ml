@@ -1,9 +1,9 @@
 "use client";
 
-import { Checkbox, Space } from "antd";
+import { Checkbox, Divider, Space } from "antd";
 import { useMemo, useState } from "react";
 
-import { comparePublicationTitlesBySize } from "@/shared/lib/publication-size";
+import { groupPublicationsByVariant } from "@/shared/lib/publication-variant";
 
 import type {
   PromotionDetails,
@@ -29,22 +29,34 @@ import type {
 } from "../domain/publication-workspace.model";
 
 export function PublicationWorkspacePromotions({
+  onChanged,
   selection,
 }: Readonly<{
+  onChanged?: () => void | Promise<void>;
   selection: PublicationWorkspaceSelection;
 }>) {
-  const promotionRows = useMemo(
-    () => {
-      const publications = selection.type === "family"
-        ? [...selection.children].sort((left, right) => (
-          comparePublicationTitlesBySize(left.title, right.title)
-        ))
-        : [selection.publication];
+  const { promotionGroups, promotionRows } = useMemo(() => {
+    const publicationGroups = selection.type === "family"
+      ? groupPublicationsByVariant(selection.children)
+      : [{
+          key: selection.publication.itemId,
+          label: null,
+          publications: [selection.publication],
+        }];
+    const groups = publicationGroups.map((group) => {
+      const publications = group.publications.map(toPromotionRow);
+      return {
+        key: group.key,
+        label: group.label,
+        page: toPromotionsPage(publications),
+      };
+    });
 
-      return publications.map(toPromotionRow);
-    },
-    [selection],
-  );
+    return {
+      promotionGroups: groups,
+      promotionRows: groups.flatMap((group) => group.page.publications),
+    };
+  }, [selection]);
   const [selectedForRemoval, setSelectedForRemoval] = useState<
     Readonly<Record<string, PromotionDeactivationSelection>>
   >({});
@@ -70,13 +82,6 @@ export function PublicationWorkspacePromotions({
     selectedApplicableCount === applicableKeys.length;
   const someApplicableSelected =
     selectedApplicableCount > 0 && !allApplicableSelected;
-
-  const page: PromotionsPage = useMemo(() => ({
-    publications: promotionRows,
-    done: true,
-    nextCursor: null,
-    count: promotionRows.length,
-  }), [promotionRows]);
 
   function toggleAllApplicable(checked: boolean): void {
     if (!checked) {
@@ -129,23 +134,42 @@ export function PublicationWorkspacePromotions({
           Seleccionar todas
         </Checkbox>
 
-        <PromotionSelectionSummary selectionKeys={applicableKeys} />
+        <PromotionSelectionSummary selectionKeys={applicableKeys} onCompleted={onChanged} />
 
         <PromotionBulkDeactivationLauncher
           publications={promotionRows}
           selectedForRemoval={selectedForRemoval}
+          onCompleted={onChanged}
           onSuccessfulRemoval={removeSuccessfulSelections}
         />
 
-        <PromotionsTable
-          loadAllOnMount
-          page={page}
-          selectedForRemoval={selectedForRemoval}
-          onToggleRemoval={toggleRemoval}
-        />
+        {promotionGroups.map((group) => (
+          <section key={group.key} style={{ width: "100%" }}>
+            {selection.type === "family" && group.label ? (
+              <Divider orientation="left">{group.label}</Divider>
+            ) : null}
+            <PromotionsTable
+              directParticipation
+              loadAllOnMount
+              page={group.page}
+              selectedForRemoval={selectedForRemoval}
+              onChanged={onChanged}
+              onToggleRemoval={toggleRemoval}
+            />
+          </section>
+        ))}
       </Space>
     </section>
   );
+}
+
+function toPromotionsPage(publications: readonly PromotionRow[]): PromotionsPage {
+  return {
+    publications,
+    done: true,
+    nextCursor: null,
+    count: publications.length,
+  };
 }
 
 function toPromotionRow(

@@ -135,21 +135,7 @@ export function PromotionContent({
       ) : null}
 
       <div style={{ marginTop: 4 }}>
-        <span
-          style={{
-            display: "inline-block",
-            maxWidth: 210,
-            padding: "3px 7px",
-            borderRadius: 3,
-            background: "#333",
-            color: "#fff",
-            fontSize: 11,
-            fontWeight: 700,
-            lineHeight: 1.25,
-          }}
-        >
-          {campaignLabel(option)}
-        </span>
+        <PromotionCampaignTag option={option} />
       </div>
 
       {hasMlContribution ? (
@@ -186,6 +172,26 @@ export function PromotionContent({
         ) : null}
       </div>
     </div>
+  );
+}
+
+export function PromotionCampaignTag({ option }: Readonly<{ option: PromotionOption }>) {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        maxWidth: 210,
+        padding: "3px 7px",
+        borderRadius: 3,
+        background: "#333",
+        color: "#fff",
+        fontSize: 11,
+        fontWeight: 700,
+        lineHeight: 1.25,
+      }}
+    >
+      {campaignLabel(option)}
+    </span>
   );
 }
 
@@ -495,14 +501,10 @@ function recommendationOf(
   };
 }
 
-function campaignLabel(
+export function campaignLabel(
   option: PromotionOption,
 ): string {
-  const raw = (
-    option.name ??
-    option.type ??
-    "Promoción"
-  ).trim();
+  const raw = option.name?.trim() || option.type?.trim() || "Promoción";
 
   const normalized = raw.toLowerCase();
 

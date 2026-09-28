@@ -17,7 +17,7 @@ type Props = Readonly<{
   campaign: PromotionCampaign;
   item: PromotionCampaignItem;
   onClose: () => void;
-  onCompleted?: () => void;
+  onCompleted?: () => void | Promise<void>;
 }>;
 
 const currencyFormatter = new Intl.NumberFormat("es-AR", {
@@ -47,7 +47,7 @@ export function DealPromotionModal({ campaign, item, onClose, onCompleted }: Pro
       return;
     }
     void message.success("Promoción aplicada correctamente.");
-    onCompleted?.();
+    await onCompleted?.();
     onClose();
     router.refresh();
   }
