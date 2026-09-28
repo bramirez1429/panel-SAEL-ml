@@ -373,9 +373,9 @@ function PublicationStatusTag({ status }: Readonly<{ status: string }>) {
   return <Tag color="default">{status}</Tag>;
 }
 
-const PUBLICATION_SIZE_PATTERN = /(^|\s)(4XL|3XL|2XL|XXXL|XXL|XL|XS|S|M|L)(?=\s|$)/iu;
+const PUBLICATION_SIZE_PATTERN = /(^|\s)(4XL|3XL|2XL|XXXL|XXL|XL|XS|S|M|L|14|12|10|8|6)(?=\s|$)/iu;
 
-function publicationTitlePresentation(title: string): Readonly<{
+export function publicationTitlePresentation(title: string): Readonly<{
   title: string;
   size: string | null;
 }> {

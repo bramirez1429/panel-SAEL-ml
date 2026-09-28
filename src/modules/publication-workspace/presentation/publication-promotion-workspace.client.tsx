@@ -16,6 +16,7 @@ import type {
 import {
   EditableWorkspaceTitle,
   PublicationWorkspaceEditor,
+  publicationTitlePresentation,
   type WorkspaceSaveAction,
   type WorkspaceStatusAction,
   type WorkspaceTitleAction,
@@ -213,6 +214,10 @@ function FamilyWorkspace({ family, onSave, onStatusChange, onTitleSave }: Readon
   onTitleSave: WorkspaceTitleAction;
 }>) {
   const totalSold = family.children.reduce((total, child) => total + child.sold, 0);
+  const orderedChildren = [...family.children].sort((left, right) => (
+    sizeOrder(publicationTitlePresentation(left.title).size)
+    - sizeOrder(publicationTitlePresentation(right.title).size)
+  ));
 
   return (
     <section className={styles.familyWorkspace}>
@@ -232,7 +237,7 @@ function FamilyWorkspace({ family, onSave, onStatusChange, onTitleSave }: Readon
       </Card>
       <Typography.Title level={4}>Publicaciones de la familia</Typography.Title>
       <div className={styles.familyChildren}>
-        {family.children.map((child) => (
+        {orderedChildren.map((child) => (
           <PublicationWorkspaceEditor
             key={child.itemId}
             publication={child}
@@ -244,4 +249,21 @@ function FamilyWorkspace({ family, onSave, onStatusChange, onTitleSave }: Readon
       </div>
     </section>
   );
+}
+
+const PUBLICATION_SIZE_ORDER = new Map<string, number>([
+  ["S", 10],
+  ["M", 20],
+  ["L", 30],
+  ["XL", 40],
+  ["2XL", 50],
+  ["6", 10],
+  ["8", 20],
+  ["10", 30],
+  ["12", 40],
+  ["14", 50],
+]);
+
+function sizeOrder(size: string | null): number {
+  return size ? PUBLICATION_SIZE_ORDER.get(size) ?? Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER;
 }
