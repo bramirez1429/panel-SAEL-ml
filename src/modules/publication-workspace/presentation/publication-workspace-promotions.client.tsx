@@ -146,7 +146,7 @@ export function PublicationWorkspacePromotions({
         {promotionGroups.map((group) => (
           <section key={group.key} style={{ width: "100%" }}>
             {selection.type === "family" && group.label ? (
-              <Divider orientation="start">{group.label}</Divider>
+              <Divider titlePlacement="start">{group.label}</Divider>
             ) : null}
             <PromotionsTable
               directParticipation

@@ -423,7 +423,7 @@ function FamilyWorkspace({ family, onChanged, onSave, onStatusChange, onTitleSav
       <Typography.Title level={4}>Publicaciones de la familia</Typography.Title>
       {variantGroups.map((group) => (
         <section key={group.key}>
-          <Divider orientation="start">{group.label}</Divider>
+          <Divider titlePlacement="start">{group.label}</Divider>
           <div className={styles.familyChildren}>
             {group.publications.map((child) => (
               <PublicationWorkspaceEditor
