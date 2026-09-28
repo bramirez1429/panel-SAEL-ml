@@ -35,11 +35,12 @@ type Props = Readonly<{
   open: boolean;
   row: PromotionRow | null;
   onClose: () => void;
+  onCompleted?: () => void;
 }>;
 
 type OptionsState = "idle" | "loading" | "success" | "error";
 
-export function PromotionOptionsModal({ open, row, onClose }: Props) {
+export function PromotionOptionsModal({ open, row, onClose, onCompleted }: Props) {
   const router = useRouter();
   const submission = useSingleSubmission();
   const [options, setOptions] = useState<readonly PromotionOption[]>([]);
@@ -106,7 +107,7 @@ export function PromotionOptionsModal({ open, row, onClose }: Props) {
       setFailure(attempt.value);
       return;
     }
-    handlePromotionCompletion(
+    const outcome = handlePromotionCompletion(
       attempt.value.result,
       "Promoción aplicada a toda la publicación.",
       {
@@ -116,6 +117,7 @@ export function PromotionOptionsModal({ open, row, onClose }: Props) {
         refresh: () => router.refresh(),
       },
     );
+    if (outcome === "SUCCESS") onCompleted?.();
   }
 
   const closeSafely = () => {
@@ -141,7 +143,10 @@ export function PromotionOptionsModal({ open, row, onClose }: Props) {
       ) : partial ? (
         <Space direction="vertical" size="middle" style={{ width: "100%" }}>
           <PromotionExecutionStatus result={partial} operation="apply" />
-          <Button onClick={onClose}>Cerrar</Button>
+          <Button onClick={() => {
+            onCompleted?.();
+            onClose();
+          }}>Cerrar</Button>
         </Space>
       ) : selected ? (
         <SelectedPromotion

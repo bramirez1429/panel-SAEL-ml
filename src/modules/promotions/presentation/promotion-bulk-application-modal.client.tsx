@@ -14,8 +14,8 @@ import {
 import { PromotionBulkPriceEditor } from "./promotion-bulk-price-editor.client";
 import {
   applyCampaignPrice,
+  initialCampaignPriceExclusions,
   initialPromotionPrices,
-  priceForCampaignExclusion,
   promotionCampaignKey,
   validSelectionPrice,
   type CampaignPriceExclusions,
@@ -38,7 +38,9 @@ export function PromotionBulkApplicationModal({ selections, onClose }: Props) {
   const [campaignPrices, setCampaignPrices] = useState<CampaignPrices>({});
   const [campaignPriceApplied, setCampaignPriceApplied] = useState<Readonly<Record<string, boolean>>>({});
   const [prices, setPrices] = useState(() => initialPromotionPrices(selections));
-  const [excludedFromCampaign, setExcludedFromCampaign] = useState<CampaignPriceExclusions>({});
+  const [excludedFromCampaign, setExcludedFromCampaign] = useState<CampaignPriceExclusions>(
+    () => initialCampaignPriceExclusions(selections),
+  );
   const [campaignWarnings, setCampaignWarnings] = useState<CampaignPriceWarnings>({});
   const [executions, setExecutions] = useState<readonly PromotionExecution[]>(
     () => pendingExecutions(selections),
@@ -48,6 +50,12 @@ export function PromotionBulkApplicationModal({ selections, onClose }: Props) {
   const valid = selections.every((selection) => (
     validSelectionPrice(selection, prices[selection.key] ?? null)
   ));
+  const hasUnappliedCampaignPrice = Object.entries(campaignPrices).some(
+    ([campaignKey, price]) => (
+      price !== null && campaignPriceApplied[campaignKey] !== true
+    ),
+  );
+  const canConfirm = valid && !hasUnappliedCampaignPrice;
   const processed = executions.filter((execution) => (
     execution.status === "success" || execution.status === "error"
   )).length;
@@ -73,38 +81,36 @@ export function PromotionBulkApplicationModal({ selections, onClose }: Props) {
   }
 
   function changeCampaignPrice(campaignKey: string, price: number | null): void {
+    const campaignSelectionKeys = selections
+      .filter((selection) => promotionCampaignKey(selection) === campaignKey)
+      .map((selection) => selection.key);
     setCampaignPrices((current) => ({ ...current, [campaignKey]: price }));
     setCampaignPriceApplied((current) => ({ ...current, [campaignKey]: false }));
+    setCampaignWarnings((current) => withoutKeys(current, campaignSelectionKeys));
   }
 
   function changePrice(key: string, price: number | null): void {
+    const selection = selections.find((item) => item.key === key);
     setPrices((current) => ({ ...current, [key]: price }));
     setCampaignWarnings((current) => withoutKey(current, key));
+    if (selection) {
+      const campaignKey = promotionCampaignKey(selection);
+      setCampaignPriceApplied((current) => ({ ...current, [campaignKey]: false }));
+    }
   }
 
-  function changeCampaignExclusion(key: string, checked: boolean): void {
+  function changeCampaignExclusion(key: string, excluded: boolean): void {
     const selection = selections.find((item) => item.key === key);
     if (!selection) return;
     const campaignKey = promotionCampaignKey(selection);
 
-    const result = priceForCampaignExclusion(
-      selection,
-      checked,
-      campaignPrices[campaignKey] ?? null,
-      prices[key] ?? null,
-    );
-
-    setExcludedFromCampaign((current) => ({ ...current, [key]: checked }));
-    setPrices((current) => ({ ...current, [key]: result.price }));
-    setCampaignWarnings((current) => (
-      result.invalidCampaignPrice === null
-        ? withoutKey(current, key)
-        : { ...current, [key]: result.invalidCampaignPrice }
-    ));
+    setExcludedFromCampaign((current) => ({ ...current, [key]: excluded }));
+    setCampaignWarnings((current) => withoutKey(current, key));
+    setCampaignPriceApplied((current) => ({ ...current, [campaignKey]: false }));
   }
 
   async function start(): Promise<void> {
-    if (activeRef.current || !valid) return;
+    if (activeRef.current || !canConfirm) return;
 
     activeRef.current = true;
     setRunning(true);
@@ -125,12 +131,13 @@ export function PromotionBulkApplicationModal({ selections, onClose }: Props) {
         setExecutions([...completed]);
 
         try {
+          const selectedPrice = prices[selection.key] ?? null;
           const result = await applySelectionWithRetry({
             itemId: selection.itemId,
-            option: selection.option,
-            selectedPrice: selection.option.requiresPriceSelection === true
-              ? prices[selection.key] ?? null
-              : null,
+            option: selectedPrice === null
+              ? selection.option
+              : { ...selection.option, promotionPrice: selectedPrice },
+            selectedPrice,
           });
 
           completed[index] = result.ok
@@ -176,7 +183,7 @@ export function PromotionBulkApplicationModal({ selections, onClose }: Props) {
         : running
           ? null
           : (
-            <Button type="primary" disabled={!valid} onClick={() => void start()}>
+            <Button type="primary" disabled={!canConfirm} onClick={() => void start()}>
               Confirmar {selections.length} promociones
             </Button>
           )}

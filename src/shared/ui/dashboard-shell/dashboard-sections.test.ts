@@ -8,6 +8,9 @@ describe("findDashboardSection", () => {
     expect(findDashboardSection("/publicaciones/123")?.title).toBe(
       "Publicaciones",
     );
+    expect(findDashboardSection("/publicacion-promocion")?.title).toBe(
+      "Publicación y promoción",
+    );
   });
 
   it("returns undefined for a path outside the dashboard sections", () => {

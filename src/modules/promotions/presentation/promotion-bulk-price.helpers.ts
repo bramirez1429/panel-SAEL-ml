@@ -21,7 +21,19 @@ export function initialPromotionPrices(
   selections: readonly SelectedPromotion[],
 ): PromotionPrices {
   return Object.fromEntries(
-    selections.map((selection) => [selection.key, suggestedPrice(selection)]),
+    selections.map((selection) => [
+      selection.key,
+      validOwnPrice(selection) ?? suggestedPrice(selection),
+    ]),
+  );
+}
+
+export function initialCampaignPriceExclusions(
+  selections: readonly SelectedPromotion[],
+): CampaignPriceExclusions {
+  return Object.fromEntries(
+    selections
+      .map((selection) => [selection.key, true]),
   );
 }
 
@@ -45,14 +57,9 @@ export function applyCampaignPrice(
   }
 
   for (const selection of selections) {
-    if (
-      selection.option.requiresPriceSelection !== true
-      || excludedFromCampaign[selection.key]
-    ) {
-      continue;
-    }
+    if (excludedFromCampaign[selection.key]) continue;
 
-    if (validSelectionPrice(selection, campaignPrice)) {
+    if (validCampaignPrice(selection, campaignPrice)) {
       prices[selection.key] = campaignPrice;
     } else {
       warnings[selection.key] = campaignPrice;
@@ -90,21 +97,18 @@ export function summarizeCampaignPrice(
   excludedFromCampaign: CampaignPriceExclusions,
   campaignPrice: number | null,
 ): CampaignPriceSummary {
-  const editable = selections.filter(
-    (selection) => selection.option.requiresPriceSelection === true,
-  );
-  const included = editable.filter(
+  const included = selections.filter(
     (selection) => excludedFromCampaign[selection.key] !== true,
   );
 
   return {
-    eligibleCount: editable.length,
-    excludedCount: editable.length - included.length,
+    eligibleCount: selections.length,
+    excludedCount: selections.length - included.length,
     appliedCount: included.filter((selection) => (
-      validSelectionPrice(selection, campaignPrice)
+      validCampaignPrice(selection, campaignPrice)
     )).length,
     rejectedCount: included.filter((selection) => (
-      !validSelectionPrice(selection, campaignPrice)
+      !validCampaignPrice(selection, campaignPrice)
     )).length,
   };
 }
@@ -154,8 +158,7 @@ export function campaignDiscountRange(
 
   const discounts = selections
     .filter((selection) => (
-      selection.option.requiresPriceSelection === true
-      && excludedFromCampaign[selection.key] !== true
+      excludedFromCampaign[selection.key] !== true
     ))
     .map((selection) => promotionDiscountPercent(selection.option.originalPrice, campaignPrice))
     .filter((value): value is number => value !== null);
@@ -171,6 +174,19 @@ export function validSelectionPrice(
   if (selection.option.requiresPriceSelection !== true) {
     return selection.option.promotionPrice !== null && selection.option.promotionPrice > 0;
   }
+  if (price === null || !Number.isFinite(price) || price <= 0) return false;
+  if (
+    selection.option.minPromotionPrice !== null
+    && price < selection.option.minPromotionPrice
+  ) return false;
+  return selection.option.maxPromotionPrice === null
+    || price <= selection.option.maxPromotionPrice;
+}
+
+function validCampaignPrice(
+  selection: SelectedPromotion,
+  price: number | null,
+): boolean {
   if (price === null || !Number.isFinite(price) || price <= 0) return false;
   if (
     selection.option.minPromotionPrice !== null

@@ -13,6 +13,7 @@ type Props = Readonly<{
   campaign: PromotionCampaign;
   item: PromotionCampaignItem;
   onClose: () => void;
+  onCompleted?: () => void;
 }>;
 
 const currencyFormatter = new Intl.NumberFormat("es-AR", {
@@ -21,7 +22,7 @@ const currencyFormatter = new Intl.NumberFormat("es-AR", {
   maximumFractionDigits: 0,
 });
 
-export function DealPromotionModal({ campaign, item, onClose }: Props) {
+export function DealPromotionModal({ campaign, item, onClose, onCompleted }: Props) {
   const router = useRouter();
   const submission = useSingleSubmission();
   const [price, setPrice] = useState<number | null>(() => initialPrice(item));
@@ -42,6 +43,7 @@ export function DealPromotionModal({ campaign, item, onClose }: Props) {
       return;
     }
     void message.success("Promoción aplicada correctamente.");
+    onCompleted?.();
     onClose();
     router.refresh();
   }

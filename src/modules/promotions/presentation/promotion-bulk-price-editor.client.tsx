@@ -1,5 +1,6 @@
 "use client";
 
+import { CheckOutlined } from "@ant-design/icons";
 import {
   Alert,
   Button,
@@ -7,6 +8,7 @@ import {
   Checkbox,
   InputNumber,
   Space,
+  Tag,
   Typography,
 } from "antd";
 import type { InputNumberProps } from "antd";
@@ -21,7 +23,6 @@ import {
   promotionCampaignKey,
   promotionName,
   summarizeCampaignPrice,
-  suggestedPrice,
   validSelectionPrice,
   type CampaignPrices,
   type CampaignPriceWarnings,
@@ -60,6 +61,17 @@ export function PromotionBulkPriceEditor({
     <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
       {campaigns.map(({ key, selections: campaignSelections }) => {
         const campaignPrice = campaignPrices[key] ?? null;
+        const hasCampaignPrice = (
+          campaignPrice !== null
+          && Number.isFinite(campaignPrice)
+          && campaignPrice > 0
+        );
+        const selectedItemKeys = campaignSelections
+          .filter((selection) => excludedFromCampaign[selection.key] !== true)
+          .map((selection) => selection.key);
+        const canApplyCampaignPrice = (
+          hasCampaignPrice && selectedItemKeys.length > 0
+        );
         const summary = summarizeCampaignPrice(
           campaignSelections,
           excludedFromCampaign,
@@ -89,7 +101,7 @@ export function PromotionBulkPriceEditor({
                 />
                 <Button
                   aria-label={`Aplicar precio ${promotionName(campaignSelections[0]!)}`}
-                  disabled={campaignPrice === null || campaignPrice <= 0}
+                  disabled={!canApplyCampaignPrice}
                   onClick={() => onApplyCampaignPrice(key)}
                 >
                   Aplicar
@@ -108,6 +120,9 @@ export function PromotionBulkPriceEditor({
                     key={selection.key}
                     selection={selection}
                     price={prices[selection.key] ?? null}
+                    campaignPrice={campaignPrice}
+                    campaignPriceApplied={campaignPriceApplied[key] === true}
+                    hasCampaignPrice={hasCampaignPrice}
                     excludedFromCampaign={excludedFromCampaign[selection.key] === true}
                     invalidCampaignPrice={campaignWarnings[selection.key] ?? null}
                     onPriceChange={(price) => onPriceChange(selection.key, price)}
@@ -128,6 +143,9 @@ export function PromotionBulkPriceEditor({
 function PromotionPriceRow({
   selection,
   price,
+  campaignPrice,
+  campaignPriceApplied,
+  hasCampaignPrice,
   excludedFromCampaign,
   invalidCampaignPrice,
   onPriceChange,
@@ -135,6 +153,9 @@ function PromotionPriceRow({
 }: Readonly<{
   selection: SelectedPromotion;
   price: number | null;
+  campaignPrice: number | null;
+  campaignPriceApplied: boolean;
+  hasCampaignPrice: boolean;
   excludedFromCampaign: boolean;
   invalidCampaignPrice: number | null;
   onPriceChange: (price: number | null) => void;
@@ -142,39 +163,51 @@ function PromotionPriceRow({
 }>) {
   const editable = selection.option.requiresPriceSelection === true;
   const valid = validSelectionPrice(selection, price);
-  const suggested = suggestedPrice(selection);
   const discount = promotionDiscountPercent(selection.option.originalPrice, price);
+  const participatesInCampaignPrice = !excludedFromCampaign;
+  const receivedCampaignPrice = (
+    campaignPriceApplied
+    && participatesInCampaignPrice
+    && invalidCampaignPrice === null
+    && price === campaignPrice
+  );
+  const titlePresentation = publicationTitlePresentation(
+    selection.publicationTitle,
+  );
 
   return (
     <div style={{ borderBottom: "1px solid #f0f0f0", padding: "12px 0" }}>
       <Space orientation="vertical" size={4} style={{ width: "100%" }}>
         <Typography.Text strong>{promotionName(selection)}</Typography.Text>
-        <Typography.Text>
-          {selection.publicationTitle} · {selection.itemId}
-        </Typography.Text>
+        <Typography.Text>{titlePresentation.title}</Typography.Text>
+        <Space size="small" wrap>
+          {titlePresentation.size ? (
+            <Tag color="blue">Talle {titlePresentation.size}</Tag>
+          ) : null}
+          <Typography.Text type="secondary">{selection.itemId}</Typography.Text>
+        </Space>
         <Typography.Text>Precio actual: {money(selection.option.originalPrice)}</Typography.Text>
         <Typography.Text>
           Precio sugerido ML: {money(selection.option.suggestedPromotionPrice)}
         </Typography.Text>
+        <Typography.Text>
+          Precio promocional actual: {money(selection.option.promotionPrice)}
+        </Typography.Text>
+        <Checkbox
+          aria-label={`Aplicar este precio a ${selection.itemId}`}
+          checked={participatesInCampaignPrice}
+          disabled={!hasCampaignPrice}
+          onChange={(event) => (
+            onExcludedFromCampaignChange(!event.target.checked)
+          )}
+        >
+          Aplicar este precio a este ítem
+        </Checkbox>
         {editable ? (
           <>
-            <Checkbox
-              aria-label={`Excluir del precio de esta campaña ${selection.itemId}`}
-              checked={excludedFromCampaign}
-              onChange={(event) => (
-                onExcludedFromCampaignChange(event.target.checked)
-              )}
-            >
-              Excluir del precio de esta campaña
-            </Checkbox>
             <Typography.Text>
               Rango permitido: {money(selection.option.minPromotionPrice)} - {money(selection.option.maxPromotionPrice)}
             </Typography.Text>
-            {excludedFromCampaign && suggested !== null ? (
-              <Typography.Text type="secondary">
-                Usará el precio sugerido de Mercado Libre.
-              </Typography.Text>
-            ) : null}
             <Typography.Text>Precio a aplicar</Typography.Text>
             <CurrencyInput
               aria-label={`Precio a aplicar ${selection.itemId}`}
@@ -192,19 +225,20 @@ function PromotionPriceRow({
               </Typography.Text>
             ) : null}
             <Typography.Text>Descuento: {percentage(discount)}</Typography.Text>
-            {invalidCampaignPrice !== null ? (
-              <Alert
-                showIcon
-                type="warning"
-                title={`${money(invalidCampaignPrice)} está fuera del rango permitido para esta promoción.`}
-              />
-            ) : null}
           </>
-        ) : (
-          <Typography.Text>
-            Precio promocional: {money(selection.option.promotionPrice)}
+        ) : null}
+        {receivedCampaignPrice ? (
+          <Typography.Text strong type="success">
+            Nuevo precio promocional: {money(price)}
           </Typography.Text>
-        )}
+        ) : null}
+        {invalidCampaignPrice !== null ? (
+          <Alert
+            showIcon
+            type="warning"
+            title={`${money(invalidCampaignPrice)} está fuera del rango permitido para esta promoción.`}
+          />
+        ) : null}
       </Space>
     </div>
   );
@@ -222,13 +256,23 @@ function CampaignApplicationSummary({
   return (
     <Space orientation="vertical" size={0} style={{ marginTop: 8 }}>
       {campaignPriceApplied ? (
-        <Typography.Text>
-          Aplicado a {summary.appliedCount} de {summary.eligibleCount} promociones
+        <Typography.Text type="success">
+          <CheckOutlined /> Precio {money(campaignPrice)} aplicado a {summary.appliedCount} de {summary.eligibleCount} promociones
         </Typography.Text>
       ) : null}
-      {summary.excludedCount > 0 ? (
+      {!campaignPriceApplied
+        && campaignPrice !== null
+        && Number.isFinite(campaignPrice)
+        && campaignPrice > 0 ? (
+        <Typography.Text type="warning">
+          {summary.eligibleCount === summary.excludedCount
+            ? "Seleccioná al menos un ítem para aplicar este precio."
+            : "Presioná Aplicar para usar este precio en las promociones."}
+        </Typography.Text>
+      ) : null}
+      {campaignPriceApplied && summary.excludedCount > 0 ? (
         <Typography.Text>
-          {summary.excludedCount} {summary.excludedCount === 1 ? "excluida" : "excluidas"} del precio de esta campaña
+          {summary.excludedCount} {summary.excludedCount === 1 ? "promoción mantiene" : "promociones mantienen"} su precio promocional
         </Typography.Text>
       ) : null}
       {campaignPriceApplied && summary.rejectedCount > 0 ? (
@@ -294,4 +338,25 @@ function groupByCampaign(selections: readonly SelectedPromotion[]) {
     key,
     selections: campaignSelections as readonly SelectedPromotion[],
   }));
+}
+
+const PUBLICATION_SIZE_PATTERN = /(^|\s)(4XL|3XL|2XL|XXXL|XXL|XL|XS|S|M|L)(?=\s|$)/iu;
+
+function publicationTitlePresentation(title: string): Readonly<{
+  title: string;
+  size: string | null;
+}> {
+  const match = PUBLICATION_SIZE_PATTERN.exec(title);
+  const matchedSize = match?.[2];
+  if (!match || !matchedSize) return { title, size: null };
+
+  const sizeStart = match.index + (match[1]?.length ?? 0);
+  const titleWithoutSize = (
+    title.slice(0, sizeStart) + title.slice(sizeStart + matchedSize.length)
+  ).replace(/\s{2,}/gu, " ").trim();
+
+  return {
+    title: titleWithoutSize || title,
+    size: matchedSize.toUpperCase(),
+  };
 }

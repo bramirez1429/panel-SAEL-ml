@@ -8,6 +8,8 @@ import {
 import type { TableColumnsType } from "antd";
 import SkeletonInput from "antd/es/skeleton/Input";
 import {
+  useCallback,
+  useEffect,
   useState,
   type CSSProperties,
 } from "react";
@@ -62,6 +64,8 @@ type Props = Readonly<{
   page: PromotionsPage;
   selectedForRemoval: Readonly<Record<string, PromotionDeactivationSelection>>;
   onToggleRemoval: (selection: PromotionDeactivationSelection) => void;
+  compact?: boolean;
+  loadAllOnMount?: boolean;
 }>;
 
 type DealSelection = Readonly<{
@@ -91,6 +95,8 @@ export function PromotionsTable({
   page,
   selectedForRemoval,
   onToggleRemoval,
+  compact = false,
+  loadAllOnMount = false,
 }: Props) {
   const [deal, setDeal] =
     useState<DealSelection | null>(null);
@@ -133,11 +139,17 @@ export function PromotionsTable({
       (state) => state.toggleSelection,
     );
 
-  function loadOptions(
+  const invalidateOptions =
+    usePromotionGlobalStore(
+      (state) => state.invalidateOptions,
+    );
+
+  const loadOptions = useCallback((
     publication: PromotionRow,
-  ): void {
+  ): void => {
     const cached =
-      optionsByItem[publication.itemId];
+      usePromotionGlobalStore.getState()
+        .optionsByItem[publication.itemId];
 
     if (
       cached?.status === "loading" ||
@@ -160,6 +172,16 @@ export function PromotionsTable({
         failOptions(publication.itemId);
       }
     });
+  }, [failOptions, saveOptions, startOptionsLoad]);
+
+  useEffect(() => {
+    if (!loadAllOnMount) return;
+    page.publications.forEach(loadOptions);
+  }, [loadAllOnMount, loadOptions, page.publications]);
+
+  function reloadOptions(publication: PromotionRow): void {
+    invalidateOptions([publication.itemId]);
+    loadOptions(publication);
   }
 
   const rows = displayRows(
@@ -322,15 +344,19 @@ export function PromotionsTable({
     },
   ];
 
+  const visibleColumns = compact
+    ? columns.filter(({ key }) => key !== "selection")
+    : columns;
+
   return (
     <>
       <Table<DisplayRow>
         rowKey="key"
         dataSource={rows}
-        columns={columns}
+        columns={visibleColumns}
         pagination={false}
         size="small"
-        scroll={{ x: 1367 }}
+        scroll={{ x: compact ? 1325 : 1367 }}
       />
 
       <PromotionDeactivationModal
@@ -353,6 +379,9 @@ export function PromotionsTable({
         onClose={() =>
           setDeactivating(null)
         }
+        onCompleted={() => {
+          if (deactivating) reloadOptions(deactivating.publication);
+        }}
       />
 
       <PromotionOptionsModal
@@ -366,6 +395,9 @@ export function PromotionsTable({
         onClose={() =>
           setLegacyRow(null)
         }
+        onCompleted={() => {
+          if (legacyRow) reloadOptions(legacyRow);
+        }}
       />
 
       {deal ? (
@@ -376,6 +408,12 @@ export function PromotionsTable({
           onClose={() =>
             setDeal(null)
           }
+          onCompleted={() => {
+            const publication = page.publications.find(
+              ({ itemId }) => itemId === deal.item.itemId,
+            );
+            if (publication) reloadOptions(publication);
+          }}
         />
       ) : null}
     </>
@@ -578,7 +616,7 @@ function SelectionCell({
     />;
   }
 
-  if (!isSelectable(option)) return null;
+  if (!isApplicablePromotionOption(option)) return null;
 
   const selection =
     promotionSelection(
@@ -710,6 +748,12 @@ function hasVisibleAction(
    * sólo visibles si realmente podemos
    * ofrecerle al usuario el botón Participar.
    */
+  return isApplicablePromotionOption(option);
+}
+
+export function isApplicablePromotionOption(
+  option: PromotionOption,
+): boolean {
   if (
     option.status !== "candidate" ||
     !option.canApply
@@ -722,15 +766,6 @@ function hasVisibleAction(
   }
 
   return completeLegacyOption(option);
-}
-
-function isSelectable(
-  option: PromotionOption,
-): boolean {
-  return (
-    option.canApply &&
-    option.status === "candidate"
-  );
 }
 
 function dealSelection(
