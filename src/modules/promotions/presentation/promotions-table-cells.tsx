@@ -2,6 +2,9 @@
 
 import { Image, Space, Tag, Typography } from "antd";
 
+import { publicationTitlePresentation } from "@/shared/lib/publication-size";
+import { PublicationSizeTag } from "@/shared/ui/publication-size-tag";
+
 import type { PromotionRow } from "../domain/promotion.model";
 import type { PromotionOption } from "../domain/promotions.repository";
 import { CopyableText } from "./copyable-text.client";
@@ -19,6 +22,8 @@ export function PublicationCell({
 }: Readonly<{
   publication: PromotionRow;
 }>) {
+  const titlePresentation = publicationTitlePresentation(publication.title);
+
   return (
     <Space align="start" size={12}>
       {publication.thumbnail ? (
@@ -37,14 +42,12 @@ export function PublicationCell({
 
       <div style={{ lineHeight: 1.45 }}>
         <Typography.Text strong>
-          {publication.title}
+          {titlePresentation.title}
         </Typography.Text>
 
-        {publication.sku ? (
+        {titlePresentation.size ? (
           <div>
-            <Typography.Text type="secondary">
-              SKU {publication.sku}
-            </Typography.Text>
+            <PublicationSizeTag size={titlePresentation.size} />
           </div>
         ) : null}
 
@@ -56,6 +59,14 @@ export function PublicationCell({
             successMessage="MLA copiado"
           />
         </div>
+
+        {publication.sku ? (
+          <div>
+            <Typography.Text type="secondary">
+              SKU {publication.sku}
+            </Typography.Text>
+          </div>
+        ) : null}
 
         {publication.price !== null ? (
           <div style={{ marginTop: 2 }}>

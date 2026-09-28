@@ -8,10 +8,12 @@ import {
   Checkbox,
   InputNumber,
   Space,
-  Tag,
   Typography,
 } from "antd";
 import type { InputNumberProps } from "antd";
+
+import { publicationTitlePresentation } from "@/shared/lib/publication-size";
+import { PublicationSizeTag } from "@/shared/ui/publication-size-tag";
 
 import type { SelectedPromotion } from "./promotion-global.store";
 import {
@@ -182,7 +184,7 @@ function PromotionPriceRow({
         <Typography.Text>{titlePresentation.title}</Typography.Text>
         <Space size="small" wrap>
           {titlePresentation.size ? (
-            <Tag color="blue">Talle {titlePresentation.size}</Tag>
+            <PublicationSizeTag size={titlePresentation.size} />
           ) : null}
           <Typography.Text type="secondary">{selection.itemId}</Typography.Text>
         </Space>
@@ -224,7 +226,6 @@ function PromotionPriceRow({
                 El precio debe estar dentro del rango permitido.
               </Typography.Text>
             ) : null}
-            <Typography.Text>Descuento: {percentage(discount)}</Typography.Text>
           </>
         ) : null}
         {receivedCampaignPrice ? (
@@ -232,6 +233,7 @@ function PromotionPriceRow({
             Nuevo precio promocional: {money(price)}
           </Typography.Text>
         ) : null}
+        <Typography.Text>Descuento: {percentage(discount)}</Typography.Text>
         {invalidCampaignPrice !== null ? (
           <Alert
             showIcon
@@ -338,25 +340,4 @@ function groupByCampaign(selections: readonly SelectedPromotion[]) {
     key,
     selections: campaignSelections as readonly SelectedPromotion[],
   }));
-}
-
-const PUBLICATION_SIZE_PATTERN = /(^|\s)(4XL|3XL|2XL|XXXL|XXL|XL|XS|S|M|L)(?=\s|$)/iu;
-
-function publicationTitlePresentation(title: string): Readonly<{
-  title: string;
-  size: string | null;
-}> {
-  const match = PUBLICATION_SIZE_PATTERN.exec(title);
-  const matchedSize = match?.[2];
-  if (!match || !matchedSize) return { title, size: null };
-
-  const sizeStart = match.index + (match[1]?.length ?? 0);
-  const titleWithoutSize = (
-    title.slice(0, sizeStart) + title.slice(sizeStart + matchedSize.length)
-  ).replace(/\s{2,}/gu, " ").trim();
-
-  return {
-    title: titleWithoutSize || title,
-    size: matchedSize.toUpperCase(),
-  };
 }

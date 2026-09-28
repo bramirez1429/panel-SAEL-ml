@@ -1,6 +1,10 @@
 import { Descriptions, Typography } from "antd";
 
 import type { PromotionOption } from "../domain/promotions.repository";
+import {
+  percentage,
+  promotionDiscountPercent,
+} from "./promotion-bulk-price.helpers";
 import { formatPromotionPeriod } from "./promotion-date.helpers";
 
 type Props = Readonly<{ option: PromotionOption }>;
@@ -10,13 +14,17 @@ export function PromotionFinancialSummary({ option }: Props) {
     option.originalPrice !== null && option.promotionPrice !== null
       ? option.originalPrice - option.promotionPrice
       : null;
+  const discountPercent = option.discountPercent ?? promotionDiscountPercent(
+    option.originalPrice,
+    option.promotionPrice,
+  );
   return (
     <Descriptions column={1} size="small">
       <Descriptions.Item label="Precio de lista">
         {money(option.originalPrice)}
       </Descriptions.Item>
       <Descriptions.Item label="Descuento">
-        {option.discountPercent === null ? "—" : `${option.discountPercent}%`}
+        {percentage(discountPercent)}
         {buyerSaving === null ? null : (
           <Typography.Text type="secondary">
             {` · Ahorrás ${money(buyerSaving)}`}

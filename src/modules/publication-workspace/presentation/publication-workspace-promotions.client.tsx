@@ -3,6 +3,8 @@
 import { Checkbox, Space } from "antd";
 import { useMemo, useState } from "react";
 
+import { comparePublicationTitlesBySize } from "@/shared/lib/publication-size";
+
 import type {
   PromotionDetails,
   PromotionRow,
@@ -32,11 +34,15 @@ export function PublicationWorkspacePromotions({
   selection: PublicationWorkspaceSelection;
 }>) {
   const promotionRows = useMemo(
-    () => (
-      selection.type === "family"
-        ? selection.children
-        : [selection.publication]
-    ).map(toPromotionRow),
+    () => {
+      const publications = selection.type === "family"
+        ? [...selection.children].sort((left, right) => (
+          comparePublicationTitlesBySize(left.title, right.title)
+        ))
+        : [selection.publication];
+
+      return publications.map(toPromotionRow);
+    },
     [selection],
   );
   const [selectedForRemoval, setSelectedForRemoval] = useState<

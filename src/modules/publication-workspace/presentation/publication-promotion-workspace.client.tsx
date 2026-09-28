@@ -2,9 +2,11 @@
 
 import { PictureOutlined } from "@ant-design/icons";
 import { Button, Card, Image, Input, List, Tabs, Typography } from "antd";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 import { parsePublicationSearch } from "@/shared/lib/publication-search";
+import { comparePublicationTitlesBySize } from "@/shared/lib/publication-size";
 
 import type {
   PublicationWorkspaceSearchItem,
@@ -16,7 +18,6 @@ import type {
 import {
   EditableWorkspaceTitle,
   PublicationWorkspaceEditor,
-  publicationTitlePresentation,
   type WorkspaceSaveAction,
   type WorkspaceStatusAction,
   type WorkspaceTitleAction,
@@ -35,6 +36,9 @@ type Props = Readonly<{
 type ViewState = "initial" | "searching" | "results" | "empty" | "error" | "selected";
 
 export function PublicationPromotionWorkspace({ onSearch, onSelect, onSave, onStatusChange, onTitleSave }: Props) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const hydratedSearchRef = useRef(false);
   const [query, setQuery] = useState("");
   const [selection, setSelection] = useState<PublicationWorkspaceSelection | null>(null);
   const [matches, setMatches] = useState<readonly PublicationWorkspaceSearchItem[]>([]);
@@ -42,6 +46,31 @@ export function PublicationPromotionWorkspace({ onSearch, onSelect, onSave, onSt
   const criteria = parsePublicationSearch(query);
 
   async function handleSearch(rawTerm: string) {
+    const criteria = parsePublicationSearch(rawTerm);
+    if (!criteria) return;
+
+    setQuery(criteria.value);
+    replaceSearchQuery(criteria.value);
+    await executeSearch(criteria.value);
+  }
+
+  function replaceSearchQuery(value: string | null): void {
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (value) {
+      params.set("q", value);
+    } else {
+      params.delete("q");
+    }
+
+    const serializedParams = params.toString();
+    router.replace(
+      `/publicacion-promocion${serializedParams ? `?${serializedParams}` : ""}`,
+      { scroll: false },
+    );
+  }
+
+  async function executeSearch(rawTerm: string) {
     const criteria = parsePublicationSearch(rawTerm);
     if (!criteria) return;
 
@@ -80,6 +109,22 @@ export function PublicationPromotionWorkspace({ onSearch, onSelect, onSave, onSt
     }
   }
 
+  useEffect(() => {
+    if (hydratedSearchRef.current) return;
+    hydratedSearchRef.current = true;
+
+    const urlQuery = searchParams.get("q")?.trim();
+    if (!urlQuery) return;
+
+    const criteria = parsePublicationSearch(urlQuery);
+    if (!criteria) return;
+
+    setQuery(criteria.value);
+    void executeSearch(criteria.value);
+    // La URL solo hidrata la búsqueda inicial; router.replace no debe repetirla.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function loadSelection(request: PublicationWorkspaceSelectionRequest) {
     setViewState("searching");
     try {
@@ -111,7 +156,14 @@ export function PublicationPromotionWorkspace({ onSearch, onSelect, onSave, onSt
           aria-label="Buscar publicación"
           enterButton="Buscar"
           loading={viewState === "searching"}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => {
+            const nextQuery = event.target.value;
+            setQuery(nextQuery);
+
+            if (!nextQuery) {
+              replaceSearchQuery(null);
+            }
+          }}
           onSearch={handleSearch}
           placeholder="Buscar por MLA, MLAU, Family ID o nombre"
           size="large"
@@ -215,8 +267,7 @@ function FamilyWorkspace({ family, onSave, onStatusChange, onTitleSave }: Readon
 }>) {
   const totalSold = family.children.reduce((total, child) => total + child.sold, 0);
   const orderedChildren = [...family.children].sort((left, right) => (
-    sizeOrder(publicationTitlePresentation(left.title).size)
-    - sizeOrder(publicationTitlePresentation(right.title).size)
+    comparePublicationTitlesBySize(left.title, right.title)
   ));
 
   return (
@@ -249,21 +300,4 @@ function FamilyWorkspace({ family, onSave, onStatusChange, onTitleSave }: Readon
       </div>
     </section>
   );
-}
-
-const PUBLICATION_SIZE_ORDER = new Map<string, number>([
-  ["S", 10],
-  ["M", 20],
-  ["L", 30],
-  ["XL", 40],
-  ["2XL", 50],
-  ["6", 10],
-  ["8", 20],
-  ["10", 30],
-  ["12", 40],
-  ["14", 50],
-]);
-
-function sizeOrder(size: string | null): number {
-  return size ? PUBLICATION_SIZE_ORDER.get(size) ?? Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER;
 }

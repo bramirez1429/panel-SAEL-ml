@@ -7,6 +7,10 @@ import { useState } from "react";
 import type { PromotionCampaign } from "../domain/promotion-campaign.model";
 import type { PromotionCampaignItem } from "../domain/promotion-campaign-items.model";
 import { applyDealPromotion } from "./apply-deal-promotion.action";
+import {
+  percentage,
+  promotionDiscountPercent,
+} from "./promotion-bulk-price.helpers";
 import { useSingleSubmission } from "./use-single-submission.client";
 
 type Props = Readonly<{
@@ -91,6 +95,10 @@ export function DealPromotionModal({ campaign, item, onClose, onCompleted }: Pro
         />
       </label>
       {validationError ? <Typography.Text type="danger">{validationError}</Typography.Text> : null}
+      <FinancialLine
+        label="Descuento"
+        value={percentage(promotionDiscountPercent(item.currentPrice, price))}
+      />
       <FinancialLine label="Aporte ML actual" value={item.mercadoLibreContributionAmount === null ? "ML no informa" : money(item.mercadoLibreContributionAmount)} />
       <FinancialLine label="Tu descuento estimado" value={estimatedSellerDiscount(item, price)} />
       <FinancialLine label="Vos recibís aprox." value="Se actualizará al confirmar" />

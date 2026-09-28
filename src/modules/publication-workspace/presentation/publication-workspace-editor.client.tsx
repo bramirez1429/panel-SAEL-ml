@@ -12,6 +12,8 @@ import { useState } from "react";
 
 import type { UpdatePublicationInput } from "@/modules/publications/application/update-publication.command";
 import type { PublicationEditStatus, PublicationEditTarget } from "@/modules/publications/domain/publication-edit.repository";
+import { publicationTitlePresentation } from "@/shared/lib/publication-size";
+import { PublicationSizeTag } from "@/shared/ui/publication-size-tag";
 
 import type {
   PublicationWorkspaceFamily,
@@ -196,18 +198,7 @@ export function PublicationWorkspaceEditor({ publication, onSave, onStatusChange
           </Space>
           {titlePresentation.size ? (
             <div>
-              <Tag
-                color="#55acee"
-                style={{
-                  borderRadius: 8,
-                  fontSize: 15,
-                  fontWeight: 600,
-                  marginTop: 6,
-                  padding: "3px 10px",
-                }}
-              >
-                Talle {titlePresentation.size}
-              </Tag>
+              <PublicationSizeTag size={titlePresentation.size} />
             </div>
           ) : null}
         </div>
@@ -371,25 +362,4 @@ function PublicationStatusTag({ status }: Readonly<{ status: string }>) {
     return <Tag color="default">Pausada</Tag>;
   }
   return <Tag color="default">{status}</Tag>;
-}
-
-const PUBLICATION_SIZE_PATTERN = /(^|\s)(4XL|3XL|2XL|XXXL|XXL|XL|XS|S|M|L|14|12|10|8|6)(?=\s|$)/iu;
-
-export function publicationTitlePresentation(title: string): Readonly<{
-  title: string;
-  size: string | null;
-}> {
-  const match = PUBLICATION_SIZE_PATTERN.exec(title);
-  const matchedSize = match?.[2];
-  if (!match || !matchedSize) return { title, size: null };
-
-  const sizeStart = match.index + (match[1]?.length ?? 0);
-  const titleWithoutSize = (
-    title.slice(0, sizeStart) + title.slice(sizeStart + matchedSize.length)
-  ).replace(/\s{2,}/gu, " ").trim();
-
-  return {
-    title: titleWithoutSize || title,
-    size: matchedSize.toUpperCase(),
-  };
 }
