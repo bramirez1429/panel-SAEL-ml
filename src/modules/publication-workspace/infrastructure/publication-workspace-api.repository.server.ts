@@ -4,14 +4,22 @@ import { ApiError } from "@/shared/api/api-error";
 import type { AuthenticatedHttpClient } from "@/shared/api/authenticated-http-client.server";
 
 import { getBestPublicationImage } from "../application/get-best-publication-image";
-import type { PublicationWorkspaceRepository, PublicationWorkspaceSearchRequest } from "../domain/publication-workspace.repository";
+import type {
+  PublicationWorkspaceRepository,
+  PublicationWorkspaceSearchRequest,
+  PublicationWorkspaceTitleUpdateResult,
+} from "../domain/publication-workspace.repository";
 import {
   publicationWorkspaceDetailResponseSchema,
   publicationWorkspaceFamilyResponseSchema,
+  publicationWorkspaceFamilyTaskResponseSchema,
+  publicationWorkspaceFamilyTaskStatusSchema,
   publicationWorkspaceSearchResponseSchema,
 } from "./publication-workspace-response.schema";
 
 const SEARCH_ENDPOINT = "/mercadolibre/direct/publicaciones/search";
+const FAMILY_TASK_POLL_INTERVAL_MS = 750;
+const FAMILY_TASK_MAX_ATTEMPTS = 40;
 
 export class PublicationWorkspaceApiRepository
   implements PublicationWorkspaceRepository
@@ -136,18 +144,119 @@ export class PublicationWorkspaceApiRepository
       | Readonly<{ type: "publication"; itemId: string }>
       | Readonly<{ type: "family"; familyId: string }>,
     title: string,
-  ): Promise<void> {
+  ): Promise<PublicationWorkspaceTitleUpdateResult> {
     if (target.type === "family") {
-      await this.httpClient.patch(
+      const response = await this.httpClient.patch(
         `/mercadolibre/direct/edicion/nueva/${encodeURIComponent(target.familyId)}`,
         { familyName: title },
       );
-      return;
+      const task = publicationWorkspaceFamilyTaskResponseSchema.safeParse(response);
+
+      if (!task.success) {
+        throw new ApiError(
+          "El backend no devolvió una tarea válida para actualizar la familia.",
+          "API_INVALID_RESPONSE",
+          { cause: task.error },
+        );
+      }
+
+      const taskResult = await this.waitForFamilyTask(task.data.task_id);
+      if (taskResult.status === "failed") return taskResult;
+
+      return {
+        status: "completed" as const,
+        family: await this.getFamily(target.familyId),
+      };
     }
 
     await this.httpClient.patch(
       `/mercadolibre/direct/edicion/clasica/${encodeURIComponent(target.itemId)}`,
       { title },
     );
+    return { status: "completed" as const, family: null };
   }
+
+  private async waitForFamilyTask(taskId: string) {
+    for (let attempt = 0; attempt < FAMILY_TASK_MAX_ATTEMPTS; attempt += 1) {
+      if (attempt > 0) await delay(FAMILY_TASK_POLL_INTERVAL_MS);
+
+      const response = await this.httpClient.get(
+        `/mercadolibre/direct/edicion/nueva/tasks/${encodeURIComponent(taskId)}`,
+      );
+      const task = publicationWorkspaceFamilyTaskStatusSchema.safeParse(response);
+
+      if (!task.success) {
+        throw new ApiError(
+          "El backend devolvió un estado de tarea de familia inválido.",
+          "API_INVALID_RESPONSE",
+          { cause: task.error },
+        );
+      }
+
+      const outcome = familyTaskOutcome(task.data);
+      if (outcome === "completed") return { status: "completed" as const };
+      if (outcome === "failed") {
+        return {
+          status: "failed" as const,
+          message: familyTaskFailureMessage(task.data),
+        };
+      }
+    }
+
+    return {
+      status: "failed" as const,
+      message: "Mercado Libre todavía no confirmó el cambio. Intentá nuevamente.",
+    };
+  }
+}
+
+type FamilyTaskStatus = ReturnType<
+  typeof publicationWorkspaceFamilyTaskStatusSchema.parse
+>;
+
+function familyTaskOutcome(
+  task: FamilyTaskStatus,
+): "pending" | "completed" | "failed" {
+  const status = task.status.toLowerCase();
+  const userProductStatuses = (task.user_products ?? []).map(
+    (userProduct) => userProduct.status.toLowerCase(),
+  );
+
+  if (
+    ["failed", "error", "rejected", "cancelled", "canceled"].includes(status)
+    || userProductStatuses.some((value) => (
+      ["failed", "error", "rejected", "cancelled", "canceled"].includes(value)
+    ))
+  ) {
+    return "failed";
+  }
+
+  if (
+    ["completed", "finished", "succeeded", "success"].includes(status)
+    || (
+      userProductStatuses.length > 0
+      && userProductStatuses.every((value) => ["completed", "succeeded", "success"].includes(value))
+    )
+  ) {
+    return "completed";
+  }
+
+  return "pending";
+}
+
+function familyTaskFailureMessage(task: FamilyTaskStatus): string {
+  const reasons = (task.user_products ?? []).flatMap((userProduct) => (
+    userProduct.reasons ?? []
+  ));
+  const messages = reasons
+    .map((reason) => reason.message?.trim() || reason.code?.trim())
+    .filter((message): message is string => Boolean(message));
+
+  return messages.length > 0
+    ? [...new Set(messages)].join(" ")
+    : "Mercado Libre rechazó el cambio de nombre de la familia.";
+}
+
+function delay(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }

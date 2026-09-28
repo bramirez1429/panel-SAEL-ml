@@ -7,11 +7,18 @@ import { PromotionBulkApplicationModal } from "./promotion-bulk-application-moda
 import type { SelectedPromotion } from "./promotion-global.store";
 import { usePromotionGlobalStore } from "./promotion-global.store";
 
-export function PromotionSelectionSummary() {
+export function PromotionSelectionSummary({
+  selectionKeys,
+}: Readonly<{
+  selectionKeys?: readonly string[];
+}> = {}) {
   const [open, setOpen] = useState(false);
   const [reviewSelections, setReviewSelections] = useState<readonly SelectedPromotion[]>([]);
   const selectionsByKey = usePromotionGlobalStore((state) => state.selections);
-  const selections = Object.values(selectionsByKey);
+  const allowedKeys = selectionKeys ? new Set(selectionKeys) : null;
+  const selections = Object.values(selectionsByKey).filter(
+    ({ key }) => !allowedKeys || allowedKeys.has(key),
+  );
 
   function openReview(): void {
     setReviewSelections(selections);

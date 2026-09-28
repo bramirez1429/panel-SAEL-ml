@@ -2,6 +2,7 @@
 
 import { searchWorkspacePublications } from "../application/search-workspace-publications";
 import type {
+  PublicationWorkspaceFamily,
   PublicationWorkspaceSearchResult,
   PublicationWorkspaceSelectionRequest,
   PublicationWorkspaceSelectionResult,
@@ -55,12 +56,30 @@ export async function updateWorkspaceTitleAction(
       | Readonly<{ type: "family"; familyId: string }>;
     title: string;
   }>,
-): Promise<Readonly<{ ok: true; title: string } | { ok: false; message: string }>> {
+): Promise<Readonly<
+  | { ok: true; title: string; family?: PublicationWorkspaceFamily }
+  | { ok: false; message: string }
+>> {
   const title = input.title.trim();
   if (!title) return { ok: false, message: "El título no puede quedar vacío." };
 
   try {
-    await createPublicationWorkspaceRepository().updateTitle(input.target, title);
+    const result = await createPublicationWorkspaceRepository().updateTitle(
+      input.target,
+      title,
+    );
+    if (result.status === "failed") {
+      return { ok: false, message: result.message };
+    }
+
+    if (result.family) {
+      return {
+        ok: true,
+        title: result.family.familyName ?? title,
+        family: result.family,
+      };
+    }
+
     return { ok: true, title };
   } catch {
     return { ok: false, message: "No se pudo actualizar el título." };

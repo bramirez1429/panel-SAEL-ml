@@ -72,7 +72,8 @@ export function PublicationPromotionWorkspace({ onSearch, onSelect, onSave, onSt
         return;
       }
       const [firstItem] = result.items;
-      if (firstItem) await loadSelection({ itemId: firstItem.itemId });
+      if (!firstItem) return;
+      await loadSelection({ itemId: firstItem.itemId });
     } catch {
       setViewState("error");
     }
@@ -90,6 +91,12 @@ export function PublicationPromotionWorkspace({ onSearch, onSelect, onSave, onSt
       setViewState("error");
     }
   }
+
+  const handleTitleSave: WorkspaceTitleAction = async (input) => {
+    const result = await onTitleSave(input);
+    if (result.ok && result.family) setSelection(result.family);
+    return result;
+  };
 
   return (
     <main className={styles.page}>
@@ -120,7 +127,7 @@ export function PublicationPromotionWorkspace({ onSearch, onSelect, onSave, onSt
       {viewState === "error" && <WorkspaceMessage>No pudimos consultar la publicación.</WorkspaceMessage>}
       {viewState === "results" && <PublicationMatches items={matches} onSelect={(item) => loadSelection({ itemId: item.itemId })} />}
       {viewState === "selected" && selection && (
-        <WorkspaceTabs selection={selection} onSave={onSave} onStatusChange={onStatusChange} onTitleSave={onTitleSave} />
+        <WorkspaceTabs selection={selection} onSave={onSave} onStatusChange={onStatusChange} onTitleSave={handleTitleSave} />
       )}
     </main>
   );
@@ -185,7 +192,7 @@ function WorkspaceTabs({ selection, onSave, onStatusChange, onTitleSave }: Reado
           label: "Publicación",
           children: selection.type === "family"
             ? <FamilyWorkspace family={selection} onSave={onSave} onStatusChange={onStatusChange} onTitleSave={onTitleSave} />
-            : <PublicationWorkspaceEditor publication={selection.publication} onSave={onSave} onStatusChange={onStatusChange} onTitleSave={onTitleSave} titleTarget={selection.publication.model === "SHARED" ? { type: "publication", itemId: selection.publication.itemId } : undefined} />,
+            : <PublicationWorkspaceEditor publication={selection.publication} onSave={onSave} onStatusChange={onStatusChange} onTitleSave={onTitleSave} showFamilyId titleTarget={selection.publication.model === "SHARED" ? { type: "publication", itemId: selection.publication.itemId } : undefined} />,
         },
         {
           key: "promotion",
@@ -215,11 +222,10 @@ function FamilyWorkspace({ family, onSave, onStatusChange, onTitleSave }: Readon
             ? <Image alt={family.familyName ?? family.familyId} className={styles.familyImage} preview={false} src={family.imageUrl} />
             : <span className={styles.familyImagePlaceholder}><PictureOutlined /></span>}
           <div>
-            <Typography.Text type="secondary">Family ID</Typography.Text>
+            <Typography.Text strong>Family ID: {family.familyId}</Typography.Text>
             <div className={styles.familyTitle}>
               <EditableWorkspaceTitle initialTitle={family.familyName ?? `Familia ${family.familyId}`} onSave={onTitleSave} target={{ type: "family", familyId: family.familyId }} />
             </div>
-            <Typography.Text>{family.familyId}</Typography.Text>
             <div><Typography.Text strong>Total vendidos: {totalSold}</Typography.Text></div>
           </div>
         </div>

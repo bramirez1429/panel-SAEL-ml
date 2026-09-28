@@ -10,6 +10,16 @@ export type PublicationWorkspaceSearchRequest = Readonly<{
   cursor?: string;
 }>;
 
+export type PublicationWorkspaceTitleUpdateResult =
+  | Readonly<{
+      status: "completed";
+      family: PublicationWorkspaceFamily | null;
+    }>
+  | Readonly<{
+      status: "failed";
+      message: string;
+    }>;
+
 export interface PublicationWorkspaceRepository {
   search(
     request: PublicationWorkspaceSearchRequest,
@@ -21,5 +31,5 @@ export interface PublicationWorkspaceRepository {
       | Readonly<{ type: "publication"; itemId: string }>
       | Readonly<{ type: "family"; familyId: string }>,
     title: string,
-  ): Promise<void>;
+  ): Promise<PublicationWorkspaceTitleUpdateResult>;
 }

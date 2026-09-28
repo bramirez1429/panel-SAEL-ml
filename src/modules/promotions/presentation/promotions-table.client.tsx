@@ -616,7 +616,7 @@ function SelectionCell({
     />;
   }
 
-  if (!isSelectable(option)) return null;
+  if (!isApplicablePromotionOption(option)) return null;
 
   const selection =
     promotionSelection(
@@ -748,6 +748,12 @@ function hasVisibleAction(
    * sólo visibles si realmente podemos
    * ofrecerle al usuario el botón Participar.
    */
+  return isApplicablePromotionOption(option);
+}
+
+export function isApplicablePromotionOption(
+  option: PromotionOption,
+): boolean {
   if (
     option.status !== "candidate" ||
     !option.canApply
@@ -760,15 +766,6 @@ function hasVisibleAction(
   }
 
   return completeLegacyOption(option);
-}
-
-function isSelectable(
-  option: PromotionOption,
-): boolean {
-  return (
-    option.canApply &&
-    option.status === "candidate"
-  );
 }
 
 function dealSelection(

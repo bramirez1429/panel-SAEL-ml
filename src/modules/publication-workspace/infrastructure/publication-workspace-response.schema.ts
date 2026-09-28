@@ -102,3 +102,30 @@ export const publicationWorkspaceFamilyResponseSchema = z.object({
     }),
   ),
 });
+
+export const publicationWorkspaceFamilyTaskResponseSchema = z.object({
+  task_id: z.string().min(1),
+  status: z.string().min(1),
+});
+
+const familyTaskReasonSchema = z.object({
+  code: z.string().optional(),
+  message: z.string().optional(),
+});
+
+const familyTaskUserProductSchema = z.object({
+  id: z.string().min(1),
+  status: z.string().min(1),
+  reasons: z.array(familyTaskReasonSchema).nullable().optional(),
+});
+
+export const publicationWorkspaceFamilyTaskStatusSchema = z.object({
+  task_id: z.string().min(1),
+  status: z.string().min(1),
+  user_products: z.array(familyTaskUserProductSchema).optional(),
+  "user-products": z.array(familyTaskUserProductSchema).optional(),
+}).transform((task) => ({
+  task_id: task.task_id,
+  status: task.status,
+  user_products: task.user_products ?? task["user-products"],
+}));

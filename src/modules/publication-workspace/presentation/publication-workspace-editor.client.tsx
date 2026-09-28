@@ -7,13 +7,16 @@ import {
   LoadingOutlined,
   PictureOutlined,
 } from "@ant-design/icons";
-import { Button, Card, Image, Input, InputNumber, message, Space, Switch, Typography } from "antd";
+import { Button, Card, Image, Input, InputNumber, message, Space, Switch, Tag, Typography } from "antd";
 import { useState } from "react";
 
 import type { UpdatePublicationInput } from "@/modules/publications/application/update-publication.command";
 import type { PublicationEditStatus, PublicationEditTarget } from "@/modules/publications/domain/publication-edit.repository";
 
-import type { PublicationWorkspaceItem } from "../domain/publication-workspace.model";
+import type {
+  PublicationWorkspaceFamily,
+  PublicationWorkspaceItem,
+} from "../domain/publication-workspace.model";
 import styles from "./publication-promotion-workspace.module.css";
 
 export type WorkspaceSaveAction = (input: UpdatePublicationInput) => Promise<
@@ -34,17 +37,21 @@ export type WorkspaceTitleTarget =
 export type WorkspaceTitleAction = (input: Readonly<{
   target: WorkspaceTitleTarget;
   title: string;
-}>) => Promise<Readonly<{ ok: true; title: string } | { ok: false; message: string }>>;
+}>) => Promise<Readonly<
+  | { ok: true; title: string; family?: PublicationWorkspaceFamily }
+  | { ok: false; message: string }
+>>;
 
 type Props = Readonly<{
   publication: PublicationWorkspaceItem;
   onSave: WorkspaceSaveAction;
   onStatusChange: WorkspaceStatusAction;
   onTitleSave: WorkspaceTitleAction;
+  showFamilyId?: boolean;
   titleTarget?: WorkspaceTitleTarget;
 }>;
 
-export function PublicationWorkspaceEditor({ publication, onSave, onStatusChange, onTitleSave, titleTarget }: Props) {
+export function PublicationWorkspaceEditor({ publication, onSave, onStatusChange, onTitleSave, showFamilyId = false, titleTarget }: Props) {
   const [messageApi, contextHolder] = message.useMessage();
   const [sku, setSku] = useState(publication.sku ?? "");
   const [stock, setStock] = useState<number | null>(publication.stock);
@@ -56,6 +63,7 @@ export function PublicationWorkspaceEditor({ publication, onSave, onStatusChange
   const [statusSaving, setStatusSaving] = useState(false);
   const [showLargeImage, setShowLargeImage] = useState(false);
   const target = editTarget(publication);
+  const titlePresentation = publicationTitlePresentation(publication.title);
 
   async function saveSku() {
     const nextSku = sku.trim();
@@ -135,6 +143,12 @@ export function PublicationWorkspaceEditor({ publication, onSave, onStatusChange
     messageApi.success("MLA copiado");
   }
 
+  async function copyFamilyId() {
+    if (!publication.familyId) return;
+    await navigator.clipboard.writeText(publication.familyId);
+    messageApi.success("Family ID copiado");
+  }
+
   return (
     <Card className={styles.childCard} size="small">
       {contextHolder}
@@ -146,13 +160,22 @@ export function PublicationWorkspaceEditor({ publication, onSave, onStatusChange
             <Typography.Text strong>{publication.itemId}</Typography.Text>
             <Button aria-label={`Copiar MLA ${publication.itemId}`} icon={<CopyOutlined />} onClick={() => void copyMla()} size="small" type="text" />
           </Space>
+          {showFamilyId && publication.familyId ? (
+            <Space size={4}>
+              <Typography.Text type="secondary">Family ID:</Typography.Text>
+              <Typography.Text strong>{publication.familyId}</Typography.Text>
+              <Button aria-label={`Copiar Family ID ${publication.familyId}`} icon={<CopyOutlined />} onClick={() => void copyFamilyId()} size="small" type="text" />
+            </Space>
+          ) : null}
           <EditableWorkspaceTitle
             initialTitle={publication.title}
             onSave={onTitleSave}
+            showSize
             target={titleTarget}
           />
-          <Space size="small">
-            <Typography.Text type="secondary">Estado: {statusLabel(status)}</Typography.Text>
+          <Space size="small" wrap>
+            <PublicationStatusTag status={status} />
+            {savedStock === 0 ? <Tag color="gold">Sin stock</Tag> : null}
             <Switch
               aria-label={`Estado de ${publication.itemId}`}
               checked={status === "active"}
@@ -171,6 +194,22 @@ export function PublicationWorkspaceEditor({ publication, onSave, onStatusChange
               }}
             />
           </Space>
+          {titlePresentation.size ? (
+            <div>
+              <Tag
+                color="#55acee"
+                style={{
+                  borderRadius: 8,
+                  fontSize: 15,
+                  fontWeight: 600,
+                  marginTop: 6,
+                  padding: "3px 10px",
+                }}
+              >
+                Talle {titlePresentation.size}
+              </Tag>
+            </div>
+          ) : null}
         </div>
         <label className={styles.editorField}>
           <span>SKU</span>
@@ -239,9 +278,10 @@ function formatPrice(value: number | null, currency: string | null): string {
   }
 }
 
-export function EditableWorkspaceTitle({ initialTitle, onSave, target }: Readonly<{
+export function EditableWorkspaceTitle({ initialTitle, onSave, showSize = false, target }: Readonly<{
   initialTitle: string;
   onSave: WorkspaceTitleAction;
+  showSize?: boolean;
   target?: WorkspaceTitleTarget;
 }>) {
   const [messageApi, contextHolder] = message.useMessage();
@@ -280,7 +320,15 @@ export function EditableWorkspaceTitle({ initialTitle, onSave, target }: Readonl
     }
   }
 
-  if (!target) return <Typography.Text ellipsis>{title}</Typography.Text>;
+  const visibleTitle = target ? title : initialTitle;
+  const titlePresentation = showSize
+    ? publicationTitlePresentation(visibleTitle)
+    : { title: visibleTitle, size: null };
+  const titleContent = (
+    <Typography.Text ellipsis>{titlePresentation.title}</Typography.Text>
+  );
+
+  if (!target) return titleContent;
   if (editing) {
     return <>{contextHolder}<Input autoFocus aria-label="Editar título" disabled={saving} value={draft} onBlur={() => void saveTitle()} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => {
       if (event.key === "Escape") {
@@ -290,7 +338,7 @@ export function EditableWorkspaceTitle({ initialTitle, onSave, target }: Readonl
       }
     }} onPressEnter={(event) => event.currentTarget.blur()} /></>;
   }
-  return <>{contextHolder}<Space size={4}><Typography.Text ellipsis>{title}</Typography.Text><Button aria-label="Editar título" icon={<EditOutlined />} onClick={() => setEditing(true)} size="small" type="text" /></Space></>;
+  return <>{contextHolder}<Space size={4} wrap>{titleContent}<Button aria-label="Editar título" icon={<EditOutlined />} onClick={() => setEditing(true)} size="small" type="text" /></Space></>;
 }
 
 function SaveIndicator({ field, savedField, savingField }: Readonly<{ field: "sku" | "stock"; savedField: "sku" | "stock" | null; savingField: "sku" | "stock" | null }>) {
@@ -307,8 +355,41 @@ function editTarget(publication: PublicationWorkspaceItem): PublicationEditTarge
   return publication.familyId ? { type: "family", familyId: publication.familyId, itemId: publication.itemId } : { type: "legacy", itemId: publication.itemId, variationId: null };
 }
 
-function statusLabel(status: string): string {
-  if (status === "active") return "Activa";
-  if (status === "paused") return "Pausada";
-  return status;
+function PublicationStatusTag({ status }: Readonly<{ status: string }>) {
+  const normalizedStatus = status.toLowerCase();
+  if (normalizedStatus === "active" || normalizedStatus === "activa") {
+    return <Tag color="green">Activa</Tag>;
+  }
+  if (
+    normalizedStatus === "inactive"
+    || normalizedStatus === "inactiva"
+    || normalizedStatus === "closed"
+  ) {
+    return <Tag color="red">Inactiva</Tag>;
+  }
+  if (normalizedStatus === "paused" || normalizedStatus === "pausada") {
+    return <Tag color="default">Pausada</Tag>;
+  }
+  return <Tag color="default">{status}</Tag>;
+}
+
+const PUBLICATION_SIZE_PATTERN = /(^|\s)(4XL|3XL|2XL|XXXL|XXL|XL|XS|S|M|L)(?=\s|$)/iu;
+
+function publicationTitlePresentation(title: string): Readonly<{
+  title: string;
+  size: string | null;
+}> {
+  const match = PUBLICATION_SIZE_PATTERN.exec(title);
+  const matchedSize = match?.[2];
+  if (!match || !matchedSize) return { title, size: null };
+
+  const sizeStart = match.index + (match[1]?.length ?? 0);
+  const titleWithoutSize = (
+    title.slice(0, sizeStart) + title.slice(sizeStart + matchedSize.length)
+  ).replace(/\s{2,}/gu, " ").trim();
+
+  return {
+    title: titleWithoutSize || title,
+    size: matchedSize.toUpperCase(),
+  };
 }
