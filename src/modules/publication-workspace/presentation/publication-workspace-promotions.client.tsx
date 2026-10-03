@@ -1,9 +1,13 @@
 "use client";
 
-import { Checkbox, Divider, Space } from "antd";
+import { Checkbox, Divider, Space, Spin, Typography } from "antd";
 import { useMemo, useState } from "react";
 
-import { groupPublicationsByVariant } from "@/shared/lib/publication-variant";
+import {
+  applyPublicationVisualOrder,
+  groupPublicationsByVariant,
+  type PublicationVisualOrder,
+} from "@/shared/lib/publication-variant";
 
 import type {
   PromotionDetails,
@@ -31,13 +35,18 @@ import type {
 export function PublicationWorkspacePromotions({
   onChanged,
   selection,
+  visualOrder,
 }: Readonly<{
   onChanged?: () => void | Promise<void>;
   selection: PublicationWorkspaceSelection;
+  visualOrder: PublicationVisualOrder;
 }>) {
   const { promotionGroups, promotionRows } = useMemo(() => {
     const publicationGroups = selection.type === "family"
-      ? groupPublicationsByVariant(selection.children)
+      ? applyPublicationVisualOrder(
+          groupPublicationsByVariant(selection.children),
+          visualOrder,
+        )
       : [{
           key: selection.publication.itemId,
           label: null,
@@ -56,7 +65,7 @@ export function PublicationWorkspacePromotions({
       promotionGroups: groups,
       promotionRows: groups.flatMap((group) => group.page.publications),
     };
-  }, [selection]);
+  }, [selection, visualOrder]);
   const [selectedForRemoval, setSelectedForRemoval] = useState<
     Readonly<Record<string, PromotionDeactivationSelection>>
   >({});
@@ -143,21 +152,36 @@ export function PublicationWorkspacePromotions({
           onSuccessfulRemoval={removeSuccessfulSelections}
         />
 
-        {promotionGroups.map((group) => (
-          <section key={group.key} style={{ width: "100%" }}>
-            {selection.type === "family" && group.label ? (
-              <Divider titlePlacement="start">{group.label}</Divider>
-            ) : null}
-            <PromotionsTable
-              directParticipation
-              loadAllOnMount
-              page={group.page}
-              selectedForRemoval={selectedForRemoval}
-              onChanged={onChanged}
-              onToggleRemoval={toggleRemoval}
-            />
-          </section>
-        ))}
+        {promotionGroups.map((group) => {
+          const groupResolved = group.page.publications.every((publication) => {
+            const cached = optionsByItem[publication.itemId];
+            return cached?.status === "success" || cached?.status === "error";
+          });
+
+          return (
+            <section key={group.key} style={{ width: "100%" }}>
+              {selection.type === "family" && group.label ? (
+                <Divider titlePlacement="start">{group.label}</Divider>
+              ) : null}
+              {!groupResolved ? (
+                <Space align="center" style={{ minHeight: 120, justifyContent: "center", width: "100%" }}>
+                  <Spin size="small" />
+                  <Typography.Text type="secondary">Cargando promociones...</Typography.Text>
+                </Space>
+              ) : null}
+              <div style={{ display: groupResolved ? "block" : "none" }}>
+                <PromotionsTable
+                  directParticipation
+                  loadAllOnMount
+                  page={group.page}
+                  selectedForRemoval={selectedForRemoval}
+                  onChanged={onChanged}
+                  onToggleRemoval={toggleRemoval}
+                />
+              </div>
+            </section>
+          );
+        })}
       </Space>
     </section>
   );

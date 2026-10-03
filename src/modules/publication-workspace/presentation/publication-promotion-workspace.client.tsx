@@ -1,12 +1,18 @@
 "use client";
 
-import { PictureOutlined } from "@ant-design/icons";
-import { Button, Card, Divider, Image, Input, List, Tabs, Typography } from "antd";
+import { EditOutlined, LoadingOutlined, PictureOutlined } from "@ant-design/icons";
+import { Button, Card, Divider, Image, Input, InputNumber, List, Modal, Progress, Space, Tabs, Typography, message } from "antd";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { parsePublicationSearch } from "@/shared/lib/publication-search";
-import { groupPublicationsByVariant } from "@/shared/lib/publication-variant";
+import {
+  applyPublicationVisualOrder,
+  createPublicationVisualOrder,
+  extendPublicationVisualOrder,
+  groupPublicationsByVariant,
+  type PublicationVisualOrder,
+} from "@/shared/lib/publication-variant";
 import type {
   TiendanubeCategory,
   TiendanubeReplicationState,
@@ -18,6 +24,7 @@ import {
 } from "@/modules/tiendanube/presentation/tiendanube-replication-cell.client";
 
 import type {
+  PublicationWorkspaceItem,
   PublicationWorkspaceSearchItem,
   PublicationWorkspaceSearchResult,
   PublicationWorkspaceSelection,
@@ -63,6 +70,7 @@ export function PublicationPromotionWorkspace({
   const selectionRequestRef = useRef<PublicationWorkspaceSelectionRequest | null>(null);
   const [query, setQuery] = useState("");
   const [selection, setSelection] = useState<PublicationWorkspaceSelection | null>(null);
+  const [visualOrder, setVisualOrder] = useState<PublicationVisualOrder>({});
   const [matches, setMatches] = useState<readonly PublicationWorkspaceSearchItem[]>([]);
   const [viewState, setViewState] = useState<ViewState>("initial");
   const criteria = parsePublicationSearch(query);
@@ -153,6 +161,7 @@ export function PublicationPromotionWorkspace({
     try {
       const result = await onSelect(request);
       if (result.status === "error") return setViewState("error");
+      setVisualOrder(createPublicationVisualOrder(selectionPublications(result.selection)));
       setSelection(result.selection);
       setMatches([]);
       setViewState("selected");
@@ -169,6 +178,9 @@ export function PublicationPromotionWorkspace({
       const result = await onSelect(request);
       if (result.status === "error") return;
       if (selectionRequestRef.current !== request) return;
+      setVisualOrder((currentOrder) =>
+        extendPublicationVisualOrder(currentOrder, selectionPublications(result.selection)),
+      );
       setSelection(result.selection);
     } catch {
       // La operación ya fue confirmada; conservamos el estado optimista si falla el refresh.
@@ -222,6 +234,7 @@ export function PublicationPromotionWorkspace({
       {viewState === "selected" && selection && (
         <WorkspaceTabs
           selection={selection}
+          visualOrder={visualOrder}
           getTiendanubeStateAction={getTiendanubeStateAction}
           onChanged={refreshCurrentSelection}
           onSave={onSave}
@@ -272,6 +285,7 @@ function PublicationMatches({ items, onSelect }: Readonly<{
 
 function WorkspaceTabs({
   selection,
+  visualOrder,
   getTiendanubeStateAction,
   onChanged,
   onSave,
@@ -281,6 +295,7 @@ function WorkspaceTabs({
   tiendanubeCategories,
 }: Readonly<{
   selection: PublicationWorkspaceSelection;
+  visualOrder: PublicationVisualOrder;
   getTiendanubeStateAction?: GetTiendanubeReplicationStateAction;
   onChanged: () => Promise<void>;
   onSave: WorkspaceSaveAction;
@@ -308,6 +323,7 @@ function WorkspaceTabs({
           children: (
             <PublicationTab
               selection={selection}
+              visualOrder={visualOrder}
               getTiendanubeStateAction={getTiendanubeStateAction}
               onChanged={onChanged}
               onSave={onSave}
@@ -322,7 +338,7 @@ function WorkspaceTabs({
           key: "promotion",
           label: "Promoción",
           children: promotionOpened
-            ? <PublicationWorkspacePromotions selection={selection} onChanged={onChanged} />
+            ? <PublicationWorkspacePromotions selection={selection} visualOrder={visualOrder} onChanged={onChanged} />
             : null,
         },
       ]}
@@ -332,6 +348,7 @@ function WorkspaceTabs({
 
 function PublicationTab({
   selection,
+  visualOrder,
   getTiendanubeStateAction,
   onChanged,
   onSave,
@@ -341,6 +358,7 @@ function PublicationTab({
   tiendanubeCategories,
 }: Readonly<{
   selection: PublicationWorkspaceSelection;
+  visualOrder: PublicationVisualOrder;
   getTiendanubeStateAction?: GetTiendanubeReplicationStateAction;
   onChanged: () => Promise<void>;
   onSave: WorkspaceSaveAction;
@@ -371,7 +389,7 @@ function PublicationTab({
         </div>
       ) : null}
       {selection.type === "family" ? (
-        <FamilyWorkspace family={selection} onChanged={onChanged} onSave={onSave} onStatusChange={onStatusChange} onTitleSave={onTitleSave} />
+        <FamilyWorkspace family={selection} visualOrder={visualOrder} onChanged={onChanged} onSave={onSave} onStatusChange={onStatusChange} onTitleSave={onTitleSave} />
       ) : (
         <PublicationWorkspaceEditor
           publication={selection.publication}
@@ -394,18 +412,67 @@ function tiendanubeSourceKey(selection: PublicationWorkspaceSelection): string {
     : `item:${selection.publication.itemId}`;
 }
 
-function FamilyWorkspace({ family, onChanged, onSave, onStatusChange, onTitleSave }: Readonly<{
+function FamilyWorkspace({ family, visualOrder, onChanged, onSave, onStatusChange, onTitleSave }: Readonly<{
   family: Extract<PublicationWorkspaceSelection, { type: "family" }>;
+  visualOrder: PublicationVisualOrder;
   onChanged: () => Promise<void>;
   onSave: WorkspaceSaveAction;
   onStatusChange: WorkspaceStatusAction;
   onTitleSave: WorkspaceTitleAction;
 }>) {
+  const [globalOpen, setGlobalOpen] = useState(false);
+  const [globalPrice, setGlobalPrice] = useState<number | null>(null);
+  const [globalProgress, setGlobalProgress] = useState<{ completed: number; total: number; failures: string[] } | null>(null);
+  const [globalApplying, setGlobalApplying] = useState(false);
+  const [editingGlobalPrice, setEditingGlobalPrice] = useState(false);
+  const globalPriceActionRef = useRef(false);
+  const draftGlobalPriceRef = useRef<number | null>(null);
+  const [messageApi, contextHolder] = message.useMessage();
   const totalSold = family.children.reduce((total, child) => total + child.sold, 0);
-  const variantGroups = groupPublicationsByVariant(family.children);
+  const variantGroups = applyPublicationVisualOrder(
+    groupPublicationsByVariant(family.children),
+    visualOrder,
+  );
+  const familyPrices = family.children.map((child) => child.standardPrice ?? child.price);
+  const numericPrices = familyPrices.filter((value): value is number => value !== null && Number.isFinite(value));
+  const currentMinPrice = numericPrices.length > 0 ? Math.min(...numericPrices) : null;
+  const currentMaxPrice = numericPrices.length > 0 ? Math.max(...numericPrices) : null;
+  const hasSingleGlobalPrice = numericPrices.length === familyPrices.length && currentMinPrice === currentMaxPrice;
+  const currentGlobalPrice = hasSingleGlobalPrice ? currentMinPrice : null;
+
+  function beginGlobalPriceEdit() {
+    if (globalApplying) return;
+    setGlobalPrice(currentGlobalPrice);
+    draftGlobalPriceRef.current = currentGlobalPrice;
+    setEditingGlobalPrice(true);
+  }
+
+  async function saveGlobalPrice() {
+    if (globalPriceActionRef.current || globalApplying) return;
+    globalPriceActionRef.current = true;
+    const nextPrice = draftGlobalPriceRef.current;
+    if (nextPrice !== null && nextPrice === currentGlobalPrice) {
+      setEditingGlobalPrice(false);
+      globalPriceActionRef.current = false;
+      return;
+    }
+    if (nextPrice === null || !Number.isFinite(nextPrice) || nextPrice <= 0) {
+      messageApi.error("El precio debe ser mayor a cero.");
+      setGlobalPrice(currentGlobalPrice);
+      draftGlobalPriceRef.current = currentGlobalPrice;
+      setEditingGlobalPrice(false);
+      globalPriceActionRef.current = false;
+      return;
+    }
+    setGlobalPrice(nextPrice);
+    setGlobalProgress(null);
+    await applyGlobalPrice(nextPrice);
+    globalPriceActionRef.current = false;
+  }
 
   return (
     <section className={styles.familyWorkspace}>
+      {contextHolder}
       <Card>
         <div className={styles.familyHeader}>
           {family.imageUrl
@@ -417,9 +484,30 @@ function FamilyWorkspace({ family, onChanged, onSave, onStatusChange, onTitleSav
               <EditableWorkspaceTitle initialTitle={family.familyName ?? `Familia ${family.familyId}`} onSave={onTitleSave} target={{ type: "family", familyId: family.familyId }} />
             </div>
             <div><Typography.Text strong>Total vendidos: {totalSold}</Typography.Text></div>
+            <div><Typography.Text type="secondary">Modalidades: </Typography.Text><Typography.Text>{[...new Set(family.children.map((child) => listingTypeLabel(child.listingTypeId)))].join(" · ")}</Typography.Text></div>
+            <div>
+              <Typography.Text strong>Precio global actual: </Typography.Text>
+              {editingGlobalPrice ? (
+                <Space size={4}>
+                  <InputNumber autoFocus disabled={globalApplying} min={0.01} value={globalPrice} onBlur={() => void saveGlobalPrice()} onChange={(value) => { draftGlobalPriceRef.current = value; setGlobalPrice(value); }} onPressEnter={(event) => event.currentTarget.blur()} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); globalPriceActionRef.current = true; setGlobalPrice(currentGlobalPrice); draftGlobalPriceRef.current = currentGlobalPrice; setEditingGlobalPrice(false); window.setTimeout(() => { globalPriceActionRef.current = false; }, 0); } }} />
+                  {globalApplying ? <LoadingOutlined aria-label="Guardando precio global" spin /> : null}
+                </Space>
+              ) : (
+                <Space size={4}>
+                  <Typography.Text>{currentMinPrice === null ? "Sin información" : currentMinPrice === currentMaxPrice ? formatGlobalPrice(currentMinPrice, family.children[0]?.currency) : `${formatGlobalPrice(currentMinPrice, family.children[0]?.currency)} - ${formatGlobalPrice(currentMaxPrice!, family.children[0]?.currency)}`}</Typography.Text>
+                  {globalApplying ? <LoadingOutlined aria-label="Guardando precio global" spin /> : <Button aria-label="Editar precio global" disabled={globalApplying} icon={<EditOutlined />} onClick={beginGlobalPriceEdit} size="small" type="text" />}
+                </Space>
+              )}
+            </div>
           </div>
         </div>
       </Card>
+      <Modal title="Cambiar precio de toda la familia" open={globalOpen} closable={!globalApplying} maskClosable={!globalApplying} onCancel={() => { if (!globalApplying) setGlobalOpen(false); }} footer={globalProgress?.completed === globalProgress?.total ? <Button onClick={() => setGlobalOpen(false)}>Listo</Button> : <><Button disabled={globalApplying} onClick={() => setGlobalOpen(false)}>Cancelar</Button><Button disabled={globalApplying || globalPrice === null || globalPrice <= 0} type="primary" onClick={() => void saveGlobalPrice()}>Aplicar precio</Button></>}>
+        <Typography.Paragraph>Se actualizarán {family.children.length} publicaciones.</Typography.Paragraph>
+        <Typography.Paragraph strong>Vas a cambiar el precio de {family.children.length} publicaciones a ${globalPrice ?? "—"}.</Typography.Paragraph>
+        <Input type="number" min={0.01} value={globalPrice ?? ""} onChange={(event) => setGlobalPrice(event.target.value ? Number(event.target.value) : null)} placeholder="Nuevo precio" />
+        {globalProgress ? <><Typography.Paragraph>Actualizando precios: {globalProgress.completed} de {globalProgress.total}</Typography.Paragraph><Progress percent={Math.round(globalProgress.completed / globalProgress.total * 100)} /><Typography.Text type="danger">{globalProgress.failures.length ? `MLA con error: ${globalProgress.failures.join(", ")}` : ""}</Typography.Text></> : null}
+      </Modal>
       <Typography.Title level={4}>Publicaciones de la familia</Typography.Title>
       {variantGroups.map((group) => (
         <section key={group.key}>
@@ -440,4 +528,52 @@ function FamilyWorkspace({ family, onChanged, onSave, onStatusChange, onTitleSav
       ))}
     </section>
   );
+
+  async function applyGlobalPrice(nextPrice: number) {
+    if (globalApplying) return;
+    const total = family.children.length;
+    setGlobalApplying(true); setGlobalProgress({ completed: 0, total, failures: [] });
+    const failures: string[] = [];
+    for (let index = 0; index < family.children.length; index += 1) {
+      const child = family.children[index];
+      try {
+        const result = await onSave({ publicationId: child.itemId, target: { type: "family", familyId: family.familyId, itemId: child.itemId }, current: { sku: child.sku, stock: child.stock, price: child.standardPrice ?? child.price }, draft: { sku: child.sku, stock: child.stock, price: nextPrice } });
+        if (!result.ok || result.confirmed.price !== nextPrice) failures.push(child.itemId);
+      } catch { failures.push(child.itemId); }
+      setGlobalProgress({ completed: index + 1, total, failures: [...failures] });
+    }
+    await onChanged();
+    setGlobalApplying(false);
+    if (failures.length) {
+      setGlobalPrice(currentGlobalPrice);
+      draftGlobalPriceRef.current = currentGlobalPrice;
+      messageApi.error(`${total - failures.length} actualizadas, ${failures.length} con error`);
+      return;
+    }
+    setEditingGlobalPrice(false);
+    messageApi.success(`${total} publicaciones actualizadas correctamente.`);
+  }
+}
+
+function formatGlobalPrice(value: number, currency: string | null | undefined): string {
+  try {
+    return new Intl.NumberFormat("es-AR", { style: "currency", currency: currency ?? "ARS", maximumFractionDigits: 0 }).format(value);
+  } catch {
+    return `$ ${value.toLocaleString("es-AR")}`;
+  }
+}
+
+function listingTypeLabel(value: string | null): string {
+  if (!value) return "Sin modalidad";
+  if (value === "gold_pro") return "Premium";
+  if (value === "gold_special") return "Clásica";
+  return value;
+}
+
+function selectionPublications(
+  selection: PublicationWorkspaceSelection,
+): readonly PublicationWorkspaceItem[] {
+  return selection.type === "family"
+    ? [...selection.children]
+    : [selection.publication];
 }

@@ -12,6 +12,7 @@ import { useState } from "react";
 
 import type { UpdatePublicationInput } from "@/modules/publications/application/update-publication.command";
 import type { PublicationEditStatus, PublicationEditTarget } from "@/modules/publications/domain/publication-edit.repository";
+import { generatePublicationSku } from "@/shared/lib/publication-sku";
 import { publicationTitlePresentation } from "@/shared/lib/publication-size";
 import { PublicationSizeTag } from "@/shared/ui/publication-size-tag";
 
@@ -22,7 +23,7 @@ import type {
 import styles from "./publication-promotion-workspace.module.css";
 
 export type WorkspaceSaveAction = (input: UpdatePublicationInput) => Promise<
-  | Readonly<{ ok: true; confirmed: Readonly<{ sku?: string | null; stock?: number | null }> }>
+  | Readonly<{ ok: true; confirmed: Readonly<{ sku?: string | null; stock?: number | null; price?: number | null }> }>
   | Readonly<{ ok: false; message: string }>
 >;
 
@@ -60,8 +61,10 @@ export function PublicationWorkspaceEditor({ publication, onChanged, onSave, onS
   const [stock, setStock] = useState<number | null>(publication.stock);
   const [savedSku, setSavedSku] = useState(publication.sku ?? "");
   const [savedStock, setSavedStock] = useState(publication.stock);
-  const [savingField, setSavingField] = useState<"sku" | "stock" | null>(null);
-  const [savedField, setSavedField] = useState<"sku" | "stock" | null>(null);
+  const [price, setPrice] = useState<number | null>(publication.standardPrice ?? publication.price);
+  const [savedPrice, setSavedPrice] = useState<number | null>(publication.standardPrice ?? publication.price);
+  const [savingField, setSavingField] = useState<"sku" | "stock" | "price" | null>(null);
+  const [savedField, setSavedField] = useState<"sku" | "stock" | "price" | null>(null);
   const [status, setStatus] = useState(publication.status);
   const [statusSaving, setStatusSaving] = useState(false);
   const [showLargeImage, setShowLargeImage] = useState(false);
@@ -79,8 +82,8 @@ export function PublicationWorkspaceEditor({ publication, onChanged, onSave, onS
       const result = await onSave({
         publicationId: publication.itemId,
         target,
-        current: { sku: savedSku || null, stock: savedStock, price: publication.price },
-        draft: { sku: nextSku, stock: savedStock, price: publication.price },
+        current: { sku: savedSku || null, stock: savedStock, price: savedPrice },
+        draft: { sku: nextSku, stock: savedStock, price: savedPrice },
       });
       if (!result.ok || result.confirmed.sku !== nextSku) {
         rollbackSku(result.ok ? "No se pudo confirmar el nuevo SKU." : result.message);
@@ -111,8 +114,8 @@ export function PublicationWorkspaceEditor({ publication, onChanged, onSave, onS
       const result = await onSave({
         publicationId: publication.itemId,
         target,
-        current: { sku: savedSku || null, stock: savedStock, price: publication.price },
-        draft: { sku: savedSku || null, stock: nextStock, price: publication.price },
+        current: { sku: savedSku || null, stock: savedStock, price: savedPrice },
+        draft: { sku: savedSku || null, stock: nextStock, price: savedPrice },
       });
       if (!result.ok || result.confirmed.stock !== nextStock) {
         rollbackStock(result.ok ? "No se pudo confirmar el nuevo stock." : result.message);
@@ -138,9 +141,21 @@ export function PublicationWorkspaceEditor({ publication, onChanged, onSave, onS
     messageApi.error(error);
   }
 
-  function showSaved(field: "sku" | "stock") {
+  function showSaved(field: "sku" | "stock" | "price") {
     setSavedField(field);
     window.setTimeout(() => setSavedField(null), 1400);
+  }
+
+  async function savePrice() {
+    const nextPrice = price;
+    if (savingField || nextPrice === savedPrice) return;
+    if (nextPrice === null || !Number.isFinite(nextPrice) || nextPrice <= 0) { setPrice(savedPrice); messageApi.error("El precio debe ser mayor a cero."); return; }
+    setSavingField("price"); setSavedField(null);
+    try {
+      const result = await onSave({ publicationId: publication.itemId, target, current: { sku: savedSku || null, stock: savedStock, price: savedPrice }, draft: { sku: savedSku || null, stock: savedStock, price: nextPrice } });
+      if (!result.ok || result.confirmed.price !== nextPrice) { setPrice(savedPrice); messageApi.error(result.ok ? "No se pudo confirmar el nuevo precio." : result.message); return; }
+      setSavedPrice(nextPrice); await onChanged?.(); showSaved("price");
+    } catch { setPrice(savedPrice); messageApi.error("No se pudo actualizar el precio."); } finally { setSavingField(null); }
   }
 
   async function copyMla() {
@@ -152,6 +167,16 @@ export function PublicationWorkspaceEditor({ publication, onChanged, onSave, onS
     if (!publication.familyId) return;
     await navigator.clipboard.writeText(publication.familyId);
     messageApi.success("Family ID copiado");
+  }
+
+  function generateSku() {
+    const generatedSku = generatePublicationSku(publication);
+    if (!generatedSku) {
+      messageApi.warning("No pudimos generar un SKU con este tÃ­tulo.");
+      return;
+    }
+    setSku(generatedSku);
+    setSavedField(null);
   }
 
   return (
@@ -208,9 +233,17 @@ export function PublicationWorkspaceEditor({ publication, onChanged, onSave, onS
           ) : null}
         </div>
         <label className={styles.editorField}>
+          <span>Precio</span>
+          <span className={styles.autoSaveField}>
+            <InputNumber aria-label={`Precio de ${publication.itemId}`} disabled={savingField === "price"} min={0.01} value={price} onBlur={() => void savePrice()} onChange={setPrice} />
+            <SaveIndicator field="price" savedField={savedField} savingField={savingField} />
+          </span>
+        </label>
+        <label className={styles.editorField}>
           <span>SKU</span>
           <span className={styles.autoSaveField}>
             <Input aria-label={`SKU de ${publication.itemId}`} disabled={savingField === "sku"} value={sku} onBlur={() => void saveSku()} onChange={(event) => setSku(event.target.value)} />
+            <Button disabled={savingField === "sku"} onClick={generateSku} onMouseDown={(event) => event.preventDefault()} size="small">Generar SKU</Button>
             <SaveIndicator field="sku" savedField={savedField} savingField={savingField} />
           </span>
         </label>
@@ -223,9 +256,10 @@ export function PublicationWorkspaceEditor({ publication, onChanged, onSave, onS
         </label>
         <div className={styles.commercialDetails}>
           <CommercialDetail
-            label="Precio contado"
-            value={formatPrice(publication.price, publication.currency)}
+            label={savedPrice === publication.price ? "Precio" : "Precio base"}
+            value={formatPrice(savedPrice, publication.currency)}
           />
+          {savedPrice !== publication.price ? <CommercialDetail label="Precio actual" value={formatPrice(publication.price, publication.currency)} /> : null}
           <CommercialDetail
             label="Precio en cuotas"
             value={publication.installmentLabel ?? "No informado"}
@@ -337,7 +371,7 @@ export function EditableWorkspaceTitle({ initialTitle, onSave, showSize = false,
   return <>{contextHolder}<Space size={4} wrap>{titleContent}<Button aria-label="Editar título" icon={<EditOutlined />} onClick={() => setEditing(true)} size="small" type="text" /></Space></>;
 }
 
-function SaveIndicator({ field, savedField, savingField }: Readonly<{ field: "sku" | "stock"; savedField: "sku" | "stock" | null; savingField: "sku" | "stock" | null }>) {
+function SaveIndicator({ field, savedField, savingField }: Readonly<{ field: "sku" | "stock" | "price"; savedField: "sku" | "stock" | "price" | null; savingField: "sku" | "stock" | "price" | null }>) {
   if (savingField === field) return <Typography.Text type="secondary"><LoadingOutlined spin /> Guardando...</Typography.Text>;
   return savedField === field ? <CheckOutlined aria-label={`${field} guardado`} className={styles.savedIndicator} /> : null;
 }

@@ -21,6 +21,8 @@ export type PublicationVariantGroup<T> = Readonly<{
   publications: readonly T[];
 }>;
 
+export type PublicationVisualOrder = Readonly<Record<string, number>>;
+
 const ATTRIBUTE_PRIORITIES = [
   ["COLOR"],
   ["VARIANT", "VARIATION", "VARIANTE"],
@@ -64,6 +66,73 @@ export function groupPublicationsByVariant<T extends PublicationVariantSource>(
     label: group.label,
     publications: [...group.publications].sort(comparePublicationsByPriceAndSize),
   }));
+}
+
+export function createPublicationVisualOrder<
+  T extends PublicationVariantSource & Readonly<{ itemId: string }>,
+>(publications: readonly T[]): PublicationVisualOrder {
+  return extendPublicationVisualOrder({}, publications);
+}
+
+export function extendPublicationVisualOrder<
+  T extends PublicationVariantSource & Readonly<{ itemId: string }>,
+>(
+  currentOrder: PublicationVisualOrder,
+  publications: readonly T[],
+): PublicationVisualOrder {
+  const nextOrder: Record<string, number> = { ...currentOrder };
+  let nextPosition = Math.max(-1, ...Object.values(currentOrder)) + 1;
+
+  groupPublicationsByVariant(publications).forEach((group) => {
+    group.publications.forEach(({ itemId }) => {
+      if (nextOrder[itemId] !== undefined) return;
+      nextOrder[itemId] = nextPosition;
+      nextPosition += 1;
+    });
+  });
+
+  return nextOrder;
+}
+
+export function applyPublicationVisualOrder<T extends Readonly<{ itemId: string }>>(
+  groups: readonly PublicationVariantGroup<T>[],
+  visualOrder: PublicationVisualOrder,
+): readonly PublicationVariantGroup<T>[] {
+  return groups
+    .map((group) => ({
+      ...group,
+      publications: [...group.publications].sort((left, right) =>
+        compareVisualPositions(left.itemId, right.itemId, visualOrder),
+      ),
+    }))
+    .sort((left, right) => groupVisualPosition(left, visualOrder) - groupVisualPosition(right, visualOrder));
+}
+
+function compareVisualPositions(
+  leftItemId: string,
+  rightItemId: string,
+  visualOrder: PublicationVisualOrder,
+): number {
+  const leftPosition = visualOrder[leftItemId];
+  const rightPosition = visualOrder[rightItemId];
+
+  if (leftPosition === undefined && rightPosition === undefined) return 0;
+  if (leftPosition === undefined) return 1;
+  if (rightPosition === undefined) return -1;
+  return leftPosition - rightPosition;
+}
+
+function groupVisualPosition<T extends Readonly<{ itemId: string }>>(
+  group: PublicationVariantGroup<T>,
+  visualOrder: PublicationVisualOrder,
+): number {
+  return group.publications.reduce(
+    (position, publication) => Math.min(
+      position,
+      visualOrder[publication.itemId] ?? Number.MAX_SAFE_INTEGER,
+    ),
+    Number.MAX_SAFE_INTEGER,
+  );
 }
 
 function comparePublicationsByPriceAndSize(

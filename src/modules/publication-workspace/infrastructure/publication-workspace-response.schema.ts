@@ -3,6 +3,7 @@ import { z } from "zod";
 const searchItemSchema = z.object({
   itemId: z.string().min(1),
   familyId: z.string().nullable(),
+  listingTypeId: z.string().nullable().optional(),
   userProductId: z.string().nullable().optional(),
   title: z.string().nullable(),
   thumbnail: z.string().nullable(),
@@ -68,6 +69,7 @@ export const publicationWorkspaceDetailResponseSchema = z.object({
   itemId: z.string().min(1),
   title: z.string().nullable(),
   familyId: z.string().nullable(),
+  listingTypeId: z.string().nullable().optional(),
   status: z.string().nullable(),
   sku: z.string().nullable(),
   stock: z.object({
@@ -89,6 +91,7 @@ export const publicationWorkspaceFamilyResponseSchema = z.object({
   variants: z.array(
     z.object({
       itemId: z.string().min(1),
+      listingTypeId: z.string().nullable().optional(),
       userProductId: z.string().nullable(),
       title: z.string().nullable(),
       status: z.string().nullable(),

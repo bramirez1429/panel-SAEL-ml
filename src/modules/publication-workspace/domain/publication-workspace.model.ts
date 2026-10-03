@@ -16,8 +16,10 @@ export type PublicationWorkspaceItem = Readonly<{
   stock: number;
   sold: number;
   price: number | null;
+  standardPrice: number | null;
   regularPrice: number | null;
   currency: string | null;
+  listingTypeId: string | null;
   hasActivePromotion: boolean;
   promotionDiscountPercent: number | null;
   installmentLabel: string | null;
