@@ -8,6 +8,7 @@ import type { PromotionOption } from "../domain/promotions.repository";
 import { createPromotionsRepository } from "../promotions.composition.server";
 import { promotionOptionToApplyRequest } from "./promotion-apply-request.mapper";
 import { mapPromotionError, promotionErrorMessage } from "./promotion-error.mapper";
+import { canEditPromotionPrice } from "./promotion-bulk-price.helpers";
 
 export type ApplySelectedPromotionInput = Readonly<{
   itemId: string;
@@ -46,7 +47,7 @@ export async function applySelectedPromotion(input: ApplySelectedPromotionInput)
 }
 
 function optionWithSelectedPrice(option: PromotionOption, selectedPrice: number | null): PromotionOption | null {
-  if (option.requiresPriceSelection !== true) return option;
+  if (!canEditPromotionPrice(option)) return option;
   if (selectedPrice === null || !Number.isFinite(selectedPrice) || selectedPrice <= 0) return null;
   if (option.minPromotionPrice !== null && selectedPrice < option.minPromotionPrice) return null;
   if (option.maxPromotionPrice !== null && selectedPrice > option.maxPromotionPrice) return null;

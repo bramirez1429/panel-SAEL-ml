@@ -12,6 +12,7 @@ import { applySelectionWithRetry } from "./apply-selection-with-retry.client";
 import { PromotionCurrencyInput } from "./promotion-bulk-price-editor.client";
 import {
   initialPromotionPrices,
+  canEditPromotionPrice,
   money,
   percentage,
   promotionDiscountPercent,
@@ -46,7 +47,7 @@ export function PromotionIndividualApplicationModal({
   const [running, setRunning] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const invalidateOptions = usePromotionGlobalStore((state) => state.invalidateOptions);
-  const editable = option.requiresPriceSelection === true;
+  const editable = canEditPromotionPrice(option);
   const originalPrice = option.originalPrice ?? publication.price;
   const hasUnappliedDraft = editable && draftPrice !== selectedPrice;
   const canApplyDraft = editable && validSelectionPrice(selection, draftPrice);

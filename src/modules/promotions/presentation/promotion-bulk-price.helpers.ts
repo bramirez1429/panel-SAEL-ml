@@ -11,6 +11,26 @@ export type CampaignPriceSummary = Readonly<{
   rejectedCount: number;
 }>;
 
+export function canEditPromotionPrice(option: Pick<PromotionOptionLike, "type" | "status" | "canApply" | "requiresPriceSelection" | "minPromotionPrice" | "maxPromotionPrice" | "suggestedPromotionPrice">): boolean {
+  const type = option.type?.toUpperCase();
+  if (option.status?.toLowerCase() !== "candidate" || option.canApply !== true) return false;
+  if (type !== "PRICE_DISCOUNT" && type !== "DEAL" && type !== "SELLER_CAMPAIGN") return false;
+  return option.requiresPriceSelection === true
+    || option.minPromotionPrice !== null
+    || option.maxPromotionPrice !== null
+    || (option.suggestedPromotionPrice !== null && option.suggestedPromotionPrice > 0);
+}
+
+type PromotionOptionLike = Readonly<{
+  type: string | null;
+  status: string | null;
+  canApply: boolean;
+  requiresPriceSelection: boolean | null;
+  minPromotionPrice: number | null;
+  maxPromotionPrice: number | null;
+  suggestedPromotionPrice: number | null;
+}>;
+
 export type CommonPriceRange = Readonly<{
   minimum: number | null;
   maximum: number | null;
@@ -23,7 +43,7 @@ export function initialPromotionPrices(
   return Object.fromEntries(
     selections.map((selection) => [
       selection.key,
-      validOwnPrice(selection) ?? suggestedPrice(selection),
+      validOwnPrice(selection) ?? suggestedPrice(selection) ?? validMaxPrice(selection),
     ]),
   );
 }
@@ -147,6 +167,11 @@ function validOwnPrice(selection: SelectedPromotion): number | null {
   return validSelectionPrice(selection, price) ? price : null;
 }
 
+function validMaxPrice(selection: SelectedPromotion): number | null {
+  const price = selection.option.maxPromotionPrice;
+  return validSelectionPrice(selection, price) ? price : null;
+}
+
 export function campaignDiscountRange(
   selections: readonly SelectedPromotion[],
   excludedFromCampaign: CampaignPriceExclusions,
@@ -171,7 +196,7 @@ export function validSelectionPrice(
   selection: SelectedPromotion,
   price: number | null,
 ): boolean {
-  if (selection.option.requiresPriceSelection !== true) {
+  if (!canEditPromotionPrice(selection.option)) {
     return selection.option.promotionPrice !== null && selection.option.promotionPrice > 0;
   }
   if (price === null || !Number.isFinite(price) || price <= 0) return false;
