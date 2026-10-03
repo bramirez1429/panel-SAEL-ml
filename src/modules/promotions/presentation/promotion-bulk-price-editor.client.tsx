@@ -71,6 +71,8 @@ export function PromotionBulkPriceEditor({
         const selectedItemKeys = campaignSelections
           .filter((selection) => excludedFromCampaign[selection.key] !== true)
           .map((selection) => selection.key);
+        const allCampaignItemsSelected = selectedItemKeys.length === campaignSelections.length;
+        const someCampaignItemsSelected = selectedItemKeys.length > 0 && !allCampaignItemsSelected;
         const canApplyCampaignPrice = (
           hasCampaignPrice && selectedItemKeys.length > 0
         );
@@ -115,6 +117,19 @@ export function PromotionBulkPriceEditor({
                 campaignPrice={campaignPrice}
                 campaignPriceApplied={campaignPriceApplied[key] === true}
               />
+
+              <Checkbox
+                checked={allCampaignItemsSelected}
+                indeterminate={someCampaignItemsSelected}
+                onChange={(event) => {
+                  const participates = event.target.checked;
+                  for (const selection of campaignSelections) {
+                    onExcludedFromCampaignChange(selection.key, !participates);
+                  }
+                }}
+              >
+                Aplicar este precio a todas las publicaciones de esta promoción
+              </Checkbox>
 
               <div>
                 {campaignSelections.map((selection) => (
@@ -198,7 +213,7 @@ function PromotionPriceRow({
         <Checkbox
           aria-label={`Aplicar este precio a ${selection.itemId}`}
           checked={participatesInCampaignPrice}
-          disabled={!hasCampaignPrice}
+          disabled={false}
           onChange={(event) => (
             onExcludedFromCampaignChange(!event.target.checked)
           )}

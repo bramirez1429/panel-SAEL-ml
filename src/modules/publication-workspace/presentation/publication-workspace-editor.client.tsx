@@ -67,7 +67,6 @@ export function PublicationWorkspaceEditor({ publication, onChanged, onSave, onS
   const [savedField, setSavedField] = useState<"sku" | "stock" | "price" | null>(null);
   const [status, setStatus] = useState(publication.status);
   const [statusSaving, setStatusSaving] = useState(false);
-  const [showLargeImage, setShowLargeImage] = useState(false);
   const target = editTarget(publication);
   const titlePresentation = publicationTitlePresentation(publication.title);
 
@@ -182,8 +181,10 @@ export function PublicationWorkspaceEditor({ publication, onChanged, onSave, onS
   return (
     <Card className={styles.childCard} size="small">
       {contextHolder}
-      <div className={styles.childLayout}>
-        <WorkspaceThumbnail publication={publication} />
+      <div className={styles.publicationCardLayout}>
+        <div className={styles.publicationInfo}>
+          <div className={styles.identityLayout}>
+            <WorkspaceThumbnail publication={publication} />
         <div className={styles.childIdentity}>
           <Space size={4}>
             <Typography.Text type="secondary">MLA:</Typography.Text>
@@ -232,28 +233,7 @@ export function PublicationWorkspaceEditor({ publication, onChanged, onSave, onS
             </div>
           ) : null}
         </div>
-        <label className={styles.editorField}>
-          <span>Precio</span>
-          <span className={styles.autoSaveField}>
-            <InputNumber aria-label={`Precio de ${publication.itemId}`} disabled={savingField === "price"} min={0.01} value={price} onBlur={() => void savePrice()} onChange={setPrice} />
-            <SaveIndicator field="price" savedField={savedField} savingField={savingField} />
-          </span>
-        </label>
-        <label className={styles.editorField}>
-          <span>SKU</span>
-          <span className={styles.autoSaveField}>
-            <Input aria-label={`SKU de ${publication.itemId}`} disabled={savingField === "sku"} value={sku} onBlur={() => void saveSku()} onChange={(event) => setSku(event.target.value)} />
-            <Button disabled={savingField === "sku"} onClick={generateSku} onMouseDown={(event) => event.preventDefault()} size="small">Generar SKU</Button>
-            <SaveIndicator field="sku" savedField={savedField} savingField={savingField} />
-          </span>
-        </label>
-        <label className={styles.editorField}>
-          <span>Stock</span>
-          <span className={styles.autoSaveField}>
-            <InputNumber aria-label={`Stock de ${publication.itemId}`} disabled={savingField === "stock"} min={0} precision={0} value={stock} onBlur={() => void saveStock()} onChange={setStock} />
-            <SaveIndicator field="stock" savedField={savedField} savingField={savingField} />
-          </span>
-        </label>
+          </div>
         <div className={styles.commercialDetails}>
           <CommercialDetail
             label={savedPrice === publication.price ? "Precio" : "Precio base"}
@@ -270,11 +250,37 @@ export function PublicationWorkspaceEditor({ publication, onChanged, onSave, onS
           />
           <CommercialDetail label="Vendidos" value={String(publication.sold)} />
         </div>
-        <Space className={styles.childActions} wrap>
-          {publication.imageUrl && <Button onClick={() => setShowLargeImage((visible) => !visible)}>{showLargeImage ? "Ocultar imagen" : "Ver imagen"}</Button>}
-        </Space>
+        </div>
+        <div className={styles.quickEditColumn}>
+          <div className={styles.quickEdit}>
+            <Typography.Text strong>Edición rápida</Typography.Text>
+            <div className={styles.editorFields}>
+              <label className={`${styles.editorField} ${styles.priceField}`}>
+                <span>Precio</span>
+                <span className={styles.autoSaveField}>
+                  <InputNumber aria-label={`Precio de ${publication.itemId}`} disabled={savingField === "price"} min={0.01} value={price} onBlur={() => void savePrice()} onChange={setPrice} />
+                  <SaveIndicator field="price" savedField={savedField} savingField={savingField} />
+                </span>
+              </label>
+              <label className={`${styles.editorField} ${styles.stockField}`}>
+                <span>Stock</span>
+                <span className={styles.autoSaveField}>
+                  <InputNumber aria-label={`Stock de ${publication.itemId}`} disabled={savingField === "stock"} min={0} precision={0} value={stock} onBlur={() => void saveStock()} onChange={setStock} />
+                  <SaveIndicator field="stock" savedField={savedField} savingField={savingField} />
+                </span>
+              </label>
+              <label className={`${styles.editorField} ${styles.skuField}`}>
+                <span>SKU</span>
+                <span className={styles.skuRow}>
+                  <Input className={styles.skuInput} aria-label={`SKU de ${publication.itemId}`} disabled={savingField === "sku"} value={sku} onBlur={() => void saveSku()} onChange={(event) => setSku(event.target.value)} />
+                  <Button className={styles.skuButton} disabled={savingField === "sku"} onClick={generateSku} onMouseDown={(event) => event.preventDefault()} size="small">Generar SKU</Button>
+                  <SaveIndicator field="sku" savedField={savedField} savingField={savingField} />
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
       </div>
-      {showLargeImage && publication.imageUrl && <div className={styles.expandedImage}><Image alt={publication.title} className={styles.image} preview={{ src: publication.imageUrl }} src={publication.imageUrl} /></div>}
     </Card>
   );
 }
@@ -378,7 +384,7 @@ function SaveIndicator({ field, savedField, savingField }: Readonly<{ field: "sk
 
 function WorkspaceThumbnail({ publication }: Readonly<{ publication: PublicationWorkspaceItem }>) {
   if (!publication.thumbnailUrl) return <span className={styles.childImagePlaceholder}><PictureOutlined /></span>;
-  return <Image alt={publication.title} className={styles.childImage} preview={false} src={publication.thumbnailUrl} />;
+  return <Image alt={publication.title} className={styles.childImage} preview={{ src: publication.imageUrl ?? publication.thumbnailUrl }} src={publication.thumbnailUrl} />;
 }
 
 function editTarget(publication: PublicationWorkspaceItem): PublicationEditTarget {

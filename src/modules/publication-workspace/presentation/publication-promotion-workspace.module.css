@@ -151,19 +151,46 @@
   width: 100%;
   max-width: none;
   min-width: 0;
+  box-sizing: border-box;
 }
 
 .childCard :global(.ant-card-body) {
-  padding: 14px;
+  padding: 10px 12px;
 }
 
-.childLayout {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: end;
+.publicationCardLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 28px;
+  align-items: stretch;
   width: 100%;
   min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.publicationInfo,
+.quickEditColumn,
+.identityLayout,
+.quickEdit,
+.editorFields,
+.commercialDetails {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.publicationInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.identityLayout {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
 }
 
 .childImage,
@@ -177,6 +204,10 @@
   border-radius: 8px;
 }
 
+.childImage {
+  cursor: zoom-in;
+}
+
 .childIdentity,
 .editorField {
   display: flex;
@@ -186,28 +217,40 @@
 }
 
 .childIdentity {
-  flex: 3 1 320px;
+  width: 100%;
 }
 
 .editorField {
-  flex: 1 1 160px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.childLayout > .editorField:first-of-type {
-  flex-basis: 220px;
+.editorFields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.childLayout > .editorField:nth-of-type(2) {
-  flex-grow: 0;
-  flex-basis: 120px;
+.quickEditColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quickEdit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--ant-color-fill-quaternary);
+  border-radius: 12px;
 }
 
 .commercialDetails {
   display: grid;
-  flex: 4 1 520px;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 8px 16px;
-  min-width: 0;
+  grid-template-columns: repeat(4, minmax(110px, 150px));
+  justify-content: start;
+  gap: 16px;
 }
 
 .commercialDetail {
@@ -230,36 +273,68 @@
 
 .editorField :global(.ant-input-number) {
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .autoSaveField {
   display: flex;
   gap: 8px;
   align-items: center;
+  width: 100%;
+  min-width: 0;
 }
 
 .autoSaveField > :first-child {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.skuField {
+  width: 100%;
+}
+
+.skuRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.skuRow .skuInput {
+  flex: 1 1 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  box-sizing: border-box;
+}
+
+.skuButton {
+  flex: 0 0 auto !important;
+  white-space: nowrap;
+}
+
+.skuRow > :last-child {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.skuRow .skuButton {
+  flex: 0 0 auto !important;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .savedIndicator {
   color: var(--ant-color-success);
 }
 
-.childActions {
-  display: flex;
-  flex: 0 1 auto;
-  align-self: end;
-  justify-content: flex-end;
-  margin-inline-start: auto;
-}
-
-.expandedImage {
-  padding-top: 16px;
-  text-align: center;
-}
-
-@media (max-width: 700px) {
+@media (max-width: 900px) {
   .searchSection {
     padding: 24px 20px;
     margin-top: 0;
@@ -269,30 +344,23 @@
     grid-template-columns: 1fr;
   }
 
-  .childLayout {
-    align-items: flex-start;
+  .publicationCardLayout {
+    grid-template-columns: 1fr;
+    gap: 16px;
   }
 
-  .childIdentity {
-    flex: 1 1 calc(100% - 76px);
-  }
-
-  .editorField,
-  .childLayout > .editorField:first-of-type,
-  .childLayout > .editorField:nth-of-type(2),
-  .commercialDetails,
-  .childActions {
-    flex: 1 1 100%;
+  .commercialDetails {
     width: 100%;
-  }
-
-  .childActions {
-    justify-content: flex-start;
-    margin-inline-start: 0;
   }
 
   .image,
   .imagePlaceholder {
     width: min(100%, 220px);
+  }
+}
+
+@media (max-width: 700px) {
+  .commercialDetails {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

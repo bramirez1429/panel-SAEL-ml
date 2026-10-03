@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Space, Typography } from "antd";
+import { Button, Card, Space, Typography } from "antd";
 import { useState } from "react";
 
 import { PromotionBulkApplicationModal } from "./promotion-bulk-application-modal.client";
@@ -30,10 +30,10 @@ export function PromotionSelectionSummary({
   if (selections.length === 0 && !open) return null;
 
   return <>
-    {selections.length > 0 ? <Space style={{ marginBottom: 16 }}>
+    {selections.length > 0 ? <Card size="small" styles={{ body: { padding: 10 } }} style={{ bottom: 24, left: 16, maxWidth: "calc(100vw - 32px)", position: "fixed", right: 24, zIndex: 900, boxShadow: "0 4px 16px rgba(0, 0, 0, 0.14)" }}><Space wrap>
       <Typography.Text strong>{selections.length} {selections.length === 1 ? "promoción seleccionada" : "promociones seleccionadas"}</Typography.Text>
       <Button type="primary" onClick={openReview}>Participar en las seleccionadas</Button>
-    </Space> : null}
+    </Space></Card> : null}
     {open ? <PromotionBulkApplicationModal selections={reviewSelections} onClose={() => setOpen(false)} onCompleted={onCompleted} /> : null}
   </>;
 }
