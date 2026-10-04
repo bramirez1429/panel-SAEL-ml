@@ -9,6 +9,6 @@
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; margin-top: 20px; }
 .productImage { width: 100%; height: 220px; object-fit: contain; background: #fafafa; }
 .cardColors { display: grid; gap: 10px; margin: 16px 0; }
-.cardActions { display: flex; justify-content: flex-end; }
+.cardActions { display: flex; justify-content: flex-end; gap: 12px; }
 .error { margin-top: 20px; }
 @media (max-width: 767px) { .formGrid { grid-template-columns: 1fr; } .productImage { height: 180px; } }

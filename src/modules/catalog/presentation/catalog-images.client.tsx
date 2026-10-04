@@ -120,7 +120,7 @@ export function CatalogImagesClient() {
           <div className={styles.cardActions}>
             <Button type="primary" disabled={colors.length === 0} loading={savingId === product.id} onClick={() => void handleSaveColors(product)}>Guardar</Button>
             <Popconfirm title="¿Eliminar esta imagen?" description="Se eliminará del catálogo." okText="Eliminar" cancelText="Cancelar" onConfirm={() => void handleDelete(product)}>
-              <Button danger icon={<DeleteOutlined />} loading={deletingId === product.id}>Borrar</Button>
+              <Button danger icon={<DeleteOutlined />} aria-label="Borrar imagen" title="Borrar imagen" loading={deletingId === product.id} />
             </Popconfirm>
           </div>
         </Card>;
