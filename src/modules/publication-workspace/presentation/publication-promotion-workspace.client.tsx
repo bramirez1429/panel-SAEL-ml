@@ -473,7 +473,25 @@ function LegacyVariationEditor({ publicationId, publicationTitle, variation, onC
   const [savedStock, setSavedStock] = useState(variation.stock);
   const [saving, setSaving] = useState<"sku" | "stock" | null>(null);
   const [skuSaved, setSkuSaved] = useState(false);
+  const confirmedSkuRef = useRef<string | null>(null);
   const target = { type: "legacy" as const, itemId: publicationId, variationId: variation.variationId };
+
+  useEffect(() => {
+    if (saving === "sku") return;
+    const confirmedSku = variation.sku ?? "";
+    if (confirmedSkuRef.current !== null) {
+      if (confirmedSku !== confirmedSkuRef.current) return;
+      confirmedSkuRef.current = null;
+    }
+    setSku(confirmedSku);
+    setSavedSku(confirmedSku);
+  }, [variation.sku, saving]);
+
+  useEffect(() => {
+    if (saving === "stock") return;
+    setStock(variation.stock);
+    setSavedStock(variation.stock);
+  }, [variation.stock, saving]);
 
   async function saveStock() {
     const nextStock = stock;
@@ -530,6 +548,7 @@ function LegacyVariationEditor({ publicationId, publicationTitle, variation, onC
       }
       setSku(nextSku);
       setSavedSku(nextSku);
+      confirmedSkuRef.current = nextSku;
       setSkuSaved(true);
       window.setTimeout(() => setSkuSaved(false), 1400);
       await onChanged();
