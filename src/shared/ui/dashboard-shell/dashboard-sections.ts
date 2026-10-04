@@ -1,6 +1,10 @@
+import { createElement, type ReactNode } from "react";
+import { PictureOutlined } from "@ant-design/icons";
+
 export type DashboardSection = Readonly<{
   href: `/${string}`;
   title: string;
+  icon?: ReactNode;
 }>;
 
 export const dashboardSections = [
@@ -13,6 +17,7 @@ export const dashboardSections = [
   { href: "/pedidos", title: "Pedidos" },
   { href: "/usuarios", title: "Usuarios" },
   { href: "/integraciones", title: "Integraciones" },
+  { href: "/catalogo/imagenes", title: "Imágenes del catálogo", icon: createElement(PictureOutlined) },
 ] as const satisfies readonly DashboardSection[];
 
 export function findDashboardSection(pathname: string) {

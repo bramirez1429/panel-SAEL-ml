@@ -1,0 +1,14 @@
+.uploadSection { margin-top: 24px; }
+.uploadForm { display: grid; gap: 20px; }
+.formGrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 1fr); gap: 20px; }
+.preview { display: flex; align-items: center; gap: 16px; min-height: 96px; padding: 12px; border: 1px dashed #d9d9d9; border-radius: 8px; background: #fafafa; }
+.previewImage { width: 96px; height: 96px; object-fit: contain; border-radius: 6px; background: white; }
+.previewText { display: grid; gap: 4px; color: #595959; }
+.colors { display: flex; flex-wrap: wrap; gap: 16px; }
+.listSection { margin-top: 32px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; margin-top: 20px; }
+.productImage { width: 100%; height: 220px; object-fit: contain; background: #fafafa; }
+.cardColors { display: grid; gap: 10px; margin: 16px 0; }
+.cardActions { display: flex; justify-content: flex-end; }
+.error { margin-top: 20px; }
+@media (max-width: 767px) { .formGrid { grid-template-columns: 1fr; } .productImage { height: 180px; } }

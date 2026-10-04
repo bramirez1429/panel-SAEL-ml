@@ -12,9 +12,10 @@ import {
 } from "./dashboard-sections";
 import styles from "./dashboard-shell.module.css";
 
-const menuItems: MenuProps["items"] = dashboardSections.map(({ href, title }) => ({
+const menuItems: MenuProps["items"] = dashboardSections.map(({ href, title, icon }) => ({
   key: href,
   label: <Link href={href}>{title}</Link>,
+  icon,
 }));
 
 type NavigationMenuProps = Readonly<{
