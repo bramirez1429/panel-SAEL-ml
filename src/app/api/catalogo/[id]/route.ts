@@ -11,3 +11,11 @@ export async function PATCH(request: Request, context: RouteContext<"/api/catalo
     body,
   });
 }
+
+export async function DELETE(request: Request, context: RouteContext<"/api/catalogo/[id]">) {
+  const { id } = await context.params;
+  return proxyCatalogRequest(`/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    headers: request.headers,
+  });
+}

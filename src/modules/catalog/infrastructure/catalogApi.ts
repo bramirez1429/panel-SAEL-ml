@@ -39,6 +39,14 @@ export async function updateCatalogProductColors(
   await ensureSuccessful(response);
 }
 
+export async function deleteCatalogProduct(id: string): Promise<void> {
+  const response = await fetch(`${catalogEndpoint}/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+
+  await ensureSuccessful(response);
+}
+
 async function parseProducts(response: Response): Promise<CatalogProduct[]> {
   await ensureSuccessful(response);
   const payload: unknown = await response.json();
@@ -83,6 +91,7 @@ async function ensureSuccessful(response: Response): Promise<void> {
   try {
     const payload: unknown = await response.json();
     if (isRecord(payload) && typeof payload.message === "string") detail = `: ${payload.message}`;
+    else if (isRecord(payload) && typeof payload.error === "string") detail = `: ${payload.error}`;
   } catch { /* La respuesta puede no ser JSON. */ }
   throw new Error(`No se pudo completar la operación (${response.status})${detail}`);
 }
