@@ -7,6 +7,8 @@ import { createCatalogProduct, getCatalogProducts, updateCatalogProductColors } 
 import styles from "./catalog-images.module.css";
 
 const colorLabels: Record<CatalogColor, string> = { rosa: "Rosa", lila: "Lila", blanco: "Blanco" };
+const MAX_IMAGE_SIZE = 4 * 1024 * 1024;
+const IMAGE_SIZE_ERROR = "La imagen es demasiado pesada. El tamaño máximo permitido es de 4 MB.";
 
 export function CatalogImagesClient() {
   const [products, setProducts] = useState<CatalogProduct[]>([]);
@@ -36,12 +38,27 @@ export function CatalogImagesClient() {
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const nextFile = event.target.files?.[0] ?? null;
+    if (nextFile && nextFile.size > MAX_IMAGE_SIZE) {
+      event.target.value = "";
+      setFile(null);
+      setPreviewUrl(null);
+      messageApi.error(IMAGE_SIZE_ERROR);
+      return;
+    }
     setFile(nextFile);
     setPreviewUrl(nextFile ? URL.createObjectURL(nextFile) : null);
   }
 
   async function handleUpload() {
     if (!file || selectedColors.length === 0) return;
+    if (file.size > MAX_IMAGE_SIZE) {
+      setFile(null);
+      setPreviewUrl(null);
+      const input = document.getElementById("catalog-image-file") as HTMLInputElement | null;
+      if (input) input.value = "";
+      messageApi.error(IMAGE_SIZE_ERROR);
+      return;
+    }
     setSaving(true);
     try {
       await createCatalogProduct(name.trim(), file, selectedColors);

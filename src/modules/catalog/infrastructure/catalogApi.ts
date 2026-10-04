@@ -76,6 +76,9 @@ function normalizeColors(value: unknown): CatalogColor[] {
 
 async function ensureSuccessful(response: Response): Promise<void> {
   if (response.ok) return;
+  if (response.status === 413) {
+    throw new Error("La imagen es demasiado pesada. El tamaño máximo permitido es de 4 MB.");
+  }
   let detail = "";
   try {
     const payload: unknown = await response.json();
