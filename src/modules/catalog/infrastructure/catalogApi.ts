@@ -1,8 +1,7 @@
 import type { CatalogColor, CatalogProduct } from "../domain/catalog.model";
 import { catalogColors } from "../domain/catalog.model";
 
-const catalogApiUrl = process.env.NEXT_PUBLIC_CATALOG_API_URL?.replace(/\/$/, "");
-const catalogEndpoint = `${catalogApiUrl ?? ""}/api/admin/catalogo`;
+const catalogEndpoint = "/api/catalogo";
 
 export async function getCatalogProducts(): Promise<CatalogProduct[]> {
   const response = await fetch(catalogEndpoint, { cache: "no-store" });
