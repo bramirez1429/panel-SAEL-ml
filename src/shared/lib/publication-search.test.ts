@@ -4,7 +4,8 @@ import { parsePublicationSearch } from "./publication-search";
 
 describe("parsePublicationSearch", () => {
   it.each([
-    ["123456", { type: "FAMILY", value: "123456" }],
+    ["1548119819", { type: "MLA", value: "MLA1548119819" }],
+    ["118836408244533", { type: "FAMILY", value: "118836408244533" }],
     ["MLA123", { type: "MLA", value: "MLA123" }],
     ["mla123", { type: "MLA", value: "MLA123" }],
     ["MLAU123", { type: "MLAU", value: "MLAU123" }],

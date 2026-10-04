@@ -37,9 +37,10 @@ describe("PublicationWorkspaceApiRepository", () => {
     expect(get).toHaveBeenCalledWith(
       "/mercadolibre/direct/publicaciones/search?q=MLA123&limit=1",
     );
-    expect(result).toEqual([
-      expect.objectContaining({ itemId: "MLA123", status: "active" }),
-    ]);
+    expect(result).toEqual({
+      criteria: { type: "MLA", value: "MLA123" },
+      items: [expect.objectContaining({ itemId: "MLA123", status: "active" })],
+    });
   });
 
   it("conserva todos los hijos devueltos por una Family ID", async () => {
@@ -60,12 +61,12 @@ describe("PublicationWorkspaceApiRepository", () => {
       patch: vi.fn(),
     }).search({ query: "4998600864813595", limit: 4 });
 
-    expect(result.map(({ itemId }) => itemId)).toEqual([
+    expect(result.items.map(({ itemId }) => itemId)).toEqual([
       "MLA1",
       "MLA2",
       "MLA3",
     ]);
-    expect(result[1]).toMatchObject({
+    expect(result.items[1]).toMatchObject({
       userProductId: "MLAU2",
       status: "paused",
     });
@@ -92,12 +93,15 @@ describe("PublicationWorkspaceApiRepository", () => {
         get,
         patch: vi.fn(),
       }).search({ query: "4998600864813595", limit: 4 }),
-    ).resolves.toEqual([
-      expect.objectContaining({
-        itemId: "MLA1",
-        userProductId: null,
-      }),
-    ]);
+    ).resolves.toEqual({
+      criteria: { type: "FAMILY", value: "4998600864813595" },
+      items: [
+        expect.objectContaining({
+          itemId: "MLA1",
+          userProductId: null,
+        }),
+      ],
+    });
   });
 
   it("usa la primera secure_url del detalle como imagen principal", async () => {
