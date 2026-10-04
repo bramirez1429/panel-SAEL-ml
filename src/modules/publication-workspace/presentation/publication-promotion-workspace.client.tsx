@@ -534,8 +534,7 @@ function FamilyWorkspace({ family, visualOrder, onChanged, onSave, onStatusChang
     const total = family.children.length;
     setGlobalApplying(true); setGlobalProgress({ completed: 0, total, failures: [] });
     const failures: string[] = [];
-    for (let index = 0; index < family.children.length; index += 1) {
-      const child = family.children[index];
+    for (const [index, child] of family.children.entries()) {
       try {
         const result = await onSave({ publicationId: child.itemId, target: { type: "family", familyId: family.familyId, itemId: child.itemId }, current: { sku: child.sku, stock: child.stock, price: child.standardPrice ?? child.price }, draft: { sku: child.sku, stock: child.stock, price: nextPrice } });
         if (!result.ok || result.confirmed.price !== nextPrice) failures.push(child.itemId);

@@ -13,7 +13,7 @@ const child = (itemId: string, status: string): PublicationWorkspaceItem => ({
   familyId: "456", model: "VARIANT_PRICING", sku: `SKU-${itemId}`,
   status, stock: itemId === "MLA1" ? 4 : 2,
   sold: itemId === "MLA1" ? 12 : 4,
-  price: 45_000, regularPrice: 56_250, currency: "ARS",
+  price: 45_000, standardPrice: 45_000, regularPrice: 56_250, listingTypeId: "gold_special", currency: "ARS",
   hasActivePromotion: itemId === "MLA1",
   promotionDiscountPercent: itemId === "MLA1" ? 20 : null,
   installmentLabel: itemId === "MLA1" ? "6 cuotas" : null,
