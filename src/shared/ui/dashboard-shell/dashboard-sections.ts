@@ -1,5 +1,16 @@
 import { createElement, type ReactNode } from "react";
-import { PictureOutlined } from "@ant-design/icons";
+import {
+  ApiOutlined,
+  ClockCircleOutlined,
+  DashboardOutlined,
+  FileTextOutlined,
+  PercentageOutlined,
+  PictureOutlined,
+  ShoppingCartOutlined,
+  TagsOutlined,
+  TeamOutlined,
+  TrophyOutlined,
+} from "@ant-design/icons";
 
 export type DashboardSection = Readonly<{
   href: `/${string}`;
@@ -8,15 +19,15 @@ export type DashboardSection = Readonly<{
 }>;
 
 export const dashboardSections = [
-  { href: "/dashboard", title: "Dashboard" },
-  { href: "/publicaciones", title: "Publicaciones" },
-  { href: "/publicacion-promocion", title: "Publicación y promoción" },
-  { href: "/ranking-productos", title: "Ranking productos" },
-  { href: "/promociones", title: "Promociones" },
-  { href: "/ventas", title: "Ventas 24 hs" },
-  { href: "/pedidos", title: "Pedidos" },
-  { href: "/usuarios", title: "Usuarios" },
-  { href: "/integraciones", title: "Integraciones" },
+  { href: "/dashboard", title: "Dashboard", icon: createElement(DashboardOutlined) },
+  { href: "/publicaciones", title: "Publicaciones", icon: createElement(FileTextOutlined) },
+  { href: "/publicacion-promocion", title: "Publicación y promoción", icon: createElement(TagsOutlined) },
+  { href: "/ranking-productos", title: "Ranking productos", icon: createElement(TrophyOutlined) },
+  { href: "/promociones", title: "Promociones", icon: createElement(PercentageOutlined) },
+  { href: "/ventas", title: "Ventas 24 hs", icon: createElement(ClockCircleOutlined) },
+  { href: "/pedidos", title: "Pedidos", icon: createElement(ShoppingCartOutlined) },
+  { href: "/usuarios", title: "Usuarios", icon: createElement(TeamOutlined) },
+  { href: "/integraciones", title: "Integraciones", icon: createElement(ApiOutlined) },
   { href: "/catalogo/imagenes", title: "Imágenes del catálogo", icon: createElement(PictureOutlined) },
 ] as const satisfies readonly DashboardSection[];
 

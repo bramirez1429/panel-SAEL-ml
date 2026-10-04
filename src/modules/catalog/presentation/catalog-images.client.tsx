@@ -118,9 +118,9 @@ export function CatalogImagesClient() {
           <div>Colores disponibles</div>
           <div className={styles.cardColors}>{catalogColors.map((color) => <Checkbox key={color} checked={colors.includes(color)} onChange={() => setDraftColors((current) => ({ ...current, [product.id]: toggleColor(colors, color) }))}>{colorLabels[color]}</Checkbox>)}</div>
           <div className={styles.cardActions}>
-            <Button type="primary" disabled={colors.length === 0} loading={savingId === product.id} onClick={() => void handleSaveColors(product)}>Guardar cambios</Button>
+            <Button type="primary" disabled={colors.length === 0} loading={savingId === product.id} onClick={() => void handleSaveColors(product)}>Guardar</Button>
             <Popconfirm title="¿Eliminar esta imagen?" description="Se eliminará del catálogo." okText="Eliminar" cancelText="Cancelar" onConfirm={() => void handleDelete(product)}>
-              <Button danger icon={<DeleteOutlined />} loading={deletingId === product.id}>Eliminar</Button>
+              <Button danger icon={<DeleteOutlined />} loading={deletingId === product.id}>Borrar</Button>
             </Popconfirm>
           </div>
         </Card>;
