@@ -6,6 +6,7 @@ import type { AuthenticatedHttpClient } from "@/shared/api/authenticated-http-cl
 import { getBestPublicationImage } from "../application/get-best-publication-image";
 import type {
   PublicationWorkspaceRepository,
+  PublicationWorkspaceSearchResponse,
   PublicationWorkspaceSearchRequest,
   PublicationWorkspaceTitleUpdateResult,
 } from "../domain/publication-workspace.repository";
@@ -48,17 +49,22 @@ export class PublicationWorkspaceApiRepository
       );
     }
 
-    return validation.data.items.map((item) => ({
-      itemId: item.itemId,
-      familyId: item.familyId,
-      userProductId: item.userProductId ?? null,
-      title: item.title ?? item.itemId,
-      imageUrl: item.thumbnail,
-      price: item.price,
-      currency: item.currencyId,
-      status: item.status,
-      stock: item.stock,
-    }));
+    const result: PublicationWorkspaceSearchResponse = {
+      criteria: validation.data.criteria,
+      items: validation.data.items.map((item) => ({
+        itemId: item.itemId,
+        familyId: item.familyId,
+        userProductId: item.userProductId ?? null,
+        title: item.title ?? item.itemId,
+        imageUrl: item.thumbnail,
+        price: item.price,
+        currency: item.currencyId,
+        status: item.status,
+        stock: item.stock,
+      })),
+    };
+
+    return result;
   }
 
   async getById(itemId: string) {

@@ -10,6 +10,16 @@ export type PublicationWorkspaceSearchRequest = Readonly<{
   cursor?: string;
 }>;
 
+export type PublicationWorkspaceSearchCriteria = Readonly<{
+  type: "FAMILY" | "MLA" | "MLAU" | "TITLE";
+  value: string;
+}>;
+
+export type PublicationWorkspaceSearchResponse = Readonly<{
+  criteria: PublicationWorkspaceSearchCriteria;
+  items: readonly PublicationWorkspaceSearchItem[];
+}>;
+
 export type PublicationWorkspaceTitleUpdateResult =
   | Readonly<{
       status: "completed";
@@ -23,7 +33,7 @@ export type PublicationWorkspaceTitleUpdateResult =
 export interface PublicationWorkspaceRepository {
   search(
     request: PublicationWorkspaceSearchRequest,
-  ): Promise<readonly PublicationWorkspaceSearchItem[]>;
+  ): Promise<PublicationWorkspaceSearchResponse>;
   getById(itemId: string): Promise<PublicationWorkspaceItem>;
   getFamily(familyId: string): Promise<PublicationWorkspaceFamily>;
   updateTitle(
