@@ -30,6 +30,7 @@ export const publicationWorkspaceSearchResponseSchema = z.object({
 });
 
 const pictureSchema = z.object({
+  id: z.string().optional(),
   secure_url: z.string().nullable().optional(),
   url: z.string().nullable().optional(),
 });
@@ -81,6 +82,7 @@ export const publicationWorkspaceDetailResponseSchema = z.object({
   installmentLabel: z.string().min(1).nullable().optional(),
   thumbnail: z.string().nullable(),
   pictures: z.array(pictureSchema),
+  variations: z.array(z.unknown()).default([]),
 });
 
 export const publicationWorkspaceFamilyResponseSchema = z.object({

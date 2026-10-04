@@ -2,6 +2,7 @@ import { publicationTitlePresentation } from "@/shared/lib/publication-size";
 
 type PublicationSkuSource = Readonly<{
   title: string;
+  size?: string | null;
   attributes?: readonly Readonly<{
     id: string;
     name: string | null;
@@ -33,7 +34,7 @@ export function generatePublicationSku(publication: PublicationSkuSource): strin
   const pack = /\bPACK\s*X\s*(\d+)\b/u.exec(normalizedTitle)?.[1];
   const hasVNeck = /\b(?:CUELLO\s+(?:EN\s+)?V|ESCOTE\s+V)\b/u.test(normalizedTitle);
   const color = colorSegment(publication, normalizedTitle);
-  const size = publicationTitlePresentation(publication.title).size;
+  const size = publication.size?.trim() || publicationTitlePresentation(publication.title).size;
 
   return [garmentType, pack ? `P${pack}` : null, hasVNeck ? "V" : null, color, size]
     .filter((segment): segment is string => Boolean(segment))

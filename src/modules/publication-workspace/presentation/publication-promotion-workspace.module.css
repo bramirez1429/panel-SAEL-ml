@@ -106,7 +106,8 @@
 }
 
 .familyWorkspace,
-.familyChildren {
+.familyChildren,
+.publicationSelection {
   display: grid;
   gap: 16px;
   width: 100%;
@@ -152,6 +153,94 @@
   max-width: none;
   min-width: 0;
   box-sizing: border-box;
+}
+
+.legacyVariations {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.legacyVariations h4 {
+  margin: 4px 0 0 !important;
+}
+
+.legacyVariationList {
+  display: grid;
+  gap: 8px;
+}
+
+.legacyVariationGroup {
+  display: grid;
+  gap: 8px;
+}
+
+.legacyVariationDivider {
+  margin: 4px 0 !important;
+}
+
+.legacyVariationImage,
+.legacyVariationImagePlaceholder {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  background: var(--ant-color-fill-quaternary);
+  border-radius: 6px;
+}
+
+.legacyVariationImagePlaceholder {
+  display: grid;
+  color: var(--ant-color-text-tertiary);
+  place-items: center;
+}
+
+.legacyVariationCard {
+  width: 100%;
+  min-width: 0;
+}
+
+.legacyVariationCard :global(.ant-card-body) {
+  display: grid;
+  grid-template-columns: 44px minmax(280px, 1fr) minmax(120px, 180px) minmax(260px, 360px);
+  gap: 12px;
+  align-items: end;
+  padding: 10px 12px;
+}
+
+.legacyVariationDetails {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(90px, 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+
+.legacyVariationField {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 4px;
+  min-width: 0;
+  color: var(--ant-color-text-secondary);
+  font-size: 12px;
+}
+
+.legacyVariationField :global(.ant-input-number),
+.legacyVariationField :global(.ant-input) {
+  width: 100%;
+  min-width: 0;
+}
+
+.legacyVariationField > span:first-child {
+  grid-column: 1 / -1;
+}
+
+.legacyVariationField > :global(.ant-input) {
+  width: 100%;
+}
+
+.legacyVariationField > :global(.ant-btn) {
+  flex: 0 0 auto;
+  width: auto;
+  white-space: nowrap;
 }
 
 .childCard :global(.ant-card-body) {
@@ -357,10 +446,28 @@
   .imagePlaceholder {
     width: min(100%, 220px);
   }
+
+  .legacyVariationCard :global(.ant-card-body) {
+    grid-template-columns: 44px 1fr 1fr;
+  }
+
+  .legacyVariationDetails {
+    grid-column: 2 / -1;
+  }
 }
 
 @media (max-width: 700px) {
   .commercialDetails {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .legacyVariationCard :global(.ant-card-body),
+  .legacyVariationDetails {
+    grid-template-columns: 1fr;
+  }
+
+  .legacyVariationImage,
+  .legacyVariationImagePlaceholder {
+    grid-column: 1 / -1;
   }
 }

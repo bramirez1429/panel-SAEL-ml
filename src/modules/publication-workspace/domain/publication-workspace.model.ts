@@ -4,6 +4,18 @@ export type PublicationWorkspaceAttribute = Readonly<{
   value: string | null;
 }>;
 
+export type PublicationWorkspaceLegacyVariation = Readonly<{
+  variationId: number;
+  imageUrl: string | null;
+  sku: string | null;
+  stock: number | null;
+  sold: number | null;
+  price: number | null;
+  color: string | null;
+  size: string | null;
+  attributes: readonly PublicationWorkspaceAttribute[];
+}>;
+
 export type PublicationWorkspaceItem = Readonly<{
   imageUrl: string | null;
   thumbnailUrl: string | null;
@@ -24,6 +36,7 @@ export type PublicationWorkspaceItem = Readonly<{
   promotionDiscountPercent: number | null;
   installmentLabel: string | null;
   attributes?: readonly PublicationWorkspaceAttribute[];
+  legacyVariations?: readonly PublicationWorkspaceLegacyVariation[];
 }>;
 
 export type PublicationWorkspaceFamily = Readonly<{

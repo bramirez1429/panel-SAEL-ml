@@ -1,9 +1,11 @@
 import "server-only";
+import { z } from "zod";
 
 import { ApiError } from "@/shared/api/api-error";
 import type { AuthenticatedHttpClient } from "@/shared/api/authenticated-http-client.server";
 
 import { getBestPublicationImage } from "../application/get-best-publication-image";
+import { mapLegacyVariations } from "@/modules/publications/infrastructure/publication-detail.mapper";
 import type {
   PublicationWorkspaceRepository,
   PublicationWorkspaceSearchResponse,
@@ -82,6 +84,31 @@ export class PublicationWorkspaceApiRepository
     }
 
     const publication = validation.data;
+    const legacyVariations = publication.model === "SHARED"
+      ? mapLegacyVariations(publication.variations).flatMap((variation) => {
+          const variationId = Number(variation.id);
+          if (!Number.isSafeInteger(variationId) || variationId < 0) return [];
+          const attributes = variation.attributes.map((attribute) => ({
+            id: attribute.id,
+            name: null,
+            value: attribute.value,
+          }));
+          const attributeValue = (id: string) =>
+            attributes.find((attribute) => attribute.id.trim().toUpperCase() === id)?.value?.trim() || null;
+
+          return [{
+            variationId,
+            imageUrl: legacyVariationImage(publication, variation.id),
+            sku: variation.sku,
+            stock: variation.stock,
+            sold: variation.sold,
+            price: variation.price?.amount ?? null,
+            color: attributeValue("COLOR"),
+            size: attributeValue("SIZE"),
+            attributes,
+          }];
+        })
+      : [];
     return {
       imageUrl: getBestPublicationImage(publication),
       thumbnailUrl: publication.thumbnail,
@@ -101,6 +128,7 @@ export class PublicationWorkspaceApiRepository
       hasActivePromotion: publication.friendly.promotion.hasActivePromotion,
       promotionDiscountPercent: publication.friendly.pricing.discountPercent,
       installmentLabel: publication.installmentLabel ?? null,
+      legacyVariations,
     };
   }
 
@@ -223,6 +251,23 @@ export class PublicationWorkspaceApiRepository
       message: "Mercado Libre todavía no confirmó el cambio. Intentá nuevamente.",
     };
   }
+}
+
+function legacyVariationImage(
+  publication: z.infer<typeof publicationWorkspaceDetailResponseSchema>,
+  variationId: string,
+): string | null {
+  const rawVariation = publication.variations.find((variation) => (
+    typeof variation === "object"
+      && variation !== null
+      && "id" in variation
+      && String(variation.id) === variationId
+  ));
+  const pictureIds = rawVariation && typeof rawVariation === "object" && "picture_ids" in rawVariation && Array.isArray(rawVariation.picture_ids)
+    ? rawVariation.picture_ids.filter((id): id is string => typeof id === "string")
+    : [];
+  const picture = pictureIds.map((id) => publication.pictures.find((item) => item.id === id)).find(Boolean);
+  return picture?.secure_url ?? picture?.url ?? publication.thumbnail ?? getBestPublicationImage(publication);
 }
 
 type FamilyTaskStatus = ReturnType<

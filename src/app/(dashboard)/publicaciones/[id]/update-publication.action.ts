@@ -31,6 +31,12 @@ export type UpdatePublicationStatusAction = (
 export type DeletePublicationVariationActionResult = Readonly<{ ok: true }> | Readonly<{ ok: false; code?: string; message: string }>;
 
 export async function updatePublicationAction(input: UpdatePublicationInput): Promise<UpdatePublicationActionResult> {
+  console.log("[SKU DEBUG]", {
+    publicationId: input.publicationId,
+    target: input.target,
+    currentSku: input.current.sku,
+    draftSku: input.draft.sku,
+  });
   try {
     const command = createUpdatePublicationCommand();
     const changed = await command.execute(input);

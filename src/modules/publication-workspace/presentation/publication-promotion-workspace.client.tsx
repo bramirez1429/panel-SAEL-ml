@@ -1,6 +1,6 @@
 "use client";
 
-import { EditOutlined, LoadingOutlined, PictureOutlined } from "@ant-design/icons";
+import { CheckOutlined, EditOutlined, LoadingOutlined, PictureOutlined } from "@ant-design/icons";
 import { Button, Card, Divider, Image, Input, InputNumber, List, Modal, Progress, Space, Tabs, Typography, message } from "antd";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -25,12 +25,15 @@ import {
 
 import type {
   PublicationWorkspaceItem,
+  PublicationWorkspaceLegacyVariation,
   PublicationWorkspaceSearchItem,
   PublicationWorkspaceSearchResult,
   PublicationWorkspaceSelection,
   PublicationWorkspaceSelectionRequest,
   PublicationWorkspaceSelectionResult,
 } from "../domain/publication-workspace.model";
+import { compareSizes } from "@/modules/publications/presentation/publication-variant-row";
+import { generatePublicationSku } from "@/shared/lib/publication-sku";
 import {
   EditableWorkspaceTitle,
   PublicationWorkspaceEditor,
@@ -391,17 +394,209 @@ function PublicationTab({
       {selection.type === "family" ? (
         <FamilyWorkspace family={selection} visualOrder={visualOrder} onChanged={onChanged} onSave={onSave} onStatusChange={onStatusChange} onTitleSave={onTitleSave} />
       ) : (
-        <PublicationWorkspaceEditor
-          publication={selection.publication}
-          onChanged={onChanged}
-          onSave={onSave}
-          onStatusChange={onStatusChange}
-          onTitleSave={onTitleSave}
-          showFamilyId
-          titleTarget={selection.publication.model === "SHARED" ? { type: "publication", itemId: selection.publication.itemId } : undefined}
-        />
+        <div className={styles.publicationSelection}>
+          <PublicationWorkspaceEditor
+            publication={selection.publication}
+            onChanged={onChanged}
+            onSave={onSave}
+            onStatusChange={onStatusChange}
+            onTitleSave={onTitleSave}
+            showFamilyId
+            titleTarget={selection.publication.model === "SHARED" ? { type: "publication", itemId: selection.publication.itemId } : undefined}
+          />
+          {selection.publication.model === "SHARED" && (selection.publication.legacyVariations?.length ?? 0) > 0 ? (
+            <LegacyVariations
+              publication={selection.publication}
+              onChanged={onChanged}
+              onSave={onSave}
+            />
+          ) : null}
+        </div>
       )}
     </>
+  );
+}
+
+function LegacyVariations({ publication, onChanged, onSave }: Readonly<{
+  publication: PublicationWorkspaceItem;
+  onChanged: () => Promise<void>;
+  onSave: WorkspaceSaveAction;
+}>) {
+  const groups = new Map<string, typeof variations>();
+  const variations = [...(publication.legacyVariations ?? [])];
+  for (const variation of variations) {
+    const color = variation.color?.trim() || "Sin color";
+    const group = groups.get(color) ?? [];
+    group.push(variation);
+    groups.set(color, group);
+  }
+  const orderedGroups = [...groups.entries()].sort(([left], [right]) => left.localeCompare(right, "es", { sensitivity: "base" }));
+
+  return (
+    <section className={styles.legacyVariations}>
+      <Typography.Title level={4}>Variantes de la publicación</Typography.Title>
+      {orderedGroups.map(([color, colorVariations]) => {
+        const orderedVariations = [...colorVariations].sort((left, right) => compareSizes(left.size, right.size));
+        return (
+          <div key={color} className={styles.legacyVariationGroup}>
+            <Divider className={styles.legacyVariationDivider} titlePlacement="start">{color}</Divider>
+            <div className={styles.legacyVariationList}>
+              {orderedVariations.map((variation) => (
+                <LegacyVariationEditor
+                  key={variation.variationId}
+                  publicationId={publication.itemId}
+                  publicationTitle={publication.title}
+                  variation={variation}
+                  onChanged={onChanged}
+                  onSave={onSave}
+                />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </section>
+  );
+}
+
+function LegacyVariationEditor({ publicationId, publicationTitle, variation, onChanged, onSave }: Readonly<{
+  publicationId: string;
+  publicationTitle: string;
+  variation: PublicationWorkspaceLegacyVariation;
+  onChanged: () => Promise<void>;
+  onSave: WorkspaceSaveAction;
+}>) {
+  const [messageApi, contextHolder] = message.useMessage();
+  const [sku, setSku] = useState(variation.sku ?? "");
+  const [stock, setStock] = useState<number | null>(variation.stock);
+  const [savedSku, setSavedSku] = useState(variation.sku ?? "");
+  const [savedStock, setSavedStock] = useState(variation.stock);
+  const [saving, setSaving] = useState<"sku" | "stock" | null>(null);
+  const [skuSaved, setSkuSaved] = useState(false);
+  const target = { type: "legacy" as const, itemId: publicationId, variationId: variation.variationId };
+
+  async function saveStock() {
+    const nextStock = stock;
+    if (saving || nextStock === savedStock) return;
+    if (nextStock === null || !Number.isInteger(nextStock) || nextStock < 0) {
+      setStock(savedStock);
+      messageApi.error("El stock debe ser un entero mayor o igual a cero.");
+      return;
+    }
+    setSaving("stock");
+    try {
+      const result = await onSave({
+        publicationId,
+        target,
+        current: { sku: savedSku || null, stock: savedStock, price: variation.price },
+        draft: { sku: savedSku || null, stock: nextStock, price: variation.price },
+      });
+      if (!result.ok || result.confirmed.stock !== nextStock) {
+        setStock(savedStock);
+        messageApi.error(result.ok ? "No se pudo confirmar el nuevo stock." : result.message);
+        return;
+      }
+      setSavedStock(nextStock);
+      await onChanged();
+    } catch {
+      setStock(savedStock);
+      messageApi.error("No se pudo actualizar el stock.");
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  async function saveSku() {
+    const nextSku = sku.trim();
+    if (saving || nextSku === savedSku) return;
+    if (!nextSku) {
+      setSku(savedSku);
+      messageApi.error("El SKU no puede quedar vacío.");
+      return;
+    }
+    setSaving("sku");
+    setSkuSaved(false);
+    try {
+      const result = await onSave({
+        publicationId,
+        target,
+        current: { sku: savedSku || null, stock: savedStock, price: variation.price },
+        draft: { sku: nextSku, stock: savedStock, price: variation.price },
+      });
+      if (!result.ok || result.confirmed.sku !== nextSku) {
+        setSku(savedSku);
+        messageApi.error(result.ok ? "No se pudo confirmar el nuevo SKU." : result.message);
+        return;
+      }
+      setSku(nextSku);
+      setSavedSku(nextSku);
+      setSkuSaved(true);
+      window.setTimeout(() => setSkuSaved(false), 1400);
+      await onChanged();
+    } catch {
+      setSku(savedSku);
+      messageApi.error("No se pudo actualizar el SKU.");
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  function generateSku() {
+    const nextSku = generatePublicationSku({
+      title: publicationTitle,
+      attributes: variation.attributes,
+      size: variation.size,
+    });
+    if (nextSku) {
+      setSku(nextSku);
+      setSkuSaved(false);
+    }
+    else messageApi.warning("No pudimos generar un SKU con esta variante.");
+  }
+
+  return (
+    <Card className={styles.legacyVariationCard} size="small">
+      {contextHolder}
+      {variation.imageUrl ? <Image alt={`Variación ${variation.variationId}`} className={styles.legacyVariationImage} preview={{ src: variation.imageUrl }} src={variation.imageUrl} /> : <span className={styles.legacyVariationImagePlaceholder}>—</span>}
+      <div className={styles.legacyVariationDetails}>
+        <LegacyVariationDetail label="Talle" value={variation.size ?? "No informado"} />
+        <LegacyVariationDetail label="Vendidos" value={variation.sold === null ? "No informado" : String(variation.sold)} />
+        <LegacyVariationDetail label="Variation ID" value={String(variation.variationId)} />
+      </div>
+      <label className={styles.legacyVariationField}>
+        <span>Stock</span>
+        <InputNumber
+          aria-label={`Stock de variación ${variation.variationId}`}
+          disabled={saving === "stock"}
+          min={0}
+          precision={0}
+          value={stock}
+          onBlur={() => void saveStock()}
+          onChange={setStock}
+        />
+      </label>
+      <label className={styles.legacyVariationField}>
+        <span>SKU</span>
+        <Input
+          aria-label={`SKU de variación ${variation.variationId}`}
+          disabled={saving === "sku"}
+          value={sku}
+          onBlur={() => void saveSku()}
+          onChange={(event) => { setSku(event.target.value); setSkuSaved(false); }}
+        />
+        <Button disabled={saving === "sku"} onClick={generateSku} onMouseDown={(event) => event.preventDefault()} size="small">Generar SKU</Button>
+        {saving === "sku" ? <Typography.Text type="secondary"><LoadingOutlined spin /> Guardando...</Typography.Text> : skuSaved ? <CheckOutlined className={styles.savedIndicator} /> : null}
+      </label>
+    </Card>
+  );
+}
+
+function LegacyVariationDetail({ label, value }: Readonly<{ label: string; value: string }>) {
+  return (
+    <span className={styles.commercialDetail}>
+      <Typography.Text type="secondary">{label}</Typography.Text>
+      <Typography.Text strong>{value}</Typography.Text>
+    </span>
   );
 }
 
