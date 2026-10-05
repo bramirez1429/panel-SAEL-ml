@@ -2,6 +2,7 @@ import { createElement, type ReactNode } from "react";
 import {
   ApiOutlined,
   ClockCircleOutlined,
+  CloudUploadOutlined,
   DashboardOutlined,
   FileTextOutlined,
   PercentageOutlined,
@@ -21,6 +22,7 @@ export type DashboardSection = Readonly<{
 export const dashboardSections = [
   { href: "/dashboard", title: "Dashboard", icon: createElement(DashboardOutlined) },
   { href: "/publicaciones", title: "Publicaciones", icon: createElement(FileTextOutlined) },
+  { href: "/replicar", title: "Replicar", icon: createElement(CloudUploadOutlined) },
   { href: "/publicacion-promocion", title: "Publicación y promoción", icon: createElement(TagsOutlined) },
   { href: "/ranking-productos", title: "Ranking productos", icon: createElement(TrophyOutlined) },
   { href: "/promociones", title: "Promociones", icon: createElement(PercentageOutlined) },
