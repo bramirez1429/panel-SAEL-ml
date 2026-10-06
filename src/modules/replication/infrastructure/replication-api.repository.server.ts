@@ -11,7 +11,10 @@ export class ReplicationApiRepository implements ReplicationRepository {
 
   async getReplicablePublications(): Promise<readonly ReplicablePublication[]> {
     const parsed = replicationListResponseSchema.safeParse(
-      await this.httpClient.get("/mercadolibre/direct/replicar"),
+      await this.httpClient.get(
+        "/mercadolibre/direct/replicar",
+        { timeoutMs: 120_000 },
+      ),
     );
     if (!parsed.success) {
       throw new ApiError("El backend devolvió publicaciones para replicar inválidas.", "API_INVALID_RESPONSE", { cause: parsed.error });

@@ -1,5 +1,6 @@
 import { AppError } from "@/shared/errors/app-error";
 import { PageHeader } from "@/shared/ui/page-header/page-header";
+import { unstable_rethrow } from "next/navigation";
 import { createGetReplicablePublicationsQuery } from "@/modules/replication/replication.composition.server";
 import { replicatePublicationAction } from "../publicaciones/tiendanube.action";
 import { loadReplicationCategoriesAction, loadReplicationPreviewAction } from "./actions";
@@ -12,7 +13,6 @@ export default async function ReplicarPage() {
     const publications = await createGetReplicablePublicationsQuery().execute();
     return (
       <>
-        <PageHeader description="Replicá publicaciones de Mercado Libre en Tiendanube de forma rápida." />
         <ReplicationListClient
           publications={publications}
           replicateAction={replicatePublicationAction}
@@ -22,6 +22,7 @@ export default async function ReplicarPage() {
       </>
     );
   } catch (error: unknown) {
+    unstable_rethrow(error);
     return (
       <>
         <PageHeader description="Replicá publicaciones de Mercado Libre en Tiendanube de forma rápida." />

@@ -1,0 +1,12 @@
+.imageSkeleton {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  background: linear-gradient(90deg, #f0f0f0 25%, #fafafa 37%, #f0f0f0 63%);
+  background-size: 400% 100%;
+  animation: skeletonLoading 1.4s ease infinite;
+}
+
+@keyframes skeletonLoading {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
