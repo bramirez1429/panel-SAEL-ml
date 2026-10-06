@@ -1,4 +1,5 @@
 .list { margin-top: 24px; }
+.searchPanel { width: 100%; padding: 0; background: transparent; }
 .col { display: flex; }
 .col > .card { width: 100%; }
 .card { display: flex; height: 100%; flex-direction: column; border: 1px solid #e7eaf0; border-radius: 12px; background: #fff; box-shadow: 0 6px 18px rgba(16, 24, 40, 0.06); transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease; overflow: hidden; }
@@ -7,7 +8,7 @@
 .image { display: block; width: 100%; aspect-ratio: 4 / 5; object-fit: cover; object-position: center; }
 .title { display: -webkit-box; height: 40px; min-height: 40px; overflow: hidden; text-overflow: ellipsis; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 20px; }
 .divider { margin: 18px 0 14px; }
-.identifiers { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.identifiers { display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 12px; }
 .identifier { min-width: 0; min-height: 30px; display: grid; gap: 4px; }
 .identifier small { color: #667085; font-size: 11px; }
 .identifier :global(.ant-space) { display: flex; min-width: 0; max-width: 100%; }
@@ -19,7 +20,7 @@
 .visits { display: block; margin-top: 2px; font-size: 12px; line-height: 18px; }
 .visitsSkeleton { width: 45%; margin: 4px 0 2px; }
 .visitsSkeleton :global(.ant-skeleton-paragraph) { margin: 0; }
-.cta { width: 100%; height: 32px; margin-top: 12px; border-radius: 8px; font-size: 13px; }
+.cta { width: 100%; height: 32px; margin-top: auto; border-radius: 8px; font-size: 13px; }
 .sentinel { min-height: 28px; display: grid; place-items: center; }
 .modalHeader { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
 .modalImage { width: 56px; height: 56px; object-fit: contain; border-radius: 8px; background: #f6f8fb; }

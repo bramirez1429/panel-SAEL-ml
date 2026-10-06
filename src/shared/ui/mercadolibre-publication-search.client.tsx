@@ -10,7 +10,7 @@ import styles from "./mercadolibre-publication-search.module.css";
 
 type Props = Readonly<{
   initialSearch: string;
-  pathname: "/promociones" | "/publicaciones";
+  pathname: "/promociones" | "/publicaciones" | "/replicar";
   onResetCursorHistory: () => void;
   clearSearchParams?: readonly string[];
   hasAdditionalFilters?: boolean;
@@ -51,22 +51,27 @@ export function MercadoLibrePublicationSearch({ initialSearch, pathname, onReset
   }
 
   if (integrated) {
-    return <div className={`${styles.form} ${className ?? ""}`} role="search">
-      <Input.Search
-        allowClear
-        aria-label="Buscar publicaciones"
-        className={styles.integratedInput}
-        enterButton={<SearchOutlined aria-label="Buscar" />}
-        loading={pending}
-        onChange={(event) => setValue(event.target.value)}
-        onSearch={(term, _event, info) => {
-          if (info?.source === "clear") clear();
-          else navigate(term);
-        }}
-        placeholder="Buscar por familia, MLA o nombre"
-        value={value}
-      />
-    </div>;
+    return <form className={`${styles.form} ${className ?? ""}`} role="search" onSubmit={submit}>
+      <div className={styles.integratedSearch}>
+        <Input
+          allowClear
+          aria-label="Buscar publicaciones"
+          onChange={(event) => setValue(event.target.value)}
+          onClear={clear}
+          placeholder="Buscar por nombre, Family ID, MLA o MLAU"
+          value={value}
+        />
+        <Button
+          aria-label="Buscar"
+          className={styles.integratedSearchButton}
+          htmlType="submit"
+          icon={<SearchOutlined />}
+          loading={pending}
+          shape="circle"
+          type="primary"
+        />
+      </div>
+    </form>;
   }
 
   return <form className={styles.form} onSubmit={submit}>

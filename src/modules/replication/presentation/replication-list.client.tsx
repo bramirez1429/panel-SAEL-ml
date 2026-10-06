@@ -3,11 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { CloudUploadOutlined } from "@ant-design/icons";
 import { Button, Card, Col, Divider, Empty, Row, Spin, Tag, Typography } from "antd";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { TiendanubeCategory } from "@/modules/tiendanube/domain/tiendanube-replication.model";
 import { ReplicatePublicationAction, ReplicationModalLoadState, TiendanubeReplicationModal } from "@/modules/tiendanube/presentation/tiendanube-replication-modal.client";
 import type { ReplicablePublication, ReplicationPreview, ReplicationVisitsProduct, ReplicationVisitsResult } from "../domain/replication.model";
 import { CopyableText } from "@/shared/ui/copyable-text.client";
+import { parsePublicationSearch, type PublicationSearchCriteria } from "@/shared/lib/publication-search";
+import { MercadoLibrePublicationSearch } from "@/shared/ui/mercadolibre-publication-search.client";
 import { ReplicationVisits } from "./replication-visits.client";
 import styles from "./replication-list.module.css";
 
@@ -16,9 +18,12 @@ type CategoriesAction = () => Promise<Readonly<{ ok: true; categories: readonly 
 type VisitsAction = (products: readonly ReplicationVisitsProduct[]) => Promise<Readonly<{ ok: true; items: readonly ReplicationVisitsResult[] } | { ok: false; message: string }>>;
 type Props = Readonly<{ publications: readonly ReplicablePublication[]; replicateAction: ReplicatePublicationAction; loadPreviewAction: PreviewAction; loadCategoriesAction: CategoriesAction; loadVisitsAction: VisitsAction }>;
 const { Meta } = Card;
+const resetReplicationSearchCursor = () => undefined;
 
 export function ReplicationListClient({ publications, replicateAction, loadPreviewAction, loadCategoriesAction, loadVisitsAction }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const search = searchParams.get("search") ?? "";
   const [visibleCount, setVisibleCount] = useState(20);
   const [appending, setAppending] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -29,9 +34,19 @@ export function ReplicationListClient({ publications, replicateAction, loadPrevi
   const [loadError, setLoadError] = useState<string | null>(null);
   const [visitsBySourceKey, setVisitsBySourceKey] = useState<Record<string, number | null>>({});
   const requestedVisitSourceKeysRef = useRef(new Set<string>());
+  const previousSearchRef = useRef(search);
 
-  const visible = publications.slice(0, visibleCount);
-  const hasMore = visibleCount < publications.length;
+  const searchChanged = previousSearchRef.current !== search;
+  const filteredPublications = publications.filter((publication) => matchesPublicationSearch(publication, parsePublicationSearch(search)));
+  const effectiveVisibleCount = searchChanged ? 20 : visibleCount;
+  const visible = filteredPublications.slice(0, effectiveVisibleCount);
+  const hasMore = effectiveVisibleCount < filteredPublications.length;
+
+  useEffect(() => {
+    if (!searchChanged) return;
+    previousSearchRef.current = search;
+    setVisibleCount(20);
+  }, [search, searchChanged]);
 
   useEffect(() => {
     const batch = visible.filter((publication) => !requestedVisitSourceKeysRef.current.has(publication.sourceKey));
@@ -61,7 +76,7 @@ export function ReplicationListClient({ publications, replicateAction, loadPrevi
         return next;
       });
     });
-  }, [loadVisitsAction, publications, visibleCount]);
+  }, [loadVisitsAction, visible, visibleCount]);
 
   useEffect(() => {
     const node = sentinelRef.current;
@@ -69,11 +84,11 @@ export function ReplicationListClient({ publications, replicateAction, loadPrevi
     const observer = new IntersectionObserver(([entry]) => {
       if (!entry?.isIntersecting || appending) return;
       setAppending(true);
-      window.setTimeout(() => { setVisibleCount((count) => Math.min(count + 20, publications.length)); setAppending(false); }, 120);
+      window.setTimeout(() => { setVisibleCount((count) => Math.min(count + 20, filteredPublications.length)); setAppending(false); }, 120);
     }, { rootMargin: "240px" });
     observer.observe(node);
     return () => observer.disconnect();
-  }, [appending, hasMore, publications.length]);
+  }, [appending, filteredPublications.length, hasMore]);
 
   async function openReplication(publication: ReplicablePublication) {
     setSelected(publication); setPreview(null); setCategories([]); setLoadError(null); setLoadState("LOADING");
@@ -94,12 +109,23 @@ export function ReplicationListClient({ publications, replicateAction, loadPrevi
   const close = () => setSelected(null);
 
   return <>
-    {publications.length === 0 ? <Empty description="No hay publicaciones para replicar." /> : <>
+    <section className={styles.searchPanel} aria-label="Buscar publicaciones para replicar">
+      <MercadoLibrePublicationSearch key={search} initialSearch={search} integrated pathname="/replicar" onResetCursorHistory={resetReplicationSearchCursor} />
+    </section>
+    {filteredPublications.length === 0 ? <Empty description="No hay publicaciones para replicar." /> : <>
       <Row className={styles.list} gutter={[16, 16]}>{visible.map((publication) => <Col className={styles.col} key={publication.sourceKey} xs={24} sm={24} md={12} lg={8} xl={6}><ReplicationRow publication={publication} visits={visitsBySourceKey[publication.sourceKey]} onReplicate={() => void openReplication(publication)} /></Col>)}</Row>
       <div ref={sentinelRef} className={styles.sentinel}>{appending ? <Spin size="small" /> : null}</div>
     </>}
     {selected ? <TiendanubeReplicationModal open sourceKey={selected.sourceKey} action={replicateAction} categories={categories} preview={preview} loadState={loadState} loadError={loadError} onLoadRetry={() => void openReplication(selected)} onGoToIntegrations={() => router.push("/integraciones")} onClose={close} /> : null}
   </>;
+}
+
+function matchesPublicationSearch(publication: ReplicablePublication, criteria: PublicationSearchCriteria | null): boolean {
+  if (!criteria) return true;
+  if (criteria.type === "FAMILY") return publication.familyId === criteria.value;
+  if (criteria.type === "MLA") return publication.itemId === criteria.value || publication.itemIds.includes(criteria.value);
+  if (criteria.type === "MLAU") return publication.userProductId === criteria.value;
+  return publication.title.toLocaleLowerCase("es").includes(criteria.value.toLocaleLowerCase("es"));
 }
 
 function ReplicationRow({ publication, visits, onReplicate }: Readonly<{ publication: ReplicablePublication; visits?: number | null; onReplicate: () => void }>) {
