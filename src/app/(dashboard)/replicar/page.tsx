@@ -3,7 +3,7 @@ import { PageHeader } from "@/shared/ui/page-header/page-header";
 import { unstable_rethrow } from "next/navigation";
 import { createGetReplicablePublicationsQuery } from "@/modules/replication/replication.composition.server";
 import { replicatePublicationAction } from "../publicaciones/tiendanube.action";
-import { loadReplicationCategoriesAction, loadReplicationPreviewAction } from "./actions";
+import { loadReplicationCategoriesAction, loadReplicationPreviewAction, loadReplicationVisitsAction } from "./actions";
 import { ReplicationListClient } from "@/modules/replication/presentation/replication-list.client";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +18,7 @@ export default async function ReplicarPage() {
           replicateAction={replicatePublicationAction}
           loadPreviewAction={loadReplicationPreviewAction}
           loadCategoriesAction={loadReplicationCategoriesAction}
+          loadVisitsAction={loadReplicationVisitsAction}
         />
       </>
     );

@@ -4,6 +4,7 @@ export type ReplicablePublication = Readonly<{
   sourceKey: string;
   title: string;
   sold: number;
+  itemIds: readonly string[];
   priceFrom: number | null;
   priceTo: number | null;
   currency: string | null;
@@ -22,4 +23,14 @@ export type ReplicationPreview = Readonly<{
   priceTo: number | null;
   currency: string | null;
   tags: readonly string[];
+}>;
+
+export type ReplicationVisitsProduct = Readonly<{
+  sourceKey: string;
+  itemIds: readonly string[];
+}>;
+
+export type ReplicationVisitsResult = Readonly<{
+  sourceKey: string;
+  visits: number | null;
 }>;

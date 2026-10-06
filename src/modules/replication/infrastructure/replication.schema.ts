@@ -4,6 +4,7 @@ const publicationSchema = z.object({
   sourceKey: z.string().min(1),
   title: z.string().nullable().optional(),
   sold: z.number().nonnegative(),
+  itemIds: z.array(z.string()).optional(),
   priceFrom: z.number().nullable(),
   priceTo: z.number().nullable(),
   currency: z.string().nullable(),
@@ -30,4 +31,11 @@ export const replicationPreviewResponseSchema = z.object({
   priceTo: z.number().nullable().optional(),
   currency: z.string().nullable().optional(),
   tags: z.array(z.string()).optional(),
+});
+
+export const replicationVisitsResponseSchema = z.object({
+  items: z.array(z.object({
+    sourceKey: z.string().min(1),
+    visits: z.number().nullable(),
+  })),
 });

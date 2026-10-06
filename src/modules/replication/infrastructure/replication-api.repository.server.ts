@@ -3,8 +3,8 @@ import "server-only";
 import { ApiError } from "@/shared/api/api-error";
 import type { AuthenticatedHttpClient } from "@/shared/api/authenticated-http-client.server";
 import type { ReplicationRepository } from "../domain/replication.repository";
-import type { ReplicablePublication, ReplicationPreview } from "../domain/replication.model";
-import { replicationListResponseSchema, replicationPreviewResponseSchema } from "./replication.schema";
+import type { ReplicablePublication, ReplicationPreview, ReplicationVisitsProduct, ReplicationVisitsResult } from "../domain/replication.model";
+import { replicationListResponseSchema, replicationPreviewResponseSchema, replicationVisitsResponseSchema } from "./replication.schema";
 
 export class ReplicationApiRepository implements ReplicationRepository {
   constructor(private readonly httpClient: AuthenticatedHttpClient) {}
@@ -23,6 +23,7 @@ export class ReplicationApiRepository implements ReplicationRepository {
       sourceKey: item.sourceKey,
       title: item.title ?? "Sin título",
       sold: item.sold,
+      itemIds: item.itemIds ?? (item.itemId ? [item.itemId] : []),
       priceFrom: item.priceFrom,
       priceTo: item.priceTo,
       currency: item.currency,
@@ -32,6 +33,20 @@ export class ReplicationApiRepository implements ReplicationRepository {
       userProductId: item.userProductId ?? null,
       type: item.type,
     }));
+  }
+
+  async getVisits(products: readonly ReplicationVisitsProduct[]): Promise<readonly ReplicationVisitsResult[]> {
+    const parsed = replicationVisitsResponseSchema.safeParse(
+      await this.httpClient.post(
+        "/mercadolibre/direct/replicar/visitas",
+        { days: 30, products },
+        { timeoutMs: 120_000 },
+      ),
+    );
+    if (!parsed.success) {
+      throw new ApiError("El backend devolviÃ³ visitas para replicar invÃ¡lidas.", "API_INVALID_RESPONSE", { cause: parsed.error });
+    }
+    return parsed.data.items;
   }
 
   async getPreviewBySource(sourceKey: string): Promise<ReplicationPreview> {

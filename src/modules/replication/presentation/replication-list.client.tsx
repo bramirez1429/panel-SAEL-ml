@@ -6,16 +6,17 @@ import { Button, Card, Col, Divider, Empty, Row, Spin, Tag, Typography } from "a
 import { useRouter } from "next/navigation";
 import type { TiendanubeCategory } from "@/modules/tiendanube/domain/tiendanube-replication.model";
 import { ReplicatePublicationAction, ReplicationModalLoadState, TiendanubeReplicationModal } from "@/modules/tiendanube/presentation/tiendanube-replication-modal.client";
-import type { ReplicablePublication, ReplicationPreview } from "../domain/replication.model";
+import type { ReplicablePublication, ReplicationPreview, ReplicationVisitsProduct, ReplicationVisitsResult } from "../domain/replication.model";
 import { CopyableText } from "@/shared/ui/copyable-text.client";
 import styles from "./replication-list.module.css";
 
 type PreviewAction = (sourceKey: string) => Promise<Readonly<{ ok: true; preview: ReplicationPreview } | { ok: false; message: string }>>;
 type CategoriesAction = () => Promise<Readonly<{ ok: true; categories: readonly TiendanubeCategory[] } | { ok: false; message: string }>>;
-type Props = Readonly<{ publications: readonly ReplicablePublication[]; replicateAction: ReplicatePublicationAction; loadPreviewAction: PreviewAction; loadCategoriesAction: CategoriesAction }>;
+type VisitsAction = (products: readonly ReplicationVisitsProduct[]) => Promise<Readonly<{ ok: true; items: readonly ReplicationVisitsResult[] } | { ok: false; message: string }>>;
+type Props = Readonly<{ publications: readonly ReplicablePublication[]; replicateAction: ReplicatePublicationAction; loadPreviewAction: PreviewAction; loadCategoriesAction: CategoriesAction; loadVisitsAction: VisitsAction }>;
 const { Meta } = Card;
 
-export function ReplicationListClient({ publications, replicateAction, loadPreviewAction, loadCategoriesAction }: Props) {
+export function ReplicationListClient({ publications, replicateAction, loadPreviewAction, loadCategoriesAction, loadVisitsAction }: Props) {
   const router = useRouter();
   const [visibleCount, setVisibleCount] = useState(20);
   const [appending, setAppending] = useState(false);
@@ -25,9 +26,32 @@ export function ReplicationListClient({ publications, replicateAction, loadPrevi
   const [categories, setCategories] = useState<readonly TiendanubeCategory[]>([]);
   const [loadState, setLoadState] = useState<ReplicationModalLoadState>("LOADING");
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [visitsBySourceKey, setVisitsBySourceKey] = useState<Record<string, number | null>>({});
+  const requestedVisitSourceKeysRef = useRef(new Set<string>());
 
   const visible = publications.slice(0, visibleCount);
   const hasMore = visibleCount < publications.length;
+
+  useEffect(() => {
+    const batch = visible.filter((publication) => !requestedVisitSourceKeysRef.current.has(publication.sourceKey));
+    if (batch.length === 0) return;
+    batch.forEach((publication) => requestedVisitSourceKeysRef.current.add(publication.sourceKey));
+
+    void loadVisitsAction(batch.map(({ sourceKey, itemIds }) => ({ sourceKey, itemIds }))).then((result) => {
+      setVisitsBySourceKey((current) => {
+        const next = { ...current };
+        batch.forEach((publication) => { next[publication.sourceKey] = null; });
+        if (result.ok) result.items.forEach((item) => { next[item.sourceKey] = item.visits; });
+        return next;
+      });
+    }).catch(() => {
+      setVisitsBySourceKey((current) => {
+        const next = { ...current };
+        batch.forEach((publication) => { next[publication.sourceKey] = null; });
+        return next;
+      });
+    });
+  }, [loadVisitsAction, publications, visibleCount]);
 
   useEffect(() => {
     const node = sentinelRef.current;
@@ -61,14 +85,14 @@ export function ReplicationListClient({ publications, replicateAction, loadPrevi
 
   return <>
     {publications.length === 0 ? <Empty description="No hay publicaciones para replicar." /> : <>
-      <Row className={styles.list} gutter={[16, 16]}>{visible.map((publication) => <Col className={styles.col} key={publication.sourceKey} xs={24} sm={24} md={12} lg={8} xl={6}><ReplicationRow publication={publication} onReplicate={() => void openReplication(publication)} /></Col>)}</Row>
+      <Row className={styles.list} gutter={[16, 16]}>{visible.map((publication) => <Col className={styles.col} key={publication.sourceKey} xs={24} sm={24} md={12} lg={8} xl={6}><ReplicationRow publication={publication} visits={visitsBySourceKey[publication.sourceKey]} visitsRequested={requestedVisitSourceKeysRef.current.has(publication.sourceKey)} onReplicate={() => void openReplication(publication)} /></Col>)}</Row>
       <div ref={sentinelRef} className={styles.sentinel}>{appending ? <Spin size="small" /> : null}</div>
     </>}
     {selected ? <TiendanubeReplicationModal open sourceKey={selected.sourceKey} action={replicateAction} categories={categories} preview={preview} loadState={loadState} loadError={loadError} onLoadRetry={() => void openReplication(selected)} onGoToIntegrations={() => router.push("/integraciones")} onClose={close} /> : null}
   </>;
 }
 
-function ReplicationRow({ publication, onReplicate }: Readonly<{ publication: ReplicablePublication; onReplicate: () => void }>) {
+function ReplicationRow({ publication, visits, visitsRequested, onReplicate }: Readonly<{ publication: ReplicablePublication; visits?: number | null; visitsRequested: boolean; onReplicate: () => void }>) {
   const cover = <img className={styles.image} src={publication.thumbnailUrl ?? ""} alt={publication.title} />;
   const identifiers = <><Identifier label="Family ID" value={publication.familyId} /><Identifier label="MLA" value={publication.itemId} /><Identifier label="MLAU" value={publication.userProductId} /></>;
 
@@ -78,6 +102,7 @@ function ReplicationRow({ publication, onReplicate }: Readonly<{ publication: Re
       description={<Tag bordered={false} className={styles.sold}>{publication.sold} vendidos</Tag>}
     />
     {formatPublicationPrice(publication.priceFrom, publication.priceTo, publication.currency) ? <Typography.Text strong className={styles.price}>{formatPublicationPrice(publication.priceFrom, publication.priceTo, publication.currency)}</Typography.Text> : null}
+    <Typography.Text type="secondary" className={styles.visits}>{!visitsRequested ? "Vistas: ..." : visits === null || visits === undefined ? "Vistas no disponibles" : `${new Intl.NumberFormat("es-AR").format(visits)} vistas · 30 días`}</Typography.Text>
     <Divider className={styles.divider} />
     <div className={styles.identifiers}>{identifiers}</div>
     <Button className={styles.cta} type="primary" size="small" block icon={<CloudUploadOutlined />} onClick={onReplicate}>Replicar TN</Button>

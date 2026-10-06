@@ -5,6 +5,7 @@ import { createAuthenticatedHttpClient } from "@/shared/api/authenticated-http-c
 import { HttpClient } from "@/shared/api/http-client.server";
 import { GetReplicablePublicationsQuery } from "./application/get-replicable-publications.query";
 import { GetReplicationPreviewQuery } from "./application/get-replication-preview.query";
+import { GetReplicationVisitsQuery } from "./application/get-replication-visits.query";
 import { ReplicationApiRepository } from "./infrastructure/replication-api.repository.server";
 
 function createRepository() {
@@ -19,4 +20,8 @@ export function createGetReplicablePublicationsQuery() {
 
 export function createGetReplicationPreviewQuery() {
   return new GetReplicationPreviewQuery(createRepository());
+}
+
+export function createGetReplicationVisitsQuery() {
+  return new GetReplicationVisitsQuery(createRepository());
 }
