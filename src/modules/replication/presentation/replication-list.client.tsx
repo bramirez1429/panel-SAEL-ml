@@ -77,10 +77,21 @@ function ReplicationRow({ publication, onReplicate }: Readonly<{ publication: Re
       title={<Typography.Text strong className={styles.title}>{publication.title}</Typography.Text>}
       description={<Tag bordered={false} className={styles.sold}>{publication.sold} vendidos</Tag>}
     />
+    {formatPublicationPrice(publication.priceFrom, publication.priceTo, publication.currency) ? <Typography.Text strong className={styles.price}>{formatPublicationPrice(publication.priceFrom, publication.priceTo, publication.currency)}</Typography.Text> : null}
     <Divider className={styles.divider} />
     <div className={styles.identifiers}>{identifiers}</div>
     <Button className={styles.cta} type="primary" size="small" block icon={<CloudUploadOutlined />} onClick={onReplicate}>Replicar TN</Button>
   </Card>;
+}
+
+function formatPublicationPrice(priceFrom: number | null, priceTo: number | null, currency: string | null): string | null {
+  const from = priceFrom ?? priceTo;
+  const to = priceTo ?? priceFrom;
+  if (from === null || to === null) return null;
+
+  const format = (value: number) => new Intl.NumberFormat("es-AR").format(value);
+  const prefix = currency?.trim() || "$";
+  return from === to ? `${prefix} ${format(from)}` : `${prefix} ${format(from)} - ${format(to)}`;
 }
 
 function Identifier({ label, value }: Readonly<{ label: string; value: string | null }>) {
