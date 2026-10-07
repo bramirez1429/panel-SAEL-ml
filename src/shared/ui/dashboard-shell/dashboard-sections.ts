@@ -8,6 +8,7 @@ import {
   PercentageOutlined,
   PictureOutlined,
   ShoppingCartOutlined,
+  SyncOutlined,
   TagsOutlined,
   TeamOutlined,
   TrophyOutlined,
@@ -21,6 +22,7 @@ export type DashboardSection = Readonly<{
 
 export const dashboardSections = [
   { href: "/dashboard", title: "Dashboard", icon: createElement(DashboardOutlined) },
+  { href: "/sincronizacion", title: "Sincronización", icon: createElement(SyncOutlined) },
   { href: "/publicaciones", title: "Publicaciones", icon: createElement(FileTextOutlined) },
   { href: "/replicar", title: "Replicar", icon: createElement(CloudUploadOutlined) },
   { href: "/publicacion-promocion", title: "Publicación y promoción", icon: createElement(TagsOutlined) },
