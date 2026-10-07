@@ -16,3 +16,10 @@ export const replicationResponseSchema = z.object({
 export const categoriesResponseSchema = z.object({
   items: z.array(z.object({ id: z.number(), name: z.string().min(1), parentId: z.number().nullable() })),
 });
+
+export const productByMlResponseSchema = z.object({
+  linked: z.boolean(),
+  price: z.number().nullable(),
+  stock: z.number().nullable(),
+  promotionalPrice: z.number().nullable(),
+});

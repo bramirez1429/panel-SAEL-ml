@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PublicationWorkspaceItem } from "../domain/publication-workspace.model";
-import { PublicationWorkspaceEditor } from "./publication-workspace-editor.client";
+import { PublicationWorkspaceEditor, type GetTiendanubeProductByMlAction } from "./publication-workspace-editor.client";
 
 const publication: PublicationWorkspaceItem = {
   imageUrl: null,
@@ -138,9 +138,48 @@ describe("PublicationWorkspaceEditor", () => {
     await waitFor(() => expect(stock).toHaveValue("12"));
     expect(await screen.findByText("Falló")).toBeInTheDocument();
   });
+  it("muestra un skeleton mientras carga los datos de Tiendanube", () => {
+    const loadTiendanubeProduct: GetTiendanubeProductByMlAction = vi.fn(() => new Promise<Awaited<ReturnType<GetTiendanubeProductByMlAction>>>(() => undefined));
+    const { container } = renderEditor({ getTiendanubeProductByMlAction: loadTiendanubeProduct });
+
+    expect(container.querySelector(".ant-skeleton")).toBeInTheDocument();
+  });
+
+  it("muestra precio, stock y precio promocional reales de Tiendanube", async () => {
+    const loadTiendanubeProduct = vi.fn().mockResolvedValue({
+      ok: true as const,
+      product: { linked: true, price: 47_000, stock: 5, promotionalPrice: 42_000 },
+    });
+    renderEditor({ getTiendanubeProductByMlAction: loadTiendanubeProduct });
+
+    expect(await screen.findByLabelText("Precio TN")).toHaveValue("47000");
+    expect(screen.getByLabelText("Stock TN")).toHaveValue("5");
+    expect(screen.getByLabelText("Precio promocional TN")).toHaveValue("42000");
+  });
+
+  it("muestra No vinculado cuando Tiendanube no tiene el MLA asociado", async () => {
+    const loadTiendanubeProduct = vi.fn().mockResolvedValue({
+      ok: true as const,
+      product: { linked: false, price: null, stock: null, promotionalPrice: null },
+    });
+    renderEditor({ getTiendanubeProductByMlAction: loadTiendanubeProduct });
+
+    expect(await screen.findAllByText("No vinculado")).toHaveLength(3);
+  });
+
+  it("muestra un guion cuando un dato de Tiendanube es nulo", async () => {
+    const loadTiendanubeProduct = vi.fn().mockResolvedValue({
+      ok: true as const,
+      product: { linked: true, price: null, stock: 5, promotionalPrice: null },
+    });
+    renderEditor({ getTiendanubeProductByMlAction: loadTiendanubeProduct });
+
+    expect(await screen.findAllByPlaceholderText("—")).toHaveLength(2);
+    expect(screen.getByLabelText("Stock TN")).toHaveValue("5");
+  });
 });
 
-function renderEditor() {
+function renderEditor(props: Readonly<{ getTiendanubeProductByMlAction?: GetTiendanubeProductByMlAction }> = {}) {
   return render(
     <PublicationWorkspaceEditor
       publication={publication}
@@ -148,6 +187,7 @@ function renderEditor() {
       onStatusChange={updateStatus}
       onTitleSave={updateTitle}
       titleTarget={{ type: "publication", itemId: publication.itemId }}
+      {...props}
     />,
   );
 }

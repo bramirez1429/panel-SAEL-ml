@@ -37,4 +37,12 @@ describe("TiendanubeReplicationApiRepository", () => {
     vi.mocked(http.post).mockRejectedValue(error);
     await expect(new TiendanubeReplicationApiRepository(http).replicate("item:MLA1", { priceMode: "KEEP_SOURCE", tagMode: "KEEP_SOURCE", categoryId: 10 })).rejects.toBe(error);
   });
+
+  it("consulta el producto Tiendanube por MLA y conserva sus datos", async () => {
+    const http = client();
+    vi.mocked(http.get).mockResolvedValue({ linked: true, price: 47_000, stock: 5, promotionalPrice: 42_000 });
+
+    await expect(new TiendanubeReplicationApiRepository(http).getProductByMl("MLA/1")).resolves.toEqual({ linked: true, price: 47_000, stock: 5, promotionalPrice: 42_000 });
+    expect(http.get).toHaveBeenCalledWith("/tiendanube/products/by-ml/MLA%2F1");
+  });
 });

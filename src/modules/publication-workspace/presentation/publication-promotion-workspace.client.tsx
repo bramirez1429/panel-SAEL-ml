@@ -37,6 +37,7 @@ import { generatePublicationSku } from "@/shared/lib/publication-sku";
 import {
   EditableWorkspaceTitle,
   PublicationWorkspaceEditor,
+  type GetTiendanubeProductByMlAction,
   type WorkspaceSaveAction,
   type WorkspaceStatusAction,
   type WorkspaceTitleAction,
@@ -51,6 +52,7 @@ type Props = Readonly<{
   onStatusChange: WorkspaceStatusAction;
   onTitleSave: WorkspaceTitleAction;
   getTiendanubeStateAction?: GetTiendanubeReplicationStateAction;
+  getTiendanubeProductByMlAction?: GetTiendanubeProductByMlAction;
   replicateTiendanubeAction?: ReplicatePublicationAction;
   tiendanubeCategories?: readonly TiendanubeCategory[];
 }>;
@@ -59,6 +61,7 @@ type ViewState = "initial" | "searching" | "results" | "empty" | "error" | "sele
 
 export function PublicationPromotionWorkspace({
   getTiendanubeStateAction,
+  getTiendanubeProductByMlAction,
   onSearch,
   onSelect,
   onSave,
@@ -239,6 +242,7 @@ export function PublicationPromotionWorkspace({
           selection={selection}
           visualOrder={visualOrder}
           getTiendanubeStateAction={getTiendanubeStateAction}
+          getTiendanubeProductByMlAction={getTiendanubeProductByMlAction}
           onChanged={refreshCurrentSelection}
           onSave={onSave}
           onStatusChange={onStatusChange}
@@ -290,6 +294,7 @@ function WorkspaceTabs({
   selection,
   visualOrder,
   getTiendanubeStateAction,
+  getTiendanubeProductByMlAction,
   onChanged,
   onSave,
   onStatusChange,
@@ -300,6 +305,7 @@ function WorkspaceTabs({
   selection: PublicationWorkspaceSelection;
   visualOrder: PublicationVisualOrder;
   getTiendanubeStateAction?: GetTiendanubeReplicationStateAction;
+  getTiendanubeProductByMlAction?: GetTiendanubeProductByMlAction;
   onChanged: () => Promise<void>;
   onSave: WorkspaceSaveAction;
   onStatusChange: WorkspaceStatusAction;
@@ -328,6 +334,7 @@ function WorkspaceTabs({
               selection={selection}
               visualOrder={visualOrder}
               getTiendanubeStateAction={getTiendanubeStateAction}
+              getTiendanubeProductByMlAction={getTiendanubeProductByMlAction}
               onChanged={onChanged}
               onSave={onSave}
               onStatusChange={onStatusChange}
@@ -353,6 +360,7 @@ function PublicationTab({
   selection,
   visualOrder,
   getTiendanubeStateAction,
+  getTiendanubeProductByMlAction,
   onChanged,
   onSave,
   onStatusChange,
@@ -363,6 +371,7 @@ function PublicationTab({
   selection: PublicationWorkspaceSelection;
   visualOrder: PublicationVisualOrder;
   getTiendanubeStateAction?: GetTiendanubeReplicationStateAction;
+  getTiendanubeProductByMlAction?: GetTiendanubeProductByMlAction;
   onChanged: () => Promise<void>;
   onSave: WorkspaceSaveAction;
   onStatusChange: WorkspaceStatusAction;
@@ -392,7 +401,7 @@ function PublicationTab({
         </div>
       ) : null}
       {selection.type === "family" ? (
-        <FamilyWorkspace family={selection} visualOrder={visualOrder} onChanged={onChanged} onSave={onSave} onStatusChange={onStatusChange} onTitleSave={onTitleSave} />
+        <FamilyWorkspace family={selection} visualOrder={visualOrder} onChanged={onChanged} onSave={onSave} onStatusChange={onStatusChange} onTitleSave={onTitleSave} getTiendanubeProductByMlAction={getTiendanubeProductByMlAction} />
       ) : (
         <div className={styles.publicationSelection}>
           <PublicationWorkspaceEditor
@@ -401,6 +410,7 @@ function PublicationTab({
             onSave={onSave}
             onStatusChange={onStatusChange}
             onTitleSave={onTitleSave}
+            getTiendanubeProductByMlAction={getTiendanubeProductByMlAction}
             showFamilyId
             titleTarget={selection.publication.model === "SHARED" ? { type: "publication", itemId: selection.publication.itemId } : undefined}
           />
@@ -626,13 +636,14 @@ function tiendanubeSourceKey(selection: PublicationWorkspaceSelection): string {
     : `item:${selection.publication.itemId}`;
 }
 
-function FamilyWorkspace({ family, visualOrder, onChanged, onSave, onStatusChange, onTitleSave }: Readonly<{
+function FamilyWorkspace({ family, visualOrder, onChanged, onSave, onStatusChange, onTitleSave, getTiendanubeProductByMlAction }: Readonly<{
   family: Extract<PublicationWorkspaceSelection, { type: "family" }>;
   visualOrder: PublicationVisualOrder;
   onChanged: () => Promise<void>;
   onSave: WorkspaceSaveAction;
   onStatusChange: WorkspaceStatusAction;
   onTitleSave: WorkspaceTitleAction;
+  getTiendanubeProductByMlAction?: GetTiendanubeProductByMlAction;
 }>) {
   const [globalOpen, setGlobalOpen] = useState(false);
   const [globalPrice, setGlobalPrice] = useState<number | null>(null);
@@ -735,6 +746,7 @@ function FamilyWorkspace({ family, visualOrder, onChanged, onSave, onStatusChang
                 onSave={onSave}
                 onStatusChange={onStatusChange}
                 onTitleSave={onTitleSave}
+                getTiendanubeProductByMlAction={getTiendanubeProductByMlAction}
               />
             ))}
           </div>

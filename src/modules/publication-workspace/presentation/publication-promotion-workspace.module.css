@@ -320,6 +320,25 @@
   gap: 10px;
 }
 
+.channelEditors {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.channelEditor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px;
+  background: var(--ant-color-bg-container);
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: 10px;
+}
+
 .quickEditColumn {
   display: flex;
   flex-direction: column;
@@ -364,6 +383,15 @@
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
+}
+
+.tiendanubeSkeleton {
+  width: 100%;
+}
+
+.tiendanubeSkeleton :global(.ant-skeleton-input) {
+  width: 100%;
+  height: 32px;
 }
 
 .autoSaveField {
@@ -457,6 +485,10 @@
 }
 
 @media (max-width: 700px) {
+  .channelEditors {
+    grid-template-columns: 1fr;
+  }
+
   .commercialDetails {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

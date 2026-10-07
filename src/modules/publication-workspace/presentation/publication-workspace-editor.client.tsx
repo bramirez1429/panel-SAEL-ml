@@ -7,8 +7,8 @@ import {
   LoadingOutlined,
   PictureOutlined,
 } from "@ant-design/icons";
-import { Button, Card, Image, Input, InputNumber, message, Space, Switch, Tag, Typography } from "antd";
-import { useState } from "react";
+import { Button, Card, Image, Input, InputNumber, message, Skeleton, Space, Switch, Tag, Typography } from "antd";
+import { useEffect, useState } from "react";
 
 import type { UpdatePublicationInput } from "@/modules/publications/application/update-publication.command";
 import type { PublicationEditStatus, PublicationEditTarget } from "@/modules/publications/domain/publication-edit.repository";
@@ -20,6 +20,7 @@ import type {
   PublicationWorkspaceFamily,
   PublicationWorkspaceItem,
 } from "../domain/publication-workspace.model";
+import type { TiendanubeProductByMl } from "@/modules/tiendanube/domain/tiendanube-replication.model";
 import styles from "./publication-promotion-workspace.module.css";
 
 export type WorkspaceSaveAction = (input: UpdatePublicationInput) => Promise<
@@ -45,17 +46,27 @@ export type WorkspaceTitleAction = (input: Readonly<{
   | { ok: false; message: string }
 >>;
 
+export type GetTiendanubeProductByMlAction = (itemId: string) => Promise<
+  | Readonly<{ ok: true; product: TiendanubeProductByMl }>
+  | Readonly<{ ok: false }>
+>;
+
 type Props = Readonly<{
   publication: PublicationWorkspaceItem;
   onChanged?: () => void | Promise<void>;
   onSave: WorkspaceSaveAction;
   onStatusChange: WorkspaceStatusAction;
   onTitleSave: WorkspaceTitleAction;
+  getTiendanubeProductByMlAction?: GetTiendanubeProductByMlAction;
   showFamilyId?: boolean;
   titleTarget?: WorkspaceTitleTarget;
 }>;
 
-export function PublicationWorkspaceEditor({ publication, onChanged, onSave, onStatusChange, onTitleSave, showFamilyId = false, titleTarget }: Props) {
+type TiendanubeProductState =
+  | Readonly<{ status: "loading" | "unavailable" }>
+  | Readonly<{ status: "ready"; product: TiendanubeProductByMl }>;
+
+export function PublicationWorkspaceEditor({ publication, onChanged, onSave, onStatusChange, onTitleSave, getTiendanubeProductByMlAction, showFamilyId = false, titleTarget }: Props) {
   const [messageApi, contextHolder] = message.useMessage();
   const [sku, setSku] = useState(publication.sku ?? "");
   const [stock, setStock] = useState<number | null>(publication.stock);
@@ -67,8 +78,29 @@ export function PublicationWorkspaceEditor({ publication, onChanged, onSave, onS
   const [savedField, setSavedField] = useState<"sku" | "stock" | "price" | null>(null);
   const [status, setStatus] = useState(publication.status);
   const [statusSaving, setStatusSaving] = useState(false);
+  const [tiendanubeState, setTiendanubeState] = useState<TiendanubeProductState>(getTiendanubeProductByMlAction ? { status: "loading" } : { status: "unavailable" });
   const target = editTarget(publication);
   const titlePresentation = publicationTitlePresentation(publication.title);
+
+  useEffect(() => {
+    let active = true;
+    if (!getTiendanubeProductByMlAction) {
+      setTiendanubeState({ status: "unavailable" });
+      return () => { active = false; };
+    }
+
+    setTiendanubeState({ status: "loading" });
+    void getTiendanubeProductByMlAction(publication.itemId)
+      .then((result) => {
+        if (!active) return;
+        setTiendanubeState(result.ok ? { status: "ready", product: result.product } : { status: "unavailable" });
+      })
+      .catch(() => {
+        if (active) setTiendanubeState({ status: "unavailable" });
+      });
+
+    return () => { active = false; };
+  }, [getTiendanubeProductByMlAction, publication.itemId]);
 
   async function saveSku() {
     const nextSku = sku.trim();
@@ -253,35 +285,68 @@ export function PublicationWorkspaceEditor({ publication, onChanged, onSave, onS
         </div>
         <div className={styles.quickEditColumn}>
           <div className={styles.quickEdit}>
-            <Typography.Text strong>Edición rápida</Typography.Text>
-            <div className={styles.editorFields}>
-              <label className={`${styles.editorField} ${styles.priceField}`}>
-                <span>Precio</span>
-                <span className={styles.autoSaveField}>
-                  <InputNumber aria-label={`Precio de ${publication.itemId}`} disabled={savingField === "price"} min={0.01} value={price} onBlur={() => void savePrice()} onChange={setPrice} />
-                  <SaveIndicator field="price" savedField={savedField} savingField={savingField} />
-                </span>
-              </label>
-              <label className={`${styles.editorField} ${styles.stockField}`}>
-                <span>Stock</span>
-                <span className={styles.autoSaveField}>
-                  <InputNumber aria-label={`Stock de ${publication.itemId}`} disabled={savingField === "stock"} min={0} precision={0} value={stock} onBlur={() => void saveStock()} onChange={setStock} />
-                  <SaveIndicator field="stock" savedField={savedField} savingField={savingField} />
-                </span>
-              </label>
-              <label className={`${styles.editorField} ${styles.skuField}`}>
-                <span>SKU</span>
-                <span className={styles.skuRow}>
-                  <Input className={styles.skuInput} aria-label={`SKU de ${publication.itemId}`} disabled={savingField === "sku"} value={sku} onBlur={() => void saveSku()} onChange={(event) => setSku(event.target.value)} />
-                  <Button className={styles.skuButton} disabled={savingField === "sku"} onClick={generateSku} onMouseDown={(event) => event.preventDefault()} size="small">Generar SKU</Button>
-                  <SaveIndicator field="sku" savedField={savedField} savingField={savingField} />
-                </span>
-              </label>
+            <div className={styles.channelEditors}>
+              <section className={styles.channelEditor} aria-labelledby={`ml-edit-${publication.itemId}`}>
+                <Typography.Text id={`ml-edit-${publication.itemId}`} strong>Edición ML</Typography.Text>
+                <div className={styles.editorFields}>
+                  <label className={`${styles.editorField} ${styles.priceField}`}>
+                    <span>Precio ML</span>
+                    <span className={styles.autoSaveField}>
+                      <InputNumber aria-label={`Precio de ${publication.itemId}`} disabled={savingField === "price"} min={0.01} value={price} onBlur={() => void savePrice()} onChange={setPrice} />
+                      <SaveIndicator field="price" savedField={savedField} savingField={savingField} />
+                    </span>
+                  </label>
+                  <label className={`${styles.editorField} ${styles.stockField}`}>
+                    <span>Stock ML</span>
+                    <span className={styles.autoSaveField}>
+                      <InputNumber aria-label={`Stock de ${publication.itemId}`} disabled={savingField === "stock"} min={0} precision={0} value={stock} onBlur={() => void saveStock()} onChange={setStock} />
+                      <SaveIndicator field="stock" savedField={savedField} savingField={savingField} />
+                    </span>
+                  </label>
+                </div>
+              </section>
+              <section className={styles.channelEditor} aria-labelledby={`tn-edit-${publication.itemId}`}>
+                <Typography.Text id={`tn-edit-${publication.itemId}`} strong>Edición TN</Typography.Text>
+                <div className={styles.editorFields}>
+                  <TiendanubeField label="Precio TN" value={tiendanubeState.status === "ready" ? tiendanubeState.product.price : null} state={tiendanubeState} />
+                  <TiendanubeField label="Stock TN" value={tiendanubeState.status === "ready" ? tiendanubeState.product.stock : null} state={tiendanubeState} />
+                  <TiendanubeField label="Precio promocional TN" value={tiendanubeState.status === "ready" ? tiendanubeState.product.promotionalPrice : null} state={tiendanubeState} />
+                </div>
+              </section>
             </div>
+            <label className={`${styles.editorField} ${styles.skuField}`}>
+              <span>SKU</span>
+              <span className={styles.skuRow}>
+                <Input className={styles.skuInput} aria-label={`SKU de ${publication.itemId}`} disabled={savingField === "sku"} value={sku} onBlur={() => void saveSku()} onChange={(event) => setSku(event.target.value)} />
+                <Button className={styles.skuButton} disabled={savingField === "sku"} onClick={generateSku} onMouseDown={(event) => event.preventDefault()} size="small">Generar SKU</Button>
+                <SaveIndicator field="sku" savedField={savedField} savingField={savingField} />
+              </span>
+            </label>
           </div>
         </div>
       </div>
     </Card>
+  );
+}
+
+function TiendanubeField({ label, value, state }: Readonly<{
+  label: string;
+  value: number | null;
+  state: TiendanubeProductState;
+}>) {
+  return (
+    <label className={styles.editorField}>
+      <span>{label}</span>
+      {state.status === "loading" ? (
+        <Skeleton.Input active className={styles.tiendanubeSkeleton} size="small" />
+      ) : state.status === "ready" && !state.product.linked ? (
+        <Typography.Text type="secondary">No vinculado</Typography.Text>
+      ) : state.status === "ready" && state.product.linked ? (
+        <InputNumber aria-label={label} disabled placeholder="—" value={value} />
+      ) : (
+        <Typography.Text type="secondary">—</Typography.Text>
+      )}
+    </label>
   );
 }
 

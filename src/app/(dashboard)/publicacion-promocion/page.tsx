@@ -9,6 +9,7 @@ import {
   updatePublicationStatusAction,
 } from "@/app/(dashboard)/publicaciones/[id]/update-publication.action";
 import {
+  getTiendanubeProductByMlAction,
   getTiendanubeReplicationStateAction,
   replicatePublicationAction,
 } from "@/app/(dashboard)/publicaciones/tiendanube.action";
@@ -22,6 +23,7 @@ export default async function PublicationPromotionPage() {
   return (
     <PublicationPromotionWorkspace
       getTiendanubeStateAction={getTiendanubeReplicationStateAction}
+      getTiendanubeProductByMlAction={getTiendanubeProductByMlAction}
       onSearch={searchWorkspacePublicationsAction}
       onSelect={selectWorkspacePublicationAction}
       onSave={updatePublicationAction}

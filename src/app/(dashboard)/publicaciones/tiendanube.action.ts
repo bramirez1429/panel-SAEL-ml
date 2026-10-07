@@ -3,11 +3,13 @@
 import { ApiError } from "@/shared/api/api-error";
 import { AppError } from "@/shared/errors/app-error";
 import {
+  createGetTiendanubeProductByMlQuery,
   createGetTiendanubeReplicationStatusQuery,
   createReplicatePublicationCommand,
 } from "@/modules/tiendanube/tiendanube.composition.server";
 import type {
   ReplicationOptions,
+  TiendanubeProductByMl,
   TiendanubeReplicationState,
 } from "@/modules/tiendanube/domain/tiendanube-replication.model";
 
@@ -49,5 +51,24 @@ export async function getTiendanubeReplicationStateAction(
     };
   } catch {
     return fallback;
+  }
+}
+
+export type GetTiendanubeProductByMlActionResult =
+  | Readonly<{ ok: true; product: TiendanubeProductByMl }>
+  | Readonly<{ ok: false }>;
+
+export async function getTiendanubeProductByMlAction(
+  itemId: string,
+): Promise<GetTiendanubeProductByMlActionResult> {
+  if (!itemId.trim()) return { ok: false };
+
+  try {
+    return {
+      ok: true,
+      product: await createGetTiendanubeProductByMlQuery().execute(itemId),
+    };
+  } catch {
+    return { ok: false };
   }
 }
