@@ -1,6 +1,6 @@
 "use client";
 
-import { Alert, Button, Image, InputNumber, Modal, Radio, Select, Space, Spin, Tag, Typography, message } from "antd";
+import { Alert, Button, Image, Input, InputNumber, Modal, Radio, Select, Space, Spin, Tag, Typography, message } from "antd";
 import { useEffect, useRef, useState } from "react";
 
 import type { ReplicationOptions, TiendanubeCategory, TiendanubeReplicationAction } from "../domain/tiendanube-replication.model";
@@ -46,8 +46,10 @@ export function TiendanubeReplicationModal({
   const activeRef = useRef(false);
   const lastOptionsRef = useRef<ReplicationOptions | null>(null);
   const [phase, setPhase] = useState<ReplicationPhase>("CONFIGURING");
+  const [title, setTitle] = useState(preview?.title ?? "");
   const [priceMode, setPriceMode] = useState<ReplicationOptions["priceMode"]>("KEEP_SOURCE");
   const [price, setPrice] = useState<number>();
+  const [promotionalPrice, setPromotionalPrice] = useState<number>();
   const [tagMode, setTagMode] = useState<ReplicationOptions["tagMode"]>("KEEP_SOURCE");
   const [tags, setTags] = useState<string[]>([]);
   const [categoryId, setCategoryId] = useState<number | undefined>(categories[0]?.id);
@@ -61,20 +63,46 @@ export function TiendanubeReplicationModal({
   }, [categories, categoryId]);
 
   useEffect(() => {
-    if (open) {
-      setPhase("CONFIGURING");
-      setFailure(null);
-      setCompletedAction(null);
-    }
-  }, [open]);
+    if (!open) return;
+    setPhase("CONFIGURING");
+    setFailure(null);
+    setCompletedAction(null);
+    setTitle(preview?.title ?? "");
+    setPriceMode("KEEP_SOURCE");
+    setPrice(undefined);
+    setPromotionalPrice(undefined);
+    setTagMode("KEEP_SOURCE");
+    setTags([]);
+    setCategoryId(undefined);
+    lastOptionsRef.current = null;
+  }, [open, preview?.title, sourceKey]);
 
   function configuredOptions(): ReplicationOptions | null {
+    const normalizedTitle = title.trim();
+    if (preview && !normalizedTitle) {
+      messageApi.error("El título no puede quedar vacío.");
+      return null;
+    }
     if (categoryId === undefined) {
       messageApi.error("Seleccioná una categoría.");
       return null;
     }
     if (priceMode === "OVERRIDE" && (price === undefined || !Number.isFinite(price) || price <= 0)) {
       messageApi.error("El precio debe ser mayor que cero.");
+      return null;
+    }
+    if (promotionalPrice !== undefined && (!Number.isFinite(promotionalPrice) || promotionalPrice <= 0)) {
+      messageApi.error("El precio promocional debe ser mayor que cero.");
+      return null;
+    }
+
+    const effectivePrice = priceMode === "OVERRIDE"
+      ? price
+      : preview && preview.priceFrom !== null && preview.priceFrom === preview.priceTo
+        ? preview.priceFrom
+        : undefined;
+    if (promotionalPrice !== undefined && effectivePrice !== undefined && promotionalPrice >= effectivePrice) {
+      messageApi.error("El precio promocional debe ser menor que el precio normal.");
       return null;
     }
 
@@ -85,10 +113,12 @@ export function TiendanubeReplicationModal({
     }
 
     return {
+      ...(normalizedTitle ? { title: normalizedTitle } : {}),
       priceMode,
       tagMode,
       categoryId,
       ...(priceMode === "OVERRIDE" && price !== undefined ? { price } : {}),
+      ...(promotionalPrice !== undefined ? { promotionalPrice } : {}),
       ...(tagMode === "OVERRIDE" ? { tags: normalizedTags } : {}),
     };
   }
@@ -156,8 +186,8 @@ export function TiendanubeReplicationModal({
     >
       {modalLoadState === "LOADING" ? <Space direction="vertical" style={{ width: "100%" }}><Spin size="large" /><Typography.Text>Cargando información de replicación...</Typography.Text></Space> : null}
       {modalLoadState === "LOAD_ERROR" ? <Alert type={isIntegrationError ? "warning" : "error"} showIcon message={loadError} /> : null}
-      {modalLoadState === null && preview ? <div>{preview.thumbnailUrl ? <Image preview={false} src={preview.thumbnailUrl} alt="" /> : null}<Typography.Title level={4}>{preview.title}</Typography.Title></div> : null}
-      {modalLoadState === null && phase === "CONFIGURING" ? <ReplicationConfiguration categories={categories} categoryId={categoryId} priceMode={priceMode} price={price} tagMode={tagMode} tags={tags} onCategoryChange={setCategoryId} onPriceChange={setPrice} onPriceModeChange={setPriceMode} onTagModeChange={setTagMode} onTagsChange={setTags} /> : null}
+      {modalLoadState === null && preview ? <Space direction="vertical" size="small" style={{ width: "100%" }}>{preview.thumbnailUrl ? <Image preview={false} src={preview.thumbnailUrl} alt="" /> : null}<Typography.Text strong>Título</Typography.Text><Input aria-label="Título" value={title} onChange={(event) => setTitle(event.target.value)} /></Space> : null}
+      {modalLoadState === null && phase === "CONFIGURING" ? <ReplicationConfiguration categories={categories} categoryId={categoryId} priceMode={priceMode} price={price} promotionalPrice={promotionalPrice} tagMode={tagMode} tags={tags} onCategoryChange={setCategoryId} onPriceChange={setPrice} onPromotionalPriceChange={setPromotionalPrice} onPriceModeChange={setPriceMode} onTagModeChange={setTagMode} onTagsChange={setTags} /> : null}
       {modalLoadState === null && phase === "PROCESSING" ? <Space direction="vertical" align="center" style={{ width: "100%" }}><Spin size="large" /><Typography.Text>Replicando publicación...</Typography.Text></Space> : null}
       {modalLoadState === null && phase === "SUCCESS" ? <Alert type="success" showIcon message="Replicado correctamente en Tiendanube." description={completedAction === "created" ? "Producto creado correctamente en Tiendanube." : "Producto actualizado correctamente en Tiendanube."} /> : null}
       {modalLoadState === null && phase === "REPLICATION_ERROR" ? <Alert type="error" showIcon message={failure} /> : null}
@@ -165,15 +195,17 @@ export function TiendanubeReplicationModal({
   </>;
 }
 
-function ReplicationConfiguration({ categories, categoryId, priceMode, price, tagMode, tags, onCategoryChange, onPriceChange, onPriceModeChange, onTagModeChange, onTagsChange }: Readonly<{
+function ReplicationConfiguration({ categories, categoryId, priceMode, price, promotionalPrice, tagMode, tags, onCategoryChange, onPriceChange, onPromotionalPriceChange, onPriceModeChange, onTagModeChange, onTagsChange }: Readonly<{
   categories: readonly TiendanubeCategory[];
   categoryId?: number;
   priceMode: ReplicationOptions["priceMode"];
   price?: number;
+  promotionalPrice?: number;
   tagMode: ReplicationOptions["tagMode"];
   tags: string[];
   onCategoryChange: (value: number) => void;
   onPriceChange: (value: number | undefined) => void;
+  onPromotionalPriceChange: (value: number | undefined) => void;
   onPriceModeChange: (value: ReplicationOptions["priceMode"]) => void;
   onTagModeChange: (value: ReplicationOptions["tagMode"]) => void;
   onTagsChange: (value: string[]) => void;
@@ -181,7 +213,9 @@ function ReplicationConfiguration({ categories, categoryId, priceMode, price, ta
   return <>
     <p>¿Mantener precio de Mercado Libre?</p>
     <Radio.Group value={priceMode === "KEEP_SOURCE"} onChange={(event) => onPriceModeChange(event.target.value ? "KEEP_SOURCE" : "OVERRIDE")} options={[{ label: "Sí", value: true }, { label: "No", value: false }]} />
-    {priceMode === "OVERRIDE" ? <InputNumber aria-label="Precio" prefix="$" min={0.01} value={price} onChange={(value) => onPriceChange(value ?? undefined)} style={{ width: "100%", marginTop: 12 }} /> : null}
+    {priceMode === "OVERRIDE" ? <><Typography.Text>Precio normal</Typography.Text><InputNumber aria-label="Precio normal" placeholder="Precio normal" prefix="$" min={0.01} value={price} onChange={(value) => onPriceChange(value ?? undefined)} style={{ width: "100%" }} /></> : null}
+    <Typography.Text>Precio promocional TN (opcional)</Typography.Text>
+    <InputNumber aria-label="Precio promocional TN" placeholder="Precio promocional TN" prefix="$" min={0.01} value={promotionalPrice} onChange={(value) => onPromotionalPriceChange(value ?? undefined)} style={{ width: "100%" }} />
     <p>¿Mantener tags de Mercado Libre?</p>
     <Radio.Group value={tagMode === "KEEP_SOURCE"} onChange={(event) => onTagModeChange(event.target.value ? "KEEP_SOURCE" : "OVERRIDE")} options={[{ label: "Sí", value: true }, { label: "No", value: false }]} />
     {tagMode === "OVERRIDE" ? <Select mode="tags" aria-label="Tags" tokenSeparators={[","]} placeholder="Agregar tags" value={tags} onChange={onTagsChange} style={{ width: "100%", marginTop: 12 }} /> : null}
