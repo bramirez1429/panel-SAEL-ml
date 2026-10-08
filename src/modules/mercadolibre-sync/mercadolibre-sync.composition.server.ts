@@ -5,6 +5,8 @@ import { createAuthenticatedHttpClient } from "@/shared/api/authenticated-http-c
 import { HttpClient } from "@/shared/api/http-client.server";
 
 import { GetMercadolibreSyncStatusQuery } from "./application/get-mercadolibre-sync-status.query";
+import { CancelMercadolibreSyncCommand } from "./application/cancel-mercadolibre-sync.command";
+import { GetMercadolibreActiveSyncQuery } from "./application/get-mercadolibre-active-sync.query";
 import { StartMercadolibreSyncCommand } from "./application/start-mercadolibre-sync.command";
 import { MercadolibreSyncApiRepository } from "./infrastructure/mercadolibre-sync-api.repository.server";
 
@@ -20,4 +22,12 @@ export function createStartMercadolibreSyncCommand(): StartMercadolibreSyncComma
 
 export function createGetMercadolibreSyncStatusQuery(): GetMercadolibreSyncStatusQuery {
   return new GetMercadolibreSyncStatusQuery(createRepository());
+}
+
+export function createGetMercadolibreActiveSyncQuery(): GetMercadolibreActiveSyncQuery {
+  return new GetMercadolibreActiveSyncQuery(createRepository());
+}
+
+export function createCancelMercadolibreSyncCommand(): CancelMercadolibreSyncCommand {
+  return new CancelMercadolibreSyncCommand(createRepository());
 }

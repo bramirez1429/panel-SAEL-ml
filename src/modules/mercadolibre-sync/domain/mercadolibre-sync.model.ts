@@ -1,4 +1,4 @@
-export type MercadolibreSyncStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
+export type MercadolibreSyncStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED";
 
 export type MercadolibreSyncProgress = Readonly<{
   ok: true;
@@ -15,4 +15,9 @@ export type MercadolibreSyncProgress = Readonly<{
 
 export type MercadolibreSyncActionResult =
   | MercadolibreSyncProgress
+  | Readonly<{ ok: false; message: string }>;
+
+export type MercadolibreActiveSyncActionResult =
+  | MercadolibreSyncProgress
+  | null
   | Readonly<{ ok: false; message: string }>;

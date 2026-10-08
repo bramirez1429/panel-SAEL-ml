@@ -3,9 +3,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { MercadolibreSyncView, syncPercent } from "./mercadolibre-sync-view.client";
 
+const SYNC_ID = "11111111-1111-4111-8111-111111111111";
+
 const pending = {
   ok: true as const,
-  syncId: "sync-1",
+  syncId: SYNC_ID,
   status: "PENDING" as const,
   totalItems: 10,
   processedItems: 2,
@@ -50,7 +52,7 @@ describe("MercadolibreSyncView", () => {
     expect(screen.getByText("2 de 10 publicaciones")).toBeInTheDocument();
 
     await act(async () => { vi.advanceTimersByTime(3000); });
-    expect(getStatusAction).toHaveBeenCalledWith("sync-1");
+    expect(getStatusAction).toHaveBeenCalledWith(SYNC_ID);
   });
 
   it("muestra COMPLETED al 100% y permite sincronizar nuevamente", async () => {
@@ -60,7 +62,7 @@ describe("MercadolibreSyncView", () => {
     await act(async () => { await screen.getByRole("button", { name: "Sincronizar ahora" }).click(); });
 
     expect(screen.getByText("Sincronización completada")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Sincronizar nuevamente" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Sincronizar ahora" })).toBeEnabled();
   });
 
   it("muestra el estado FAILED sin exponer el error técnico", async () => {
@@ -74,11 +76,54 @@ describe("MercadolibreSyncView", () => {
   });
 
   it("restaura el syncId guardado y retoma el progreso", async () => {
-    window.localStorage.setItem("mercadolibre-publication-sync-id", "sync-restored");
+    window.localStorage.setItem("mercadolibre-publication-sync-id", SYNC_ID);
     const getStatusAction = vi.fn().mockResolvedValue(pending);
     render(<MercadolibreSyncView startAction={vi.fn()} getStatusAction={getStatusAction} />);
 
-    await waitFor(() => expect(getStatusAction).toHaveBeenCalledWith("sync-restored"));
+    await waitFor(() => expect(getStatusAction).toHaveBeenCalledWith(SYNC_ID));
     expect(screen.getByText("2 de 10 publicaciones")).toBeInTheDocument();
+  });
+
+  it("recupera el job activo cuando no hay syncId local", async () => {
+    const getActiveAction = vi.fn().mockResolvedValue(pending);
+    render(<MercadolibreSyncView startAction={vi.fn()} getStatusAction={vi.fn()} getActiveAction={getActiveAction} />);
+
+    await waitFor(() => expect(getActiveAction).toHaveBeenCalledTimes(1));
+    expect(screen.getByText("2 de 10 publicaciones")).toBeInTheDocument();
+    expect(window.localStorage.getItem("mercadolibre-publication-sync-id")).toBe(SYNC_ID);
+  });
+
+  it("descarta un syncId local inválido y recupera el trabajo activo sin consultar su estado", async () => {
+    window.localStorage.setItem("mercadolibre-publication-sync-id", "sync-inválido");
+    const getActiveAction = vi.fn().mockResolvedValue(null);
+    const getStatusAction = vi.fn();
+    render(<MercadolibreSyncView startAction={vi.fn()} getStatusAction={getStatusAction} getActiveAction={getActiveAction} />);
+
+    await waitFor(() => expect(getActiveAction).toHaveBeenCalledTimes(1));
+    expect(getStatusAction).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem("mercadolibre-publication-sync-id")).toBeNull();
+  });
+
+  it("conserva el mensaje real si falla el inicio", async () => {
+    const startAction = vi.fn().mockResolvedValue({ ok: false as const, message: "La cola no está disponible" });
+    render(<MercadolibreSyncView startAction={startAction} getStatusAction={vi.fn()} />);
+
+    await act(async () => { await screen.getByRole("button", { name: "Sincronizar ahora" }).click(); });
+
+    expect(screen.getByText("La cola no está disponible")).toBeInTheDocument();
+  });
+
+  it("cancela un job activo y detiene el estado de sincronización", async () => {
+    const cancelAction = vi.fn().mockResolvedValue({ ...pending, status: "CANCELLED" as const });
+    render(<MercadolibreSyncView startAction={vi.fn().mockResolvedValue(pending)} getStatusAction={vi.fn()} cancelAction={cancelAction} />);
+
+    await act(async () => { await screen.getByRole("button", { name: "Sincronizar ahora" }).click(); });
+    await act(async () => { await screen.getByRole("button", { name: "Cancelar sincronización" }).click(); });
+
+    await act(async () => { await screen.getByRole("button", { name: "Sí, cancelar" }).click(); });
+
+    expect(cancelAction).toHaveBeenCalledWith(SYNC_ID);
+    expect(screen.getByText("Sincronización cancelada.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cancelar sincronización" })).not.toBeInTheDocument();
   });
 });

@@ -1,7 +1,17 @@
 import { MercadolibreSyncView } from "@/modules/mercadolibre-sync/presentation/mercadolibre-sync-view.client";
 
-import { getMercadolibreSyncStatusAction, startMercadolibreSyncAction } from "./actions";
+import {
+  cancelMercadolibreSyncAction,
+  getMercadolibreActiveSyncAction,
+  getMercadolibreSyncStatusAction,
+  startMercadolibreSyncAction,
+} from "./actions";
 
 export default function SincronizacionPage() {
-  return <MercadolibreSyncView getStatusAction={getMercadolibreSyncStatusAction} startAction={startMercadolibreSyncAction} />;
+  return <MercadolibreSyncView
+    cancelAction={cancelMercadolibreSyncAction}
+    getActiveAction={getMercadolibreActiveSyncAction}
+    getStatusAction={getMercadolibreSyncStatusAction}
+    startAction={startMercadolibreSyncAction}
+  />;
 }

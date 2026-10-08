@@ -3,7 +3,7 @@ import { z } from "zod";
 export const mercadolibreSyncProgressSchema = z.object({
   ok: z.literal(true),
   syncId: z.string().min(1),
-  status: z.enum(["PENDING", "RUNNING", "COMPLETED", "FAILED"]),
+  status: z.enum(["PENDING", "RUNNING", "COMPLETED", "FAILED", "CANCELLED"]),
   totalItems: z.number().int().nonnegative(),
   processedItems: z.number().int().nonnegative(),
   productsSaved: z.number().int().nonnegative(),
@@ -12,3 +12,5 @@ export const mercadolibreSyncProgressSchema = z.object({
   lastError: z.string().nullable(),
   hasMore: z.boolean(),
 });
+
+export const mercadolibreActiveSyncResponseSchema = mercadolibreSyncProgressSchema.nullable();
