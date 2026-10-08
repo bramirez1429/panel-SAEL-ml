@@ -1,7 +1,7 @@
 "use client";
 
-import { SyncOutlined } from "@ant-design/icons";
-import { Alert, Button, Popconfirm, Progress, Space, Typography } from "antd";
+import { CheckOutlined, SyncOutlined } from "@ant-design/icons";
+import { Alert, Button, Popconfirm, Space, Typography } from "antd";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type {
@@ -14,6 +14,15 @@ import styles from "./mercadolibre-sync-view.module.css";
 const STORAGE_KEY = "mercadolibre-publication-sync-id";
 const SYNC_POLLING_INTERVAL_MS = 300000;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const SEGMENT_COUNT = 8;
+const CIRCLE_SIZE = 120;
+const CIRCLE_CENTER = CIRCLE_SIZE / 2;
+const CIRCLE_RADIUS = 54;
+const CIRCLE_STROKE_WIDTH = 6;
+const SEGMENT_GAP_DEGREES = 4;
+const INACTIVE_SEGMENT_COLOR = "#DCE1E7";
+const ACTIVE_SEGMENT_COLOR = "#1677FF";
+const COMPLETED_SEGMENT_COLOR = "#16A34A";
 
 type SyncAction = () => Promise<MercadolibreSyncActionResult>;
 type SyncStatusAction = (syncId: string) => Promise<MercadolibreSyncActionResult>;
@@ -29,7 +38,64 @@ type Props = Readonly<{
 
 export function syncPercent(progress: Pick<MercadolibreSyncProgress, "processedItems" | "totalItems">): number {
   if (progress.totalItems === 0) return 0;
-  return Math.min(100, Math.max(0, Math.round((progress.processedItems / progress.totalItems) * 100)));
+  return Math.min(100, Math.max(0, (progress.processedItems / progress.totalItems) * 100));
+}
+
+function segmentPath(startAngle: number, endAngle: number): string {
+  const startRadians = (startAngle * Math.PI) / 180;
+  const endRadians = (endAngle * Math.PI) / 180;
+  const startX = CIRCLE_CENTER + CIRCLE_RADIUS * Math.cos(startRadians);
+  const startY = CIRCLE_CENTER + CIRCLE_RADIUS * Math.sin(startRadians);
+  const endX = CIRCLE_CENTER + CIRCLE_RADIUS * Math.cos(endRadians);
+  const endY = CIRCLE_CENTER + CIRCLE_RADIUS * Math.sin(endRadians);
+
+  return `M ${startX} ${startY} A ${CIRCLE_RADIUS} ${CIRCLE_RADIUS} 0 0 1 ${endX} ${endY}`;
+}
+
+function SegmentedCircularProgress({ percent, completed }: Readonly<{ percent: number; completed: boolean }>) {
+  const normalizedPercent = completed
+    ? 100
+    : Math.min(99, Math.max(0, percent));
+  const segmentAngle = 360 / SEGMENT_COUNT;
+  const segmentSpan = segmentAngle - SEGMENT_GAP_DEGREES;
+  const segmentColor = completed ? COMPLETED_SEGMENT_COLOR : ACTIVE_SEGMENT_COLOR;
+
+  return <div
+    aria-label={`${Math.round(normalizedPercent)}%`}
+    aria-valuemax={100}
+    aria-valuemin={0}
+    aria-valuenow={normalizedPercent}
+    className={styles.progress}
+    role="progressbar"
+    style={{ height: CIRCLE_SIZE, position: "relative", width: CIRCLE_SIZE }}
+  >
+    <svg aria-hidden="true" height={CIRCLE_SIZE} viewBox={`0 0 ${CIRCLE_SIZE} ${CIRCLE_SIZE}`} width={CIRCLE_SIZE}>
+      {Array.from({ length: SEGMENT_COUNT }, (_, index) => {
+        const segmentStart = -90 + index * segmentAngle + SEGMENT_GAP_DEGREES / 2;
+        const segmentEnd = segmentStart + segmentSpan;
+        const segmentProgress = Math.min(1, Math.max(0, (normalizedPercent - index * (100 / SEGMENT_COUNT)) / (100 / SEGMENT_COUNT)));
+        const path = segmentPath(segmentStart, segmentEnd);
+
+        return <g key={index}>
+          <path d={path} fill="none" stroke={INACTIVE_SEGMENT_COLOR} strokeLinecap="butt" strokeWidth={CIRCLE_STROKE_WIDTH} />
+          {segmentProgress > 0 ? (
+            <path
+              d={path}
+              fill="none"
+              pathLength={1}
+              stroke={segmentColor}
+              strokeDasharray={`${segmentProgress} 1`}
+              strokeLinecap="butt"
+              strokeWidth={CIRCLE_STROKE_WIDTH}
+            />
+          ) : null}
+        </g>;
+      })}
+    </svg>
+    <span style={{ alignItems: "center", display: "flex", inset: 0, justifyContent: "center", position: "absolute" }}>
+      {completed ? <CheckOutlined aria-label="Completado" style={{ color: COMPLETED_SEGMENT_COLOR, fontSize: 24 }} /> : `${Math.round(normalizedPercent)}%`}
+    </span>
+  </div>;
 }
 
 export function MercadolibreSyncView({ startAction, getStatusAction, getActiveAction, cancelAction }: Props) {
@@ -167,13 +233,7 @@ export function MercadolibreSyncView({ startAction, getStatusAction, getActiveAc
     <section className={styles.content} aria-live="polite">
       <Typography.Title level={2} className={styles.title}>Sincronización de Mercado Libre</Typography.Title>
       {!syncing && !completed && !failed && !cancelled ? <Typography.Paragraph className={styles.description}>Actualizá las publicaciones guardadas en el panel con la información más reciente de Mercado Libre.</Typography.Paragraph> : null}
-      <Progress
-        className={styles.progress}
-        percent={percent}
-        steps={8}
-        status={completed ? "success" : failed || cancelled ? "exception" : "active"}
-        type="circle"
-      />
+      <SegmentedCircularProgress completed={completed} percent={percent} />
       {syncing && progress ? <>
         <Typography.Paragraph className={styles.counts}>{progress.processedItems} de {progress.totalItems} publicaciones</Typography.Paragraph>
         <div className={styles.details}>
