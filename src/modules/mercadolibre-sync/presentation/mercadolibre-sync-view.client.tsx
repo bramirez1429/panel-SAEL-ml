@@ -65,11 +65,11 @@ export function MercadolibreSyncView({ startAction, getStatusAction, getActiveAc
     if (!getActiveAction) return "none";
 
     const result = await getActiveAction();
-    if (!result.ok) {
+    if (result === null) return "none";
+    if (result.ok === false) {
       setError(result.message);
       return "error";
     }
-    if (!result) return "none";
 
     window.localStorage.setItem(STORAGE_KEY, result.syncId);
     finish(result, result.syncId);
