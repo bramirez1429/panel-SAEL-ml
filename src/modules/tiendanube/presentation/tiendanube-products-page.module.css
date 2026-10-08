@@ -1,0 +1,88 @@
+.page {
+  display: grid;
+  gap: 20px;
+  width: 100%;
+}
+
+.header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.title {
+  margin: 0 0 4px !important;
+}
+
+.search {
+  width: min(100%, 520px);
+}
+
+.tableCard {
+  overflow: hidden;
+}
+
+.tableCard :global(.ant-card-body) {
+  padding: 0;
+}
+
+.productCell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 220px;
+}
+
+.productImage,
+.productImagePlaceholder {
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  background: var(--ant-color-fill-quaternary);
+  border-radius: 8px;
+}
+
+.productImagePlaceholder {
+  border: 1px solid var(--ant-color-border-secondary);
+}
+
+.variantList {
+  min-width: 580px;
+}
+
+.variantGrid {
+  display: grid;
+  grid-template-columns: minmax(120px, 1.2fr) minmax(100px, 1fr) 70px 100px 110px;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.variantGrid > :nth-child(-n + 5) {
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--ant-color-border-secondary);
+}
+
+.expandButton {
+  padding-inline: 0;
+  margin-top: 8px;
+}
+
+.pagination {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px 20px;
+  border-top: 1px solid var(--ant-color-border-secondary);
+}
+
+@media (max-width: 900px) {
+  .header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .search {
+    width: 100%;
+  }
+}
