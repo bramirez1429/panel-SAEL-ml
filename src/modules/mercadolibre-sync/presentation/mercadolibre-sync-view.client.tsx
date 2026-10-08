@@ -12,6 +12,7 @@ import type {
 import styles from "./mercadolibre-sync-view.module.css";
 
 const STORAGE_KEY = "mercadolibre-publication-sync-id";
+const SYNC_POLLING_INTERVAL_MS = 300000;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type SyncAction = () => Promise<MercadolibreSyncActionResult>;
@@ -39,6 +40,7 @@ export function MercadolibreSyncView({ startAction, getStatusAction, getActiveAc
   const [cancelling, setCancelling] = useState(false);
   const startingRef = useRef(false);
   const cancellingRef = useRef(false);
+  const statusRequestInFlightRef = useRef(false);
   const terminalSyncIdsRef = useRef(new Set<string>());
 
   const finish = useCallback((next: MercadolibreSyncProgress, activeSyncId: string) => {
@@ -51,14 +53,20 @@ export function MercadolibreSyncView({ startAction, getStatusAction, getActiveAc
   }, []);
 
   const readStatus = useCallback(async (activeSyncId: string): Promise<void> => {
-    const result = await getStatusAction(activeSyncId);
-    if (terminalSyncIdsRef.current.has(activeSyncId)) return;
-    if (!result.ok) {
-      setError(result.message);
-      return;
+    if (statusRequestInFlightRef.current || terminalSyncIdsRef.current.has(activeSyncId)) return;
+    statusRequestInFlightRef.current = true;
+    try {
+      const result = await getStatusAction(activeSyncId);
+      if (terminalSyncIdsRef.current.has(activeSyncId)) return;
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+      setError(null);
+      finish(result, activeSyncId);
+    } finally {
+      statusRequestInFlightRef.current = false;
     }
-    setError(null);
-    finish(result, activeSyncId);
   }, [finish, getStatusAction]);
 
   const recoverActive = useCallback(async (): Promise<"active" | "none" | "error"> => {
@@ -103,7 +111,7 @@ export function MercadolibreSyncView({ startAction, getStatusAction, getActiveAc
     let disposed = false;
     const interval = window.setInterval(() => {
       if (!disposed) void readStatus(syncId);
-    }, 3000);
+    }, SYNC_POLLING_INTERVAL_MS);
     return () => {
       disposed = true;
       window.clearInterval(interval);
