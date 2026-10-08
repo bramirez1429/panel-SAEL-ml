@@ -1,27 +1,37 @@
 import { z } from "zod";
 
+const localizedTextSchema = z.object({
+  es: z.string().trim().min(1),
+});
+
+const variantAttributeSchema = z.object({
+  name: localizedTextSchema.nullable(),
+  value: localizedTextSchema,
+});
+
 const variantSchema = z.object({
-  id: z.string().min(1),
-  size: z.string().nullable().optional(),
-  color: z.string().nullable().optional(),
-  sku: z.string().nullable().optional(),
+  id: z.number().int().positive(),
+  attributes: z.array(variantAttributeSchema),
+  sku: z.string().nullable(),
   stock: z.number().nullable(),
+  stockManagement: z.boolean(),
   price: z.number().nullable(),
   promotionalPrice: z.number().nullable(),
 });
 
 const productSchema = z.object({
-  id: z.string().min(1),
-  name: z.string().min(1),
-  imageUrl: z.string().nullable().optional(),
-  status: z.string().min(1),
-  tags: z.array(z.string()).optional(),
+  id: z.number().int().positive(),
+  name: localizedTextSchema,
+  mainImage: z.string().nullable(),
+  tags: z.array(z.string()),
+  published: z.boolean(),
+  visibility: z.enum(["visible", "unlisted", "hidden"]),
   variants: z.array(variantSchema),
 });
 
 export const tiendanubeProductsResponseSchema = z.object({
-  items: z.array(productSchema),
+  products: z.array(productSchema),
   page: z.number().int().positive(),
-  pageSize: z.number().int().positive(),
-  total: z.number().int().nonnegative(),
+  hasMore: z.boolean(),
+  total: z.number().int().nonnegative().optional(),
 });

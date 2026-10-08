@@ -96,7 +96,7 @@ export function TiendanubeProductsPageClient({ page, activeSearch, errorMessage 
               pageSize={PRODUCT_PAGE_SIZE}
               showQuickJumper={false}
               showSizeChanger={false}
-              total={page.total}
+              total={paginationTotal(page)}
               onChange={changePage}
             />
           </div>
@@ -186,6 +186,13 @@ function variantLabel(variant: TiendanubeProductVariant): string {
 
 function formatNumber(value: number): string {
   return new Intl.NumberFormat("es-AR").format(value);
+}
+
+function paginationTotal(page: TiendanubeProductsPage): number {
+  if (page.total !== undefined) return page.total;
+
+  const currentItems = (page.page - 1) * page.pageSize + page.products.length;
+  return page.hasMore ? currentItems + 1 : currentItems;
 }
 
 function formatPrice(value: number | null): string {

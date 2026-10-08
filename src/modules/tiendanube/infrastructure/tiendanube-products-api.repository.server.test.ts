@@ -10,36 +10,84 @@ function client() {
 }
 
 describe("TiendanubeProductsApiRepository", () => {
-  it("envía q y la paginación al endpoint de productos", async () => {
+  it("sends q and pagination to the catalog endpoint", async () => {
     const http = client();
-    vi.mocked(http.get).mockResolvedValue({ items: [], page: 2, pageSize: 20, total: 0 });
+    vi.mocked(http.get).mockResolvedValue({ products: [], page: 2, hasMore: false, total: 0 });
 
     await new TiendanubeProductsApiRepository(http).getProducts({ q: "remera azul", page: 2, pageSize: 20 });
 
-    expect(http.get).toHaveBeenCalledWith("/tiendanube/products?page=2&pageSize=20&q=remera+azul");
+    expect(http.get).toHaveBeenCalledWith("/tiendanube/products/catalog?page=2&limit=20&q=remera+azul");
   });
 
-  it("conserva los datos de cada variante sin mezclarlos", async () => {
+  it("maps the catalog response without fabricating nullable variant values", async () => {
     const http = client();
     vi.mocked(http.get).mockResolvedValue({
-      items: [{
-        id: "tn-1",
-        name: "Remera",
-        imageUrl: "https://example.com/remera.jpg",
-        status: "active",
+      products: [{
+        id: 1001,
+        name: { es: "Remera" },
+        mainImage: "https://example.com/remera.jpg",
         tags: ["verano"],
+        published: true,
+        visibility: "visible",
         variants: [
-          { id: "variant-m", size: "M", color: "Negro", sku: "REM-M", stock: 4, price: 47000, promotionalPrice: 42000 },
-          { id: "variant-l", size: "L", color: "Negro", sku: "REM-L", stock: 2, price: 48000, promotionalPrice: null },
+          {
+            id: 1101,
+            attributes: [
+              { name: { es: "Talle" }, value: { es: "M" } },
+              { name: { es: "Color" }, value: { es: "Negro" } },
+            ],
+            sku: "REM-M",
+            stock: 4,
+            stockManagement: true,
+            price: 47000,
+            promotionalPrice: 42000,
+          },
+          {
+            id: 1102,
+            attributes: [],
+            sku: null,
+            stock: null,
+            stockManagement: false,
+            price: 48000,
+            promotionalPrice: null,
+          },
         ],
       }],
       page: 1,
-      pageSize: 20,
-      total: 1,
+      hasMore: true,
     });
 
-    await expect(new TiendanubeProductsApiRepository(http).getProducts({ q: "", page: 1, pageSize: 20 })).resolves.toMatchObject({
-      products: [{ variants: [{ stock: 4, price: 47000, promotionalPrice: 42000 }, { stock: 2, price: 48000, promotionalPrice: null }] }],
+    await expect(new TiendanubeProductsApiRepository(http).getProducts({ q: "", page: 1, pageSize: 20 })).resolves.toEqual({
+      page: 1,
+      pageSize: 20,
+      hasMore: true,
+      products: [{
+        id: "1001",
+        name: "Remera",
+        imageUrl: "https://example.com/remera.jpg",
+        status: "visible",
+        tags: ["verano"],
+        variants: [
+          {
+            id: "1101",
+            size: "M",
+            color: "Negro",
+            sku: "REM-M",
+            stock: 4,
+            price: 47000,
+            promotionalPrice: 42000,
+          },
+          {
+            id: "1102",
+            size: null,
+            color: null,
+            sku: null,
+            stock: null,
+            price: 48000,
+            promotionalPrice: null,
+          },
+        ],
+      }],
     });
   });
 });

@@ -51,6 +51,7 @@ function page(variantCount = 4): TiendanubeProductsPage {
   return {
     page: 1,
     pageSize: 20,
+    hasMore: false,
     total: 1,
     products: [{
       id: "product-1",

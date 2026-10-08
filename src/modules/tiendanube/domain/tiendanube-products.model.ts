@@ -27,5 +27,6 @@ export type TiendanubeProductsPage = Readonly<{
   products: readonly TiendanubeProduct[];
   page: number;
   pageSize: number;
-  total: number;
+  hasMore: boolean;
+  total?: number;
 }>;
