@@ -13,4 +13,6 @@ export const mercadolibreSyncProgressSchema = z.object({
   hasMore: z.boolean(),
 });
 
-export const mercadolibreActiveSyncResponseSchema = mercadolibreSyncProgressSchema.nullable();
+export const mercadolibreActiveSyncResponseSchema = z.object({
+  activeSync: mercadolibreSyncProgressSchema.nullable(),
+});

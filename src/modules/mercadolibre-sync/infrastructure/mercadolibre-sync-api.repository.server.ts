@@ -25,7 +25,7 @@ export class MercadolibreSyncApiRepository implements MercadolibreSyncRepository
     if (!parsed.success) {
       throw new ApiError("El backend devolvi\u00f3 un estado de sincronizaci\u00f3n inv\u00e1lido.", "API_INVALID_RESPONSE", { cause: parsed.error });
     }
-    return parsed.data;
+    return parsed.data.activeSync;
   }
 
   async cancel(syncId: string): Promise<MercadolibreSyncProgress> {
