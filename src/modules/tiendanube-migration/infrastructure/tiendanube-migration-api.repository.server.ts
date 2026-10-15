@@ -24,6 +24,11 @@ export class TiendanubeMigrationApiRepository implements TiendanubeMigrationRepo
     );
   }
 
+  async pause(jobId: string): Promise<TiendanubeMigrationProgress> {
+    const path = migrationPath + "/" + encodeURIComponent(jobId) + "/pause";
+    return this.parseProgress(await this.httpClient.post(path, {}));
+  }
+
   async cancel(jobId: string): Promise<TiendanubeMigrationProgress> {
     const path = migrationPath + "/" + encodeURIComponent(jobId) + "/cancel";
     return this.parseProgress(await this.httpClient.post(path, {}));

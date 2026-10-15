@@ -6,6 +6,7 @@ import {
   getTiendanubeMigrationStatusAction,
   startTiendanubeMigrationAction,
   cancelTiendanubeMigrationAction,
+  pauseTiendanubeMigrationAction,
   resumeOneTiendanubeMigrationAction,
 } from "./actions";
 
@@ -18,6 +19,7 @@ export default function MigracionGlobalPage() {
     getStatusAction={getTiendanubeMigrationStatusAction}
     startAction={startTiendanubeMigrationAction}
     cancelAction={cancelTiendanubeMigrationAction}
+    pauseAction={pauseTiendanubeMigrationAction}
     resumeOneAction={resumeOneTiendanubeMigrationAction}
   />;
 }

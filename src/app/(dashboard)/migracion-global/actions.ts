@@ -6,6 +6,7 @@ import {
   createGetTiendanubeMigrationStatusQuery,
   createStartTiendanubeMigrationCommand,
   createCancelTiendanubeMigrationCommand,
+  createPauseTiendanubeMigrationCommand,
   createResumeOneTiendanubeMigrationCommand,
 } from "@/modules/tiendanube-migration/tiendanube-migration.composition.server";
 import type {
@@ -34,6 +35,19 @@ export async function resumeOneTiendanubeMigrationAction(
     return {
       ok: false,
       message: errorMessage(error, "No se pudo probar un producto.")
+    };
+  }
+}
+
+export async function pauseTiendanubeMigrationAction(
+  jobId: string
+): Promise<TiendanubeMigrationActionResult> {
+  try {
+    return await createPauseTiendanubeMigrationCommand().execute(jobId);
+  } catch (error: unknown) {
+    return {
+      ok: false,
+      message: errorMessage(error, "No se pudo detener la migración.")
     };
   }
 }

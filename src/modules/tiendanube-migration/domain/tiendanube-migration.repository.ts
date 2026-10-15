@@ -3,6 +3,7 @@ import type { TiendanubeMigrationOutcome, TiendanubeMigrationProgress, Tiendanub
 export interface TiendanubeMigrationRepository {
   start(testLimit?: 1 | 5 | 10): Promise<TiendanubeMigrationProgress>;
   resumeOne(jobId: string, singleProduct?: boolean): Promise<TiendanubeMigrationProgress>;
+  pause(jobId: string): Promise<TiendanubeMigrationProgress>;
   cancel(jobId: string): Promise<TiendanubeMigrationProgress>;
   getActive(): Promise<TiendanubeMigrationProgress | null>;
   getStatus(jobId: string): Promise<TiendanubeMigrationProgress>;

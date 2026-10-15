@@ -1,6 +1,7 @@
 "use client";
 
 import { Alert, Button, Card, Popconfirm, Typography } from "antd";
+import { PauseCircleOutlined } from "@ant-design/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type {
@@ -25,6 +26,7 @@ const RESULTS_PAGE_SIZE = 20;
 type Props = Readonly<{
   startAction(): Promise<TiendanubeMigrationActionResult>;
   resumeOneAction(jobId: string, singleProduct?: boolean): Promise<TiendanubeMigrationActionResult>;
+  pauseAction(jobId: string): Promise<TiendanubeMigrationActionResult>;
   cancelAction(jobId: string): Promise<TiendanubeMigrationActionResult>;
   getActiveAction(): Promise<TiendanubeActiveMigrationActionResult>;
   getStatusAction(jobId: string): Promise<TiendanubeMigrationActionResult>;
@@ -39,7 +41,7 @@ function isActive(progress: TiendanubeMigrationProgress | null): boolean {
   return progress?.status === "DISCOVERING" || progress?.status === "QUEUED" || progress?.status === "RUNNING" || progress?.status === "WAITING_RECONCILIATION" || progress?.status === "CANCELLING";
 }
 
-export function TiendanubeMigrationView({ startAction, resumeOneAction, cancelAction, getActiveAction, getStatusAction, getResultsAction }: Props) {
+export function TiendanubeMigrationView({ startAction, resumeOneAction, cancelAction, pauseAction, getActiveAction, getStatusAction, getResultsAction }: Props) {
   const [progress, setProgress] = useState<TiendanubeMigrationProgress | null>(null);
   const [approvedPage, setApprovedPage] = useState<TiendanubeMigrationResultsPage | null>(null);
   const [rejectedPage, setRejectedPage] = useState<TiendanubeMigrationResultsPage | null>(null);
@@ -50,6 +52,8 @@ export function TiendanubeMigrationView({ startAction, resumeOneAction, cancelAc
   const resumingRef = useRef(false);
   const [cancelling, setCancelling] = useState(false);
   const cancellingRef = useRef(false);
+  const [stopping, setStopping] = useState(false);
+  const stoppingRef = useRef(false);
   const statusInFlightRef = useRef(false);
   const resultsInFlightRef = useRef(false);
   const resultsQueuedRef = useRef(false);
@@ -174,6 +178,31 @@ export function TiendanubeMigrationView({ startAction, resumeOneAction, cancelAc
     }
   }
 
+  async function pauseMigration(): Promise<void> {
+    if (stoppingRef.current || !progress ||
+      !["DISCOVERING", "QUEUED", "RUNNING", "WAITING_RECONCILIATION"].includes(progress.status)) return;
+
+    stoppingRef.current = true;
+    setStopping(true);
+    setError(null);
+
+    try {
+      const result = await pauseAction(progress.id);
+
+      if (isActionError(result)) {
+        setError(result.message);
+        return;
+      }
+
+      applyProgress(result);
+    } catch {
+      setError("No se pudo detener la migración.");
+    } finally {
+      stoppingRef.current = false;
+      setStopping(false);
+    }
+  }
+
   async function cancelMigration(): Promise<void> {
     if (cancellingRef.current || !progress ||
       !["DISCOVERING", "QUEUED", "RUNNING", "WAITING_RECONCILIATION", "PAUSED"].includes(progress.status)) return;
@@ -210,6 +239,7 @@ export function TiendanubeMigrationView({ startAction, resumeOneAction, cancelAc
     <section className={styles.intro} aria-live="polite">
       <Typography.Title level={2}>Migración global</Typography.Title>
       <Typography.Paragraph type="secondary">Iniciá la migración de todos los productos de Mercado Libre hacia Tiendanube.</Typography.Paragraph>
+      <div className={styles.controls}>
       {!progress ? (
         <MigrationStartButton
           disabled={starting}
@@ -245,6 +275,17 @@ export function TiendanubeMigrationView({ startAction, resumeOneAction, cancelAc
           </Button>
         </Popconfirm>
       ) : null}
+      {progress && ["DISCOVERING", "QUEUED", "RUNNING", "WAITING_RECONCILIATION"].includes(progress.status) ? (
+        <Button
+          size="large"
+          icon={<PauseCircleOutlined />}
+          loading={stopping}
+          disabled={stopping || resuming || cancelling || starting}
+          onClick={() => void pauseMigration()}
+        >
+          Detener migración
+        </Button>
+      ) : null}
       {progress && ["DISCOVERING", "QUEUED", "RUNNING", "WAITING_RECONCILIATION", "PAUSED"].includes(progress.status) ? (
         <MigrationCancelButton
           loading={cancelling}
@@ -252,6 +293,7 @@ export function TiendanubeMigrationView({ startAction, resumeOneAction, cancelAc
           onCancel={() => void cancelMigration()}
         />
       ) : null}
+      </div>
       {progress?.status === "CANCELLING" ? (
         <Alert message="Cancelación solicitada. Esperando que finalice el producto en curso." showIcon type="warning" />
       ) : null}

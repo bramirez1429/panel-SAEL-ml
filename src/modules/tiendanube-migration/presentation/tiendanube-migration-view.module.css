@@ -65,3 +65,23 @@
     grid-template-columns: 1fr;
   }
 }
+
+.controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 20px auto 0;
+}
+
+@media (max-width: 540px) {
+  .controls {
+    flex-direction: column;
+  }
+
+  .controls > * {
+    width: 100%;
+    max-width: 320px;
+  }
+}
