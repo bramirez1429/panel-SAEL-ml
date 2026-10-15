@@ -24,6 +24,11 @@ export class TiendanubeMigrationApiRepository implements TiendanubeMigrationRepo
     );
   }
 
+  async cancel(jobId: string): Promise<TiendanubeMigrationProgress> {
+    const path = migrationPath + "/" + encodeURIComponent(jobId) + "/cancel";
+    return this.parseProgress(await this.httpClient.post(path, {}));
+  }
+
   async getActive(): Promise<TiendanubeMigrationProgress | null> {
     const parsed = tiendanubeMigrationActiveResponseSchema.safeParse(await this.httpClient.get(`${migrationPath}/active`));
     if (!parsed.success) throw this.invalidResponse("un trabajo activo de migración");

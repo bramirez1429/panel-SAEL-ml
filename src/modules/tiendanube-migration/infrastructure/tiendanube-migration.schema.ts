@@ -4,7 +4,7 @@ const identifierListSchema = z.array(z.string().min(1));
 
 const migrationJobSchema = z.object({
   id: z.string().min(1),
-  status: z.enum(["DISCOVERING", "QUEUED", "RUNNING", "WAITING_RECONCILIATION", "PAUSED", "COMPLETED", "COMPLETED_WITH_REJECTIONS"]),
+  status: z.enum(["DISCOVERING", "QUEUED", "RUNNING", "WAITING_RECONCILIATION", "PAUSED", "CANCELLING", "CANCELLED", "COMPLETED", "COMPLETED_WITH_REJECTIONS"]),
   totalItems: z.number().int().nonnegative(),
   processedItems: z.number().int().nonnegative(),
   approvedItems: z.number().int().nonnegative(),

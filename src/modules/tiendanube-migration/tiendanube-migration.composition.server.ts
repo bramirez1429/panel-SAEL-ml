@@ -8,6 +8,7 @@ import { GetActiveTiendanubeMigrationQuery } from "./application/get-active-tien
 import { GetTiendanubeMigrationResultsQuery } from "./application/get-tiendanube-migration-results.query";
 import { GetTiendanubeMigrationStatusQuery } from "./application/get-tiendanube-migration-status.query";
 import { ResumeOneTiendanubeMigrationCommand } from "./application/resume-one-tiendanube-migration.command";
+import { CancelTiendanubeMigrationCommand } from "./application/cancel-tiendanube-migration.command";
 import { StartTiendanubeMigrationCommand } from "./application/start-tiendanube-migration.command";
 import { TiendanubeMigrationApiRepository } from "./infrastructure/tiendanube-migration-api.repository.server";
 
@@ -17,6 +18,9 @@ function createRepository(): TiendanubeMigrationApiRepository {
 
 export function createResumeOneTiendanubeMigrationCommand() {
   return new ResumeOneTiendanubeMigrationCommand(createRepository());
+}
+export function createCancelTiendanubeMigrationCommand() {
+  return new CancelTiendanubeMigrationCommand(createRepository());
 }
 export function createStartTiendanubeMigrationCommand() { return new StartTiendanubeMigrationCommand(createRepository()); }
 export function createGetActiveTiendanubeMigrationQuery() { return new GetActiveTiendanubeMigrationQuery(createRepository()); }

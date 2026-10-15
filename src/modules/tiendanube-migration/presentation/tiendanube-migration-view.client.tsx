@@ -13,6 +13,7 @@ import type {
 } from "../domain/tiendanube-migration.model";
 import { MigrationCircularProgress } from "./migration-circular-progress";
 import { MigrationCounters } from "./migration-counters";
+import { MigrationCancelButton } from "./migration-cancel-button.client";
 import { MigrationCurrentProduct } from "./migration-current-product";
 import { MigrationResultList } from "./migration-result-list";
 import { MigrationStartButton } from "./migration-start-button.client";
@@ -24,6 +25,7 @@ const RESULTS_PAGE_SIZE = 20;
 type Props = Readonly<{
   startAction(): Promise<TiendanubeMigrationActionResult>;
   resumeOneAction(jobId: string, singleProduct?: boolean): Promise<TiendanubeMigrationActionResult>;
+  cancelAction(jobId: string): Promise<TiendanubeMigrationActionResult>;
   getActiveAction(): Promise<TiendanubeActiveMigrationActionResult>;
   getStatusAction(jobId: string): Promise<TiendanubeMigrationActionResult>;
   getResultsAction(jobId: string, outcome: TiendanubeMigrationOutcome, page: number, pageSize: number): Promise<TiendanubeMigrationResultsActionResult>;
@@ -34,10 +36,10 @@ function isActionError(value: TiendanubeMigrationActionResult | TiendanubeActive
 }
 
 function isActive(progress: TiendanubeMigrationProgress | null): boolean {
-  return progress?.status === "DISCOVERING" || progress?.status === "QUEUED" || progress?.status === "RUNNING" || progress?.status === "WAITING_RECONCILIATION";
+  return progress?.status === "DISCOVERING" || progress?.status === "QUEUED" || progress?.status === "RUNNING" || progress?.status === "WAITING_RECONCILIATION" || progress?.status === "CANCELLING";
 }
 
-export function TiendanubeMigrationView({ startAction, resumeOneAction, getActiveAction, getStatusAction, getResultsAction }: Props) {
+export function TiendanubeMigrationView({ startAction, resumeOneAction, cancelAction, getActiveAction, getStatusAction, getResultsAction }: Props) {
   const [progress, setProgress] = useState<TiendanubeMigrationProgress | null>(null);
   const [approvedPage, setApprovedPage] = useState<TiendanubeMigrationResultsPage | null>(null);
   const [rejectedPage, setRejectedPage] = useState<TiendanubeMigrationResultsPage | null>(null);
@@ -46,6 +48,8 @@ export function TiendanubeMigrationView({ startAction, resumeOneAction, getActiv
   const startingRef = useRef(false);
   const [resuming, setResuming] = useState(false);
   const resumingRef = useRef(false);
+  const [cancelling, setCancelling] = useState(false);
+  const cancellingRef = useRef(false);
   const statusInFlightRef = useRef(false);
   const resultsInFlightRef = useRef(false);
   const resultsQueuedRef = useRef(false);
@@ -170,6 +174,31 @@ export function TiendanubeMigrationView({ startAction, resumeOneAction, getActiv
     }
   }
 
+  async function cancelMigration(): Promise<void> {
+    if (cancellingRef.current || !progress ||
+      !["DISCOVERING", "QUEUED", "RUNNING", "WAITING_RECONCILIATION", "PAUSED"].includes(progress.status)) return;
+
+    cancellingRef.current = true;
+    setCancelling(true);
+    setError(null);
+
+    try {
+      const result = await cancelAction(progress.id);
+
+      if (isActionError(result)) {
+        setError(result.message);
+        return;
+      }
+
+      applyProgress(result);
+    } catch {
+      setError("No se pudo cancelar la migración.");
+    } finally {
+      cancellingRef.current = false;
+      setCancelling(false);
+    }
+  }
+
   function changeResultPage(outcome: TiendanubeMigrationOutcome, nextPage: number): void {
     if (!progress) return;
     if (outcome === "APPROVED") approvedPageRef.current = nextPage;
@@ -215,6 +244,19 @@ export function TiendanubeMigrationView({ startAction, resumeOneAction, getActiv
             Reanudar migración completa
           </Button>
         </Popconfirm>
+      ) : null}
+      {progress && ["DISCOVERING", "QUEUED", "RUNNING", "WAITING_RECONCILIATION", "PAUSED"].includes(progress.status) ? (
+        <MigrationCancelButton
+          loading={cancelling}
+          disabled={cancelling || resuming || starting}
+          onCancel={() => void cancelMigration()}
+        />
+      ) : null}
+      {progress?.status === "CANCELLING" ? (
+        <Alert message="Cancelación solicitada. Esperando que finalice el producto en curso." showIcon type="warning" />
+      ) : null}
+      {progress?.status === "CANCELLED" ? (
+        <Alert message="Migración cancelada." showIcon type="info" />
       ) : null}
       {error ? <Alert className={styles.alert} message={error} showIcon type="error" /> : null}
       {progress?.status === "PAUSED" ? <Alert className={styles.alert} message="La migración quedó pausada." showIcon type="warning" /> : null}

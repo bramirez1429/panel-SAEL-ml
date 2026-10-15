@@ -1,4 +1,4 @@
-export type TiendanubeMigrationStatus = "DISCOVERING" | "QUEUED" | "RUNNING" | "WAITING_RECONCILIATION" | "PAUSED" | "COMPLETED" | "COMPLETED_WITH_REJECTIONS";
+export type TiendanubeMigrationStatus = "DISCOVERING" | "QUEUED" | "RUNNING" | "WAITING_RECONCILIATION" | "PAUSED" | "CANCELLING" | "CANCELLED" | "COMPLETED" | "COMPLETED_WITH_REJECTIONS";
 
 export type TiendanubeMigrationOutcome = "APPROVED" | "REJECTED";
 
