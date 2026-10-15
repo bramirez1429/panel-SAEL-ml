@@ -1,37 +1,41 @@
-export type TiendanubeMigrationStatus = "PENDING" | "DISCOVERING" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED";
+export type TiendanubeMigrationStatus = "DISCOVERING" | "QUEUED" | "RUNNING" | "WAITING_RECONCILIATION" | "PAUSED" | "COMPLETED" | "COMPLETED_WITH_REJECTIONS";
 
 export type TiendanubeMigrationOutcome = "APPROVED" | "REJECTED";
 
 export type TiendanubeMigrationProduct = Readonly<{
-  title: string;
+  sourceKey: string;
+  title: string | null;
   mlaIds: readonly string[];
   familyId: string | null;
   mlauIds: readonly string[];
 }>;
 
-export type TiendanubeMigrationCurrentProduct = TiendanubeMigrationProduct;
-
 export type TiendanubeMigrationProgress = Readonly<{
-  jobId: string;
+  id: string;
   status: TiendanubeMigrationStatus;
-  totalProducts: number | null;
-  processedProducts: number;
-  approvedProducts: number;
-  rejectedProducts: number;
-  currentProduct: TiendanubeMigrationCurrentProduct | null;
+  totalItems: number;
+  processedItems: number;
+  approvedItems: number;
+  rejectedItems: number;
+  currentSourceKey: string | null;
 }>;
 
 export type TiendanubeMigrationResult = TiendanubeMigrationProduct & Readonly<{
   id: string;
-  rejectionReason: string | null;
+  status: "PENDING" | "PROCESSING" | "RECONCILING" | "APPROVED" | "REJECTED";
+  outcome: "CREATED" | "ALREADY_EXISTS" | null;
   tiendanubeProductId: string | null;
+  errorCode: string | null;
+  errorMessage: string | null;
+  attempts: number;
+  updatedAt: string;
   action: "CREATED" | "LINKED" | null;
 }>;
 
 export type TiendanubeMigrationResultsPage = Readonly<{
   items: readonly TiendanubeMigrationResult[];
   page: number;
-  pageSize: number;
+  limit: number;
   total: number;
 }>;
 

@@ -3,7 +3,7 @@ import type { TiendanubeMigrationRepository } from "../domain/tiendanube-migrati
 export class StartTiendanubeMigrationCommand {
   constructor(private readonly repository: TiendanubeMigrationRepository) {}
 
-  execute() {
-    return this.repository.start();
+  execute(testLimit?: 1 | 5 | 10) {
+    return this.repository.start(testLimit);
   }
 }

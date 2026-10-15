@@ -33,7 +33,7 @@ function isActionError(value: TiendanubeMigrationActionResult | TiendanubeActive
 }
 
 function isActive(progress: TiendanubeMigrationProgress | null): boolean {
-  return progress?.status === "PENDING" || progress?.status === "DISCOVERING" || progress?.status === "RUNNING";
+  return progress?.status === "DISCOVERING" || progress?.status === "QUEUED" || progress?.status === "RUNNING" || progress?.status === "WAITING_RECONCILIATION";
 }
 
 export function TiendanubeMigrationView({ startAction, getActiveAction, getStatusAction, getResultsAction }: Props) {
@@ -81,7 +81,7 @@ export function TiendanubeMigrationView({ startAction, getActiveAction, getStatu
 
   const applyProgress = useCallback((nextProgress: TiendanubeMigrationProgress): void => {
     setProgress(nextProgress);
-    void refreshResults(nextProgress.jobId);
+    void refreshResults(nextProgress.id);
   }, [refreshResults]);
 
   const refreshStatus = useCallback(async (jobId: string): Promise<void> => {
@@ -116,7 +116,7 @@ export function TiendanubeMigrationView({ startAction, getActiveAction, getStatu
 
   useEffect(() => {
     if (!progress || !isActive(progress)) return;
-    const interval = window.setInterval(() => void refreshStatus(progress.jobId), POLLING_INTERVAL_MS);
+    const interval = window.setInterval(() => void refreshStatus(progress.id), POLLING_INTERVAL_MS);
     return () => window.clearInterval(interval);
   }, [progress, refreshStatus]);
 
@@ -145,7 +145,7 @@ export function TiendanubeMigrationView({ startAction, getActiveAction, getStatu
     if (!progress) return;
     if (outcome === "APPROVED") approvedPageRef.current = nextPage;
     else rejectedPageRef.current = nextPage;
-    void refreshResults(progress.jobId);
+    void refreshResults(progress.id);
   }
 
   return <main className={styles.page}>
@@ -154,15 +154,15 @@ export function TiendanubeMigrationView({ startAction, getActiveAction, getStatu
       <Typography.Paragraph type="secondary">Iniciá la migración de todos los productos de Mercado Libre hacia Tiendanube.</Typography.Paragraph>
       <MigrationStartButton disabled={starting || isActive(progress)} loading={starting} onStart={() => void start()} />
       {error ? <Alert className={styles.alert} message={error} showIcon type="error" /> : null}
-      {progress?.status === "FAILED" ? <Alert className={styles.alert} message="La migración no pudo completarse." showIcon type="error" /> : null}
-      {progress?.status === "CANCELLED" ? <Alert className={styles.alert} message="La migración fue cancelada." showIcon type="warning" /> : null}
+      {progress?.status === "PAUSED" ? <Alert className={styles.alert} message="La migración quedó pausada." showIcon type="warning" /> : null}
+      {progress?.status === "COMPLETED_WITH_REJECTIONS" ? <Alert className={styles.alert} message="La migración terminó con productos rechazados." showIcon type="warning" /> : null}
     </section>
 
     {progress ? <section className={styles.progressSection} aria-live="polite">
       <Card className={styles.progressCard}>
         <MigrationCircularProgress progress={progress} />
         <MigrationCounters progress={progress} />
-        <MigrationCurrentProduct product={progress.currentProduct} />
+        <MigrationCurrentProduct sourceKey={progress.currentSourceKey} />
       </Card>
     </section> : null}
 
