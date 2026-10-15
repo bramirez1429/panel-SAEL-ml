@@ -1,6 +1,6 @@
 "use client";
 
-import { Alert, Card, Typography } from "antd";
+import { Alert, Button, Card, Typography } from "antd";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type {
@@ -23,6 +23,7 @@ const RESULTS_PAGE_SIZE = 20;
 
 type Props = Readonly<{
   startAction(): Promise<TiendanubeMigrationActionResult>;
+  resumeOneAction(jobId: string): Promise<TiendanubeMigrationActionResult>;
   getActiveAction(): Promise<TiendanubeActiveMigrationActionResult>;
   getStatusAction(jobId: string): Promise<TiendanubeMigrationActionResult>;
   getResultsAction(jobId: string, outcome: TiendanubeMigrationOutcome, page: number, pageSize: number): Promise<TiendanubeMigrationResultsActionResult>;
@@ -36,13 +37,15 @@ function isActive(progress: TiendanubeMigrationProgress | null): boolean {
   return progress?.status === "DISCOVERING" || progress?.status === "QUEUED" || progress?.status === "RUNNING" || progress?.status === "WAITING_RECONCILIATION";
 }
 
-export function TiendanubeMigrationView({ startAction, getActiveAction, getStatusAction, getResultsAction }: Props) {
+export function TiendanubeMigrationView({ startAction, resumeOneAction, getActiveAction, getStatusAction, getResultsAction }: Props) {
   const [progress, setProgress] = useState<TiendanubeMigrationProgress | null>(null);
   const [approvedPage, setApprovedPage] = useState<TiendanubeMigrationResultsPage | null>(null);
   const [rejectedPage, setRejectedPage] = useState<TiendanubeMigrationResultsPage | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const startingRef = useRef(false);
+  const [resuming, setResuming] = useState(false);
+  const resumingRef = useRef(false);
   const statusInFlightRef = useRef(false);
   const resultsInFlightRef = useRef(false);
   const resultsQueuedRef = useRef(false);
@@ -121,7 +124,7 @@ export function TiendanubeMigrationView({ startAction, getActiveAction, getStatu
   }, [progress, refreshStatus]);
 
   async function start(): Promise<void> {
-    if (startingRef.current || isActive(progress)) return;
+    if (startingRef.current || progress !== null) return;
     startingRef.current = true;
     setStarting(true);
     setError(null);
@@ -141,6 +144,32 @@ export function TiendanubeMigrationView({ startAction, getActiveAction, getStatu
     }
   }
 
+  async function resumeOne(): Promise<void> {
+    if (resumingRef.current || !progress || progress.status !== "PAUSED") return;
+
+    resumingRef.current = true;
+    setResuming(true);
+    setError(null);
+
+    try {
+      const result = await resumeOneAction(progress.id);
+
+      if (isActionError(result)) {
+        setError(result.message);
+        void recoverActive();
+        return;
+      }
+
+      applyProgress(result);
+    } catch {
+      setError("No se pudo reanudar la migración.");
+      void recoverActive();
+    } finally {
+      resumingRef.current = false;
+      setResuming(false);
+    }
+  }
+
   function changeResultPage(outcome: TiendanubeMigrationOutcome, nextPage: number): void {
     if (!progress) return;
     if (outcome === "APPROVED") approvedPageRef.current = nextPage;
@@ -152,7 +181,24 @@ export function TiendanubeMigrationView({ startAction, getActiveAction, getStatu
     <section className={styles.intro} aria-live="polite">
       <Typography.Title level={2}>Migración global</Typography.Title>
       <Typography.Paragraph type="secondary">Iniciá la migración de todos los productos de Mercado Libre hacia Tiendanube.</Typography.Paragraph>
-      <MigrationStartButton disabled={starting || isActive(progress)} loading={starting} onStart={() => void start()} />
+      {!progress ? (
+        <MigrationStartButton
+          disabled={starting}
+          loading={starting}
+          onStart={() => void start()}
+        />
+      ) : null}
+      {progress?.status === "PAUSED" ? (
+        <Button
+          type="primary"
+          size="large"
+          loading={resuming}
+          disabled={resuming || starting}
+          onClick={() => void resumeOne()}
+        >
+          Probar 1 producto
+        </Button>
+      ) : null}
       {error ? <Alert className={styles.alert} message={error} showIcon type="error" /> : null}
       {progress?.status === "PAUSED" ? <Alert className={styles.alert} message="La migración quedó pausada." showIcon type="warning" /> : null}
       {progress?.status === "COMPLETED_WITH_REJECTIONS" ? <Alert className={styles.alert} message="La migración terminó con productos rechazados." showIcon type="warning" /> : null}

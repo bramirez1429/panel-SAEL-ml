@@ -39,6 +39,25 @@ const item = {
 };
 
 describe("TiendanubeMigrationApiRepository", () => {
+  it("reanuda un único producto del trabajo existente", async () => {
+    const post = vi.fn<AuthenticatedHttpClient["post"]>()
+      .mockResolvedValue({ ...progress, status: "QUEUED" });
+
+    const repository = new TiendanubeMigrationApiRepository(
+      createClient(vi.fn(), post)
+    );
+
+    await expect(repository.resumeOne("job-1")).resolves.toMatchObject({
+      id: "job-1",
+      status: "QUEUED"
+    });
+
+    expect(post).toHaveBeenCalledWith(
+      "/tiendanube/migration/job-1/resume",
+      { singleProduct: true }
+    );
+  });
+
   it("inicia sin límite en la ruta del backend", async () => {
     const post = vi.fn<AuthenticatedHttpClient["post"]>().mockResolvedValue(progress);
     const repository = new TiendanubeMigrationApiRepository(createClient(vi.fn(), post));

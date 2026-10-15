@@ -17,6 +17,13 @@ export class TiendanubeMigrationApiRepository implements TiendanubeMigrationRepo
     return this.parseProgress(await this.httpClient.post(`${migrationPath}/start`, body));
   }
 
+  async resumeOne(jobId: string): Promise<TiendanubeMigrationProgress> {
+    const path = migrationPath + "/" + encodeURIComponent(jobId) + "/resume";
+    return this.parseProgress(
+      await this.httpClient.post(path, { singleProduct: true })
+    );
+  }
+
   async getActive(): Promise<TiendanubeMigrationProgress | null> {
     const parsed = tiendanubeMigrationActiveResponseSchema.safeParse(await this.httpClient.get(`${migrationPath}/active`));
     if (!parsed.success) throw this.invalidResponse("un trabajo activo de migración");

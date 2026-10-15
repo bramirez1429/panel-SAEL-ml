@@ -2,6 +2,7 @@ import type { TiendanubeMigrationOutcome, TiendanubeMigrationProgress, Tiendanub
 
 export interface TiendanubeMigrationRepository {
   start(testLimit?: 1 | 5 | 10): Promise<TiendanubeMigrationProgress>;
+  resumeOne(jobId: string): Promise<TiendanubeMigrationProgress>;
   getActive(): Promise<TiendanubeMigrationProgress | null>;
   getStatus(jobId: string): Promise<TiendanubeMigrationProgress>;
   getResults(jobId: string, outcome: TiendanubeMigrationOutcome, page: number, pageSize: number): Promise<TiendanubeMigrationResultsPage>;

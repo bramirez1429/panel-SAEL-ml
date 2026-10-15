@@ -5,6 +5,7 @@ import {
   getTiendanubeMigrationResultsAction,
   getTiendanubeMigrationStatusAction,
   startTiendanubeMigrationAction,
+  resumeOneTiendanubeMigrationAction,
 } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -15,5 +16,6 @@ export default function MigracionGlobalPage() {
     getResultsAction={getTiendanubeMigrationResultsAction}
     getStatusAction={getTiendanubeMigrationStatusAction}
     startAction={startTiendanubeMigrationAction}
+    resumeOneAction={resumeOneTiendanubeMigrationAction}
   />;
 }
