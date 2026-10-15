@@ -24,10 +24,11 @@ export async function startTiendanubeMigrationAction(): Promise<TiendanubeMigrat
 }
 
 export async function resumeOneTiendanubeMigrationAction(
-  jobId: string
+  jobId: string,
+  singleProduct = true
 ): Promise<TiendanubeMigrationActionResult> {
   try {
-    return await createResumeOneTiendanubeMigrationCommand().execute(jobId);
+    return await createResumeOneTiendanubeMigrationCommand().execute(jobId, singleProduct);
   } catch (error: unknown) {
     return {
       ok: false,

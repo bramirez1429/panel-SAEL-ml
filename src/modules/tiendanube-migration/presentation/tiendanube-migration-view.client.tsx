@@ -1,6 +1,6 @@
 "use client";
 
-import { Alert, Button, Card, Typography } from "antd";
+import { Alert, Button, Card, Popconfirm, Typography } from "antd";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type {
@@ -23,7 +23,7 @@ const RESULTS_PAGE_SIZE = 20;
 
 type Props = Readonly<{
   startAction(): Promise<TiendanubeMigrationActionResult>;
-  resumeOneAction(jobId: string): Promise<TiendanubeMigrationActionResult>;
+  resumeOneAction(jobId: string, singleProduct?: boolean): Promise<TiendanubeMigrationActionResult>;
   getActiveAction(): Promise<TiendanubeActiveMigrationActionResult>;
   getStatusAction(jobId: string): Promise<TiendanubeMigrationActionResult>;
   getResultsAction(jobId: string, outcome: TiendanubeMigrationOutcome, page: number, pageSize: number): Promise<TiendanubeMigrationResultsActionResult>;
@@ -144,7 +144,7 @@ export function TiendanubeMigrationView({ startAction, resumeOneAction, getActiv
     }
   }
 
-  async function resumeOne(): Promise<void> {
+  async function resume(singleProduct: boolean): Promise<void> {
     if (resumingRef.current || !progress || progress.status !== "PAUSED") return;
 
     resumingRef.current = true;
@@ -152,7 +152,7 @@ export function TiendanubeMigrationView({ startAction, resumeOneAction, getActiv
     setError(null);
 
     try {
-      const result = await resumeOneAction(progress.id);
+      const result = await resumeOneAction(progress.id, singleProduct);
 
       if (isActionError(result)) {
         setError(result.message);
@@ -194,10 +194,27 @@ export function TiendanubeMigrationView({ startAction, resumeOneAction, getActiv
           size="large"
           loading={resuming}
           disabled={resuming || starting}
-          onClick={() => void resumeOne()}
+          onClick={() => void resume(true)}
         >
           Probar 1 producto
         </Button>
+      ) : null}
+      {progress?.status === "PAUSED" ? (
+        <Popconfirm
+          title="¿Reanudar toda la migración?"
+          description="Se intentarán procesar todos los productos pendientes."
+          okText="Sí, reanudar"
+          cancelText="Cancelar"
+          onConfirm={() => void resume(false)}
+        >
+          <Button
+            size="large"
+            loading={resuming}
+            disabled={resuming || starting}
+          >
+            Reanudar migración completa
+          </Button>
+        </Popconfirm>
       ) : null}
       {error ? <Alert className={styles.alert} message={error} showIcon type="error" /> : null}
       {progress?.status === "PAUSED" ? <Alert className={styles.alert} message="La migración quedó pausada." showIcon type="warning" /> : null}

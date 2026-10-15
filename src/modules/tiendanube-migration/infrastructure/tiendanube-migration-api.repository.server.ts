@@ -17,10 +17,10 @@ export class TiendanubeMigrationApiRepository implements TiendanubeMigrationRepo
     return this.parseProgress(await this.httpClient.post(`${migrationPath}/start`, body));
   }
 
-  async resumeOne(jobId: string): Promise<TiendanubeMigrationProgress> {
+  async resumeOne(jobId: string, singleProduct = true): Promise<TiendanubeMigrationProgress> {
     const path = migrationPath + "/" + encodeURIComponent(jobId) + "/resume";
     return this.parseProgress(
-      await this.httpClient.post(path, { singleProduct: true })
+      await this.httpClient.post(path, { singleProduct })
     );
   }
 
