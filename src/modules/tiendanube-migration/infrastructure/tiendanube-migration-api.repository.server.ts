@@ -86,7 +86,7 @@ function mapProgress(progress: BackendProgress): TiendanubeMigrationProgress {
 
 function mapResult(item: BackendItem): TiendanubeMigrationResult {
   return {
-    id: item.id,
+    id: item.id ?? item.sourceKey,
     sourceKey: item.sourceKey,
     title: item.title,
     mlaIds: item.mlaIds,

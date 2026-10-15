@@ -23,7 +23,6 @@ const progress = {
 };
 
 const item = {
-  id: "item-1",
   sourceKey: "family:10",
   title: null,
   mlaIds: ["MLA1"],
@@ -105,7 +104,7 @@ describe("TiendanubeMigrationApiRepository", () => {
       page: 1,
       limit: 20,
       total: 1,
-      items: [{ ...item, action: "LINKED" }],
+      items: [{ ...item, id: item.sourceKey, action: "LINKED" }],
     });
     expect(get).toHaveBeenCalledWith("/tiendanube/migration/job-1/items?status=APPROVED&page=1&limit=20");
   });

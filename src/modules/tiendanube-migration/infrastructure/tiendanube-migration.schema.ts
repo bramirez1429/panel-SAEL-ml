@@ -13,7 +13,7 @@ const migrationJobSchema = z.object({
 });
 
 const migrationItemSchema = z.object({
-  id: z.string().min(1),
+  id: z.string().min(1).optional(),
   sourceKey: z.string().min(1),
   title: z.string().nullable(),
   mlaIds: identifierListSchema,
