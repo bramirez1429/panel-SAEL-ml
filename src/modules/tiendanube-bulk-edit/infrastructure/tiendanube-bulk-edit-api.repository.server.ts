@@ -5,7 +5,7 @@ import { ApiError } from "@/shared/api/api-error";
 import type { AuthenticatedHttpClient } from "@/shared/api/authenticated-http-client.server";
 import type { TiendanubeBulkEditRepository } from "../domain/tiendanube-bulk-edit.repository";
 import type { TiendanubeBulkEditCategorySummary, TiendanubeBulkEditJob, TiendanubeBulkEditPreview, TiendanubeBulkEditRequest } from "../domain/tiendanube-bulk-edit.model";
-import { activeJobSchema, categorySummarySchema, previewSchema } from "./tiendanube-bulk-edit.schema";
+import { activeJobSchema, categorySummarySchema, jobSchema, previewSchema } from "./tiendanube-bulk-edit.schema";
 
 const basePath = "/tiendanube/bulk-edition";
 
@@ -23,6 +23,18 @@ export class TiendanubeBulkEditApiRepository implements TiendanubeBulkEditReposi
   async getActive(): Promise<TiendanubeBulkEditJob | null> {
     const parsed = activeJobSchema.safeParse(await this.httpClient.get(`${basePath}/jobs/active`));
     return parsed.success ? parsed.data : null;
+  }
+
+  async createJob(previewId: string): Promise<TiendanubeBulkEditJob> {
+    return this.parse(jobSchema, await this.httpClient.post(`${basePath}/jobs`, { previewId }), "el trabajo de actualización");
+  }
+
+  async getJob(jobId: string): Promise<TiendanubeBulkEditJob> {
+    return this.parse(jobSchema, await this.httpClient.get(`${basePath}/jobs/${encodeURIComponent(jobId)}`), "el progreso de actualización");
+  }
+
+  async retryFailed(jobId: string): Promise<TiendanubeBulkEditJob> {
+    return this.parse(jobSchema, await this.httpClient.post(`${basePath}/jobs/${encodeURIComponent(jobId)}/retry-failed`), "el reintento de variantes fallidas");
   }
 
   private parse<T>(schema: z.ZodType<T>, value: unknown, resource: string): T {

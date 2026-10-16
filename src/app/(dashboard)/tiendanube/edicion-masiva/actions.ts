@@ -16,3 +16,12 @@ export async function previewBulkEditAction(request: TiendanubeBulkEditRequest):
 export async function getActiveBulkEditAction(): Promise<ActionResult<TiendanubeBulkEditJob | null>> {
   try { return await createTiendanubeBulkEditRepository().getActive(); } catch (error) { return { ok: false, message: errorMessage(error, "No se pudo recuperar la actualización en curso.") }; }
 }
+export async function createBulkEditJobAction(previewId: string): Promise<ActionResult<TiendanubeBulkEditJob>> {
+  try { return await createTiendanubeBulkEditRepository().createJob(previewId); } catch (error) { return { ok: false, message: errorMessage(error, "No se pudo iniciar la actualización.") }; }
+}
+export async function getBulkEditJobAction(jobId: string): Promise<ActionResult<TiendanubeBulkEditJob>> {
+  try { return await createTiendanubeBulkEditRepository().getJob(jobId); } catch (error) { return { ok: false, message: errorMessage(error, "No se pudo consultar el progreso.") }; }
+}
+export async function retryBulkEditFailedAction(jobId: string): Promise<ActionResult<TiendanubeBulkEditJob>> {
+  try { return await createTiendanubeBulkEditRepository().retryFailed(jobId); } catch (error) { return { ok: false, message: errorMessage(error, "No se pudieron reintentar las variantes fallidas.") }; }
+}

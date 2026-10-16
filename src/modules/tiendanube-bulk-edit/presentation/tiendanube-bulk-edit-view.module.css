@@ -9,6 +9,9 @@
 .fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
 .input { width: 100%; }
 .primaryButton { margin-top: 20px; min-height: 44px; }
+.confirmButton { background: #1677ff; }
+.retryButton { margin-top: 20px; }
+.failuresTable { margin-top: 20px; }
 .previewAlert { margin-top: 16px; }
 .card :global(.ant-progress) { margin: 22px 0 10px; }
 @media (max-width: 900px) { .fields { grid-template-columns: 1fr; } .page { padding-inline: 16px; } }

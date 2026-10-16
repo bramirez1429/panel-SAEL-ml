@@ -27,9 +27,19 @@ export const previewSchema = z.object({
   generatedAt: z.string().datetime(), expiresAt: z.string().datetime(),
 });
 
+const bulkEditFailureSchema = z.object({
+  productName: z.string().min(1),
+  productId: z.string().min(1),
+  sku: z.string().nullable(),
+  variant: z.string().nullable(),
+  variantId: z.string().min(1),
+  error: z.string().min(1),
+});
+
 export const jobSchema = z.object({
   id: z.string().min(1), status: z.enum(["QUEUED", "RUNNING", "COMPLETED", "COMPLETED_WITH_ERRORS", "PAUSED", "FAILED"]),
   totalProducts: count, totalVariants: count, completedVariants: count, failedVariants: count, pendingVariants: count,
+  failures: z.array(bulkEditFailureSchema),
 });
 
 export const activeJobSchema = jobSchema.nullable();

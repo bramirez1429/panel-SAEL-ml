@@ -53,4 +53,14 @@ export type TiendanubeBulkEditJob = Readonly<{
   completedVariants: number;
   failedVariants: number;
   pendingVariants: number;
+  failures: readonly TiendanubeBulkEditFailure[];
+}>;
+
+export type TiendanubeBulkEditFailure = Readonly<{
+  productName: string;
+  productId: string;
+  sku: string | null;
+  variant: string | null;
+  variantId: string;
+  error: string;
 }>;

@@ -94,6 +94,9 @@ function actions(overrides: Partial<ComponentProps<typeof TiendanubeBulkEditView
     getActiveAction: vi.fn().mockResolvedValue(null),
     getCategorySummaryAction: vi.fn().mockResolvedValue(summary()),
     previewAction: vi.fn(),
+    createJobAction: vi.fn(),
+    getJobAction: vi.fn(),
+    retryFailedAction: vi.fn(),
     ...overrides,
   };
 }
@@ -103,4 +106,4 @@ function summary(): TiendanubeBulkEditCategorySummary {
 }
 function emptySummary(): TiendanubeBulkEditCategorySummary { return { ...summary(), productCount: 0, variantCount: 0, products: [] }; }
 function preview(): TiendanubeBulkEditPreview { return { id: "preview-1", categoryId: "1", productCount: 1, variantCount: 1, products: [], locations: [], changes: { price: "45000" }, preservedFields: ["stock", "promotionalPrice"], incompatibilities: [], generatedAt: "2026-10-16T12:00:00.000Z", expiresAt: "2026-10-16T12:30:00.000Z" }; }
-function queuedJob() { return { id: "job-1", status: "QUEUED" as const, totalProducts: 1, totalVariants: 1, completedVariants: 0, failedVariants: 0, pendingVariants: 1 }; }
+function queuedJob() { return { id: "job-1", status: "QUEUED" as const, totalProducts: 1, totalVariants: 1, completedVariants: 0, failedVariants: 0, pendingVariants: 1, failures: [] }; }
