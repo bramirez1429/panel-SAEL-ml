@@ -22,8 +22,6 @@ const fieldLabels: Record<TiendanubeBulkEditField, string> = { price: "Precio no
 function isError<T>(result: ActionResult<T>): result is Readonly<{ ok: false; message: string }> {
   return typeof result === "object" && result !== null && "ok" in result && result.ok === false;
 }
-function isRunning(job: TiendanubeBulkEditJob | null): boolean { return job?.status === "QUEUED" || job?.status === "RUNNING"; }
-
 export function TiendanubeBulkEditView(props: Props) {
   const [form] = Form.useForm<FormValues>();
   const [selectedCategoryId, setSelectedCategoryId] = useState<number>();
@@ -33,6 +31,7 @@ export function TiendanubeBulkEditView(props: Props) {
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(props.categoryError);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
   const price = Form.useWatch("price", form);
   const promotionalPrice = Form.useWatch("promotionalPrice", form);
   const stock = Form.useWatch("stock", form);
@@ -46,22 +45,34 @@ export function TiendanubeBulkEditView(props: Props) {
 
   useEffect(() => {
     void (async () => {
-      const result = await props.getActiveAction();
-      if (isError(result)) { setError(result.message); return; }
-      if (result) applyJob(result);
+      try {
+        const result = await props.getActiveAction();
+        if (isError(result)) { setError(result.message); return; }
+        if (result) applyJob(result);
+      } catch (caught: unknown) {
+        setError(errorMessage(caught, "No se pudo recuperar la actualización en curso."));
+      }
     })();
   }, [applyJob, props]);
 
-  async function selectCategory(categoryId: number): Promise<void> {
-    setSelectedCategoryId(categoryId); setSummary(null); setPreview(null); setError(null); setLoadingSummary(true);
+  async function loadCategorySummary(categoryId: number): Promise<void> {
+    setLoadingSummary(true);
     try {
       const result = await props.getCategorySummaryAction(categoryId);
-      if (isError(result)) setError(result.message); else setSummary(result);
+      if (isError(result)) setSummaryError(result.message);
+      else { setSummary(result); setSummaryError(null); }
+    } catch (caught: unknown) {
+      setSummaryError(errorMessage(caught, "No se pudo cargar el resumen de la categoría."));
     } finally { setLoadingSummary(false); }
   }
 
+  function selectCategory(categoryId: number): void {
+    setSelectedCategoryId(categoryId); setSummary(null); setPreview(null); setError(null); setSummaryError(null);
+    void loadCategorySummary(categoryId);
+  }
+
   async function createPreview(): Promise<void> {
-    if (!selectedCategoryId || isRunning(job)) return;
+    if (!selectedCategoryId || !summary || submitting) return;
     try {
       const values = await form.validateFields();
       const request = createRequest(selectedCategoryId, values);
@@ -69,20 +80,25 @@ export function TiendanubeBulkEditView(props: Props) {
       const result = await props.previewAction(request);
       if (isError(result)) { setError(result.message); return; }
       setPreview(result);
-    } catch { /* Ant Design displays validation errors beside fields. */ } finally { setSubmitting(false); }
+    } catch (caught: unknown) {
+      if (!isFormValidationError(caught)) {
+        setError(errorMessage(caught, "No se pudo generar la previsualización."));
+      }
+    } finally { setSubmitting(false); }
   }
 
-  const hasChanges = hasValue(price) || hasValue(promotionalPrice) || hasValue(stock);
+  const hasValidChanges = hasCompleteValidChanges(price, promotionalPrice, stock);
   const noProducts = summary !== null && summary.productCount === 0;
   return <main className={styles.page}>
     <header className={styles.header}><Typography.Title level={1}>Tiendanube — Edición masiva</Typography.Title><Typography.Text type="secondary">Actualizá precios y stock de todos los productos de una categoría desde un solo lugar.</Typography.Text></header>
     {error ? <Alert closable message={error} onClose={() => setError(null)} showIcon type="error" /> : null}
 
     <Card className={styles.card} title="Seleccionar categoría">
-      <Select showSearch className={styles.categorySelect} disabled={isRunning(job)} loading={loadingSummary} notFoundContent={<Empty description="No hay categorías disponibles." image={Empty.PRESENTED_IMAGE_SIMPLE} />} onChange={(value) => { if (typeof value === "number") void selectCategory(value); }} optionFilterProp="label" options={categoryOptions} placeholder="Buscar y seleccionar una categoría" size="large" value={selectedCategoryId} />
+      <Select showSearch className={styles.categorySelect} loading={loadingSummary} notFoundContent={<Empty description="No hay categorías disponibles." image={Empty.PRESENTED_IMAGE_SIMPLE} />} onChange={(value) => { if (typeof value === "number") selectCategory(value); }} optionFilterProp="label" options={categoryOptions} placeholder="Buscar y seleccionar una categoría" size="large" value={selectedCategoryId} />
     </Card>
 
     {selectedCategoryId && loadingSummary ? <Card className={styles.card} loading /> : null}
+    {selectedCategoryId && summaryError ? <Alert action={<Button onClick={() => { if (selectedCategoryId !== undefined) void loadCategorySummary(selectedCategoryId); }} size="small" type="primary">Reintentar cargar categoría</Button>} description="No se puede previsualizar hasta cargar el resumen real de productos y variantes." message={summaryError} showIcon type="error" /> : null}
     {summary && noProducts ? <Card className={styles.card}><Empty description="No hay productos en esta categoría." /></Card> : null}
     {summary && !noProducts ? <>
       <section className={styles.statistics} aria-label="Resumen de la categoría"><Card><Statistic title="Productos encontrados" value={summary.productCount} /></Card><Card><Statistic title="Variantes encontradas" value={summary.variantCount} /></Card></section>
@@ -92,12 +108,12 @@ export function TiendanubeBulkEditView(props: Props) {
     <Card className={styles.card} title="Cambios globales">
       <Form form={form} layout="vertical" onValuesChange={() => setPreview(null)} requiredMark={false}>
         <div className={styles.fields}>
-          <Form.Item label="Precio normal (precio tachado)" name="price" rules={[{ type: "number", min: 0, message: "Ingresá un precio válido." }]}><NumericInput disabled={isRunning(job)} placeholder="$45.000" /></Form.Item>
-          <Form.Item label="Precio promocional" name="promotionalPrice" rules={[{ type: "number", min: 0, message: "Ingresá un precio válido." }]}><NumericInput disabled={isRunning(job)} placeholder="$31.999" /></Form.Item>
-          <Form.Item label="Stock por variante" name="stock" rules={[{ type: "number", min: 0, message: "El stock no puede ser negativo." }, { validator: (_, value: number | null | undefined) => !hasValue(value) || Number.isInteger(value) ? Promise.resolve() : Promise.reject(new Error("El stock debe ser entero.")) }]}><NumericInput disabled={isRunning(job)} placeholder="4 unidades" /></Form.Item>
+          <Form.Item label="Precio normal (precio tachado)" name="price" rules={[{ type: "number", min: 0, message: "Ingresá un precio válido." }]}><NumericInput disabled={submitting} placeholder="$45.000" /></Form.Item>
+          <Form.Item label="Precio promocional" name="promotionalPrice" rules={[{ type: "number", min: 0, message: "Ingresá un precio válido." }]}><NumericInput disabled={submitting} placeholder="$31.999" /></Form.Item>
+          <Form.Item label="Stock por variante" name="stock" rules={[{ type: "number", min: 0, message: "El stock no puede ser negativo." }, { validator: (_, value: number | null | undefined) => !hasValue(value) || Number.isInteger(value) ? Promise.resolve() : Promise.reject(new Error("El stock debe ser entero.")) }]}><NumericInput disabled={submitting} placeholder="4 unidades" /></Form.Item>
         </div>
         <Alert message="Los cambios se aplicarán a todas las variantes de los productos de la categoría seleccionada." showIcon type="info" />
-        <Button className={styles.primaryButton} disabled={!selectedCategoryId || !summary || noProducts || !hasChanges || isRunning(job)} loading={submitting} onClick={() => void createPreview()} size="large" type="primary">Previsualizar cambios</Button>
+        <Button className={styles.primaryButton} disabled={!selectedCategoryId || !summary || noProducts || !hasValidChanges || submitting} loading={submitting} onClick={() => void createPreview()} size="large" type="primary">Previsualizar cambios</Button>
       </Form>
     </Card>
 
@@ -115,4 +131,14 @@ function JobProgress({ job }: Readonly<{ job: TiendanubeBulkEditJob }>) { const 
 function categoryPath(category: TiendanubeCategory, categories: readonly TiendanubeCategory[]): string { const names = [category.name]; let parentId = category.parentId; while (parentId !== null) { const parent = categories.find((item) => item.id === parentId); if (!parent) break; names.unshift(parent.name); parentId = parent.parentId; } return names.join(" / "); }
 function formatValue(value: string | number | null | undefined): string { return value === null || value === undefined ? "Valores diferentes" : currency.format(Number(value)); }
 function hasValue(value: number | null | undefined): value is number { return typeof value === "number"; }
+function hasCompleteValidChanges(price: number | null | undefined, promotionalPrice: number | null | undefined, stock: number | null | undefined): boolean {
+  const values = [price, promotionalPrice, stock];
+  return values.some(hasValue) && values.every((value) => !hasValue(value) || (value >= 0 && Number.isInteger(value)));
+}
+function isFormValidationError(error: unknown): error is Readonly<{ errorFields: readonly unknown[] }> {
+  return typeof error === "object" && error !== null && "errorFields" in error && Array.isArray(error.errorFields);
+}
+function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message.trim() ? error.message : fallback;
+}
 function createRequest(categoryId: number, values: FormValues): TiendanubeBulkEditRequest { if (!hasValue(values.price) && !hasValue(values.promotionalPrice) && !hasValue(values.stock)) throw new Error("Completá al menos un campo."); return { categoryId: String(categoryId), changes: { ...(hasValue(values.price) ? { price: String(values.price) } : {}), ...(hasValue(values.promotionalPrice) ? { promotionalPrice: String(values.promotionalPrice) } : {}), ...(hasValue(values.stock) ? { stock: values.stock } : {}) } }; }
