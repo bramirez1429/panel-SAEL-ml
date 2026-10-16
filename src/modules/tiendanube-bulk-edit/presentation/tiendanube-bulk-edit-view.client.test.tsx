@@ -35,18 +35,44 @@ describe("TiendanubeBulkEditView", () => {
     expect(await screen.findByText("No hay productos en esta categoría.")).toBeInTheDocument();
   });
 
-  it("envía únicamente los campos completados para la previsualización", async () => {
+  it("envía los tres valores escritos en los InputNumber para la previsualización", async () => {
     const user = userEvent.setup();
     const previewAction = vi.fn().mockResolvedValue(preview());
     render(<TiendanubeBulkEditView {...actions({ previewAction })} categories={[{ id: 1, name: "Remeras", parentId: null }]} categoryError={null} />);
     await user.click(screen.getByRole("combobox"));
     await user.click(await screen.findByText("Remeras"));
-    const input = screen.getByPlaceholderText("$45.000");
-    await user.type(input, "45000");
+    await user.type(screen.getByPlaceholderText("$45.000"), "36499");
+    await user.type(screen.getByPlaceholderText("$31.999"), "31024");
+    await user.type(screen.getByPlaceholderText("4 unidades"), "3");
     expect(screen.getByRole("button", { name: "Previsualizar cambios" })).toBeEnabled();
     await user.click(screen.getByRole("button", { name: "Previsualizar cambios" }));
-    await waitFor(() => expect(previewAction).toHaveBeenCalledWith({ categoryId: "1", changes: { price: "45000" } }));
-    expect(screen.getByText("La previsualización está disponible. La aplicación de cambios se habilitará cuando finalice el procesamiento masivo.")).toBeInTheDocument();
+    await waitFor(() => expect(previewAction).toHaveBeenCalledWith({ categoryId: "1", changes: { price: "36499", promotionalPrice: "31024", stock: 3 } }));
+    expect(screen.getByText("Confirmá para iniciar la actualización real en Tiendanube.")).toBeInTheDocument();
+  });
+
+  it("exige seleccionar un depósito al modificar stock cuando hay más de uno", async () => {
+    const user = userEvent.setup();
+    const previewAction = vi.fn().mockResolvedValue(preview());
+    const multipleLocations = { ...summary(), locations: [{ id: "location-1" }, { id: "location-2" }] };
+    render(<TiendanubeBulkEditView {...actions({ getCategorySummaryAction: vi.fn().mockResolvedValue(multipleLocations), previewAction })} categories={[{ id: 1, name: "Remeras", parentId: null }]} categoryError={null} />);
+    await user.click(screen.getByRole("combobox"));
+    await user.click(await screen.findByText("Remeras"));
+    await user.type(screen.getByPlaceholderText("4 unidades"), "0");
+    await user.click(screen.getByRole("combobox", { name: "Depósito para stock" }));
+    await user.click(await screen.findByText("location-2"));
+    await user.click(screen.getByRole("button", { name: "Previsualizar cambios" }));
+    await waitFor(() => expect(previewAction).toHaveBeenCalledWith({ categoryId: "1", locationId: "location-2", changes: { stock: 0 } }));
+  });
+
+  it("no permite confirmar una previsualización con incompatibilidades", async () => {
+    const user = userEvent.setup();
+    const incompatiblePreview = preview({ incompatibilities: [{ variantId: "v1", reason: "Sin depósito compatible" }] });
+    render(<TiendanubeBulkEditView {...actions({ previewAction: vi.fn().mockResolvedValue(incompatiblePreview) })} categories={[{ id: 1, name: "Remeras", parentId: null }]} categoryError={null} />);
+    await user.click(screen.getByRole("combobox"));
+    await user.click(await screen.findByText("Remeras"));
+    await user.type(screen.getByPlaceholderText("$45.000"), "36499");
+    await user.click(screen.getByRole("button", { name: "Previsualizar cambios" }));
+    expect(await screen.findByRole("button", { name: "Confirmar y aplicar cambios" })).toBeDisabled();
   });
 
   it("muestra el error del resumen y permite reintentar la categoría", async () => {
@@ -95,8 +121,9 @@ function actions(overrides: Partial<ComponentProps<typeof TiendanubeBulkEditView
     getCategorySummaryAction: vi.fn().mockResolvedValue(summary()),
     previewAction: vi.fn(),
     createJobAction: vi.fn(),
-    getJobAction: vi.fn(),
-    retryFailedAction: vi.fn(),
+    getJobAction: vi.fn().mockResolvedValue(completedJob()),
+    getFailuresAction: vi.fn().mockResolvedValue([]),
+    retryFailuresAction: vi.fn(),
     ...overrides,
   };
 }
@@ -105,5 +132,6 @@ function summary(): TiendanubeBulkEditCategorySummary {
   return { categoryId: "1", productCount: 1, variantCount: 1, locations: [], products: [{ id: "p1", name: "Remera", variants: [] }] };
 }
 function emptySummary(): TiendanubeBulkEditCategorySummary { return { ...summary(), productCount: 0, variantCount: 0, products: [] }; }
-function preview(): TiendanubeBulkEditPreview { return { id: "preview-1", categoryId: "1", productCount: 1, variantCount: 1, products: [], locations: [], changes: { price: "45000" }, preservedFields: ["stock", "promotionalPrice"], incompatibilities: [], generatedAt: "2026-10-16T12:00:00.000Z", expiresAt: "2026-10-16T12:30:00.000Z" }; }
-function queuedJob() { return { id: "job-1", status: "QUEUED" as const, totalProducts: 1, totalVariants: 1, completedVariants: 0, failedVariants: 0, pendingVariants: 1, failures: [] }; }
+function preview(overrides: Partial<TiendanubeBulkEditPreview> = {}): TiendanubeBulkEditPreview { return { id: "preview-1", categoryId: "1", productCount: 1, variantCount: 1, products: [], locations: [], changes: { price: "45000" }, preservedFields: ["stock", "promotionalPrice"], incompatibilities: [], generatedAt: "2026-10-16T12:00:00.000Z", expiresAt: "2026-10-16T12:30:00.000Z", ...overrides }; }
+function queuedJob() { return { id: "job-1", status: "QUEUED" as const, totalProducts: 1, totalVariants: 1, completedVariants: 0, failedVariants: 0, pendingVariants: 1 }; }
+function completedJob() { return { id: "job-1", status: "COMPLETED" as const, totalProducts: 1, totalVariants: 1, completedVariants: 1, failedVariants: 0, pendingVariants: 0 }; }

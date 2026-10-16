@@ -13,11 +13,12 @@ type Props = Readonly<{
   getCategorySummaryAction(categoryId: number): Promise<ActionResult<TiendanubeBulkEditCategorySummary>>;
   previewAction(request: TiendanubeBulkEditRequest): Promise<ActionResult<TiendanubeBulkEditPreview>>;
   getActiveAction(): Promise<ActionResult<TiendanubeBulkEditJob | null>>;
-  createJobAction(previewId: string): Promise<ActionResult<TiendanubeBulkEditJob>>;
+  createJobAction(snapshotId: string): Promise<ActionResult<TiendanubeBulkEditJob>>;
   getJobAction(jobId: string): Promise<ActionResult<TiendanubeBulkEditJob>>;
-  retryFailedAction(jobId: string): Promise<ActionResult<TiendanubeBulkEditJob>>;
+  getFailuresAction(jobId: string): Promise<ActionResult<readonly TiendanubeBulkEditFailure[]>>;
+  retryFailuresAction(jobId: string): Promise<ActionResult<TiendanubeBulkEditJob>>;
 }>;
-type FormValues = Readonly<{ price?: number | null; promotionalPrice?: number | null; stock?: number | null }>;
+type FormValues = Readonly<{ price?: number | null; promotionalPrice?: number | null; stock?: number | null; locationId?: string }>;
 
 const currency = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 const fieldLabels: Record<TiendanubeBulkEditField, string> = { price: "Precio normal", promotionalPrice: "Precio promocional", stock: "Stock" };
@@ -28,6 +29,7 @@ function isError<T>(result: ActionResult<T>): result is Readonly<{ ok: false; me
 }
 export function TiendanubeBulkEditView(props: Props) {
   const [form] = Form.useForm<FormValues>();
+  const stockValue: FormValues["stock"] = Form.useWatch("stock", form);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number>();
   const [summary, setSummary] = useState<TiendanubeBulkEditCategorySummary | null>(null);
   const [preview, setPreview] = useState<TiendanubeBulkEditPreview | null>(null);
@@ -37,6 +39,8 @@ export function TiendanubeBulkEditView(props: Props) {
   const [error, setError] = useState<string | null>(props.categoryError);
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [pollingError, setPollingError] = useState<string | null>(null);
+  const [failures, setFailures] = useState<readonly TiendanubeBulkEditFailure[]>([]);
+  const [failuresError, setFailuresError] = useState<string | null>(null);
   const previewRequestInFlight = useRef(false);
 
   const categoryOptions = useMemo(() => props.categories.map((category) => ({ value: category.id, label: categoryPath(category, props.categories) })), [props.categories]);
@@ -83,6 +87,27 @@ export function TiendanubeBulkEditView(props: Props) {
     return () => { active = false; if (timeout !== undefined) window.clearTimeout(timeout); };
   }, [applyJob, job, props]);
 
+  useEffect(() => {
+    if (!job || job.failedVariants === 0 || isRunning(job.status)) {
+      setFailures([]);
+      setFailuresError(null);
+      return;
+    }
+    let active = true;
+    void (async () => {
+      try {
+        const result = await props.getFailuresAction(job.id);
+        if (!active) return;
+        if (isError(result)) { setFailuresError(result.message); return; }
+        setFailures(result);
+        setFailuresError(null);
+      } catch (caught: unknown) {
+        if (active) setFailuresError(errorMessage(caught, "No se pudo obtener el detalle de las variantes fallidas."));
+      }
+    })();
+    return () => { active = false; };
+  }, [job, props]);
+
   async function loadCategorySummary(categoryId: number): Promise<void> {
     setLoadingSummary(true);
     try {
@@ -96,6 +121,7 @@ export function TiendanubeBulkEditView(props: Props) {
 
   function selectCategory(categoryId: number): void {
     setSelectedCategoryId(categoryId); setSummary(null); setPreview(null); setError(null); setSummaryError(null);
+    form.setFieldValue("locationId", undefined);
     void loadCategorySummary(categoryId);
   }
 
@@ -108,7 +134,7 @@ export function TiendanubeBulkEditView(props: Props) {
     previewRequestInFlight.current = true;
     try {
       const values = await form.validateFields();
-      const request = createRequest(selectedCategoryId, values);
+      const request = createRequest(selectedCategoryId, values, summary?.locations ?? []);
       setSubmitting(true); setError(null);
       const result = await props.previewAction(request);
       if (isError(result)) { setError(result.message); return; }
@@ -124,7 +150,7 @@ export function TiendanubeBulkEditView(props: Props) {
   }
 
   async function confirmChanges(): Promise<void> {
-    if (!preview || submitting) return;
+    if (!preview || preview.incompatibilities.length > 0 || submitting) return;
     setSubmitting(true); setError(null);
     try {
       const result = await props.createJobAction(preview.id);
@@ -139,9 +165,9 @@ export function TiendanubeBulkEditView(props: Props) {
     if (!job || job.failedVariants === 0 || submitting) return;
     setSubmitting(true); setError(null);
     try {
-      const result = await props.retryFailedAction(job.id);
+      const result = await props.retryFailuresAction(job.id);
       if (isError(result)) { setError(result.message); return; }
-      applyJob(result); setPollingError(null);
+      applyJob(result); setPollingError(null); setFailures([]); setFailuresError(null);
     } catch (caught: unknown) {
       setError(errorMessage(caught, "No se pudieron reintentar las variantes fallidas."));
     } finally { setSubmitting(false); }
@@ -167,26 +193,26 @@ export function TiendanubeBulkEditView(props: Props) {
     <Card className={styles.card} title="Cambios globales">
       <Form form={form} layout="vertical" onValuesChange={() => setPreview(null)} requiredMark={false}>
         <div className={styles.fields}>
-          <Form.Item label="Precio normal (precio tachado)" name="price" rules={[{ type: "number", min: 0, message: "Ingresá un precio válido." }]}><NumericInput disabled={submitting} placeholder="$45.000" /></Form.Item>
-          <Form.Item label="Precio promocional" name="promotionalPrice" rules={[{ type: "number", min: 0, message: "Ingresá un precio válido." }]}><NumericInput disabled={submitting} placeholder="$31.999" /></Form.Item>
-          <Form.Item label="Stock por variante" name="stock" rules={[{ type: "number", min: 0, message: "El stock no puede ser negativo." }, { validator: (_, value: number | null | undefined) => !hasValue(value) || Number.isInteger(value) ? Promise.resolve() : Promise.reject(new Error("El stock debe ser entero.")) }]}><NumericInput disabled={submitting} placeholder="4 unidades" /></Form.Item>
+          <Form.Item label="Precio normal (precio tachado)" name="price" rules={[{ type: "number", min: 0, message: "Ingresá un precio válido." }]}><InputNumber className={styles.input} controls={false} min={0} placeholder="$45.000" precision={0} size="large" /></Form.Item>
+          <Form.Item label="Precio promocional" name="promotionalPrice" rules={[{ type: "number", min: 0, message: "Ingresá un precio válido." }]}><InputNumber className={styles.input} controls={false} min={0} placeholder="$31.999" precision={0} size="large" /></Form.Item>
+          <Form.Item label="Stock por variante" name="stock" rules={[{ type: "number", min: 0, message: "El stock no puede ser negativo." }, { validator: (_, value: number | null | undefined) => !hasValue(value) || Number.isInteger(value) ? Promise.resolve() : Promise.reject(new Error("El stock debe ser entero.")) }]}><InputNumber className={styles.input} controls={false} min={0} placeholder="4 unidades" precision={0} size="large" /></Form.Item>
         </div>
+        {hasValue(stockValue) && summary && summary.locations.length > 1 ? <Form.Item label="Depósito para stock" name="locationId" rules={[{ required: true, message: "Seleccioná el depósito que se actualizará." }]}><Select className={styles.categorySelect} options={summary.locations.map((location) => ({ label: location.id, value: location.id }))} placeholder="Seleccionar depósito" size="large" /></Form.Item> : null}
         <Alert message="Los cambios se aplicarán a todas las variantes de los productos de la categoría seleccionada." showIcon type="info" />
-        <Button className={styles.primaryButton} loading={submitting} onClick={() => void createPreview()} size="large" type="primary">Previsualizar cambios</Button>
+        <Button className={styles.primaryButton} disabled={loadingSummary || summaryError !== null || noProducts} loading={submitting} onClick={() => void createPreview()} size="large" type="primary">Previsualizar cambios</Button>
       </Form>
     </Card>
 
-    {job ? <JobProgress job={job} pollingError={pollingError} retrying={submitting} onRetryFailures={() => void retryFailures()} /> : null}
-    <Modal cancelText="Cerrar" footer={preview ? <><Button disabled={submitting} onClick={() => setPreview(null)}>Cancelar</Button><Button className={styles.confirmButton} loading={submitting} onClick={() => void confirmChanges()} type="primary">Confirmar y aplicar cambios</Button></> : null} onCancel={() => setPreview(null)} open={preview !== null} title="Previsualización de cambios" width={760}>
+    {job ? <JobProgress failures={failures} failuresError={failuresError} job={job} pollingError={pollingError} retrying={submitting} onRetryFailures={() => void retryFailures()} /> : null}
+    <Modal cancelText="Cerrar" footer={preview ? <><Button disabled={submitting} onClick={() => setPreview(null)}>Cancelar</Button><Button className={styles.confirmButton} disabled={preview.incompatibilities.length > 0} loading={submitting} onClick={() => void confirmChanges()} type="primary">Confirmar y aplicar cambios</Button></> : null} onCancel={() => setPreview(null)} open={preview !== null} title="Previsualización de cambios" width={760}>
       {preview ? <PreviewContent categoryName={selectedCategory?.name ?? "Categoría seleccionada"} error={error} preview={preview} /> : null}
     </Modal>
   </main>;
 }
 
-function NumericInput({ disabled, placeholder }: Readonly<{ disabled: boolean; placeholder: string }>) { return <InputNumber className={styles.input} controls={false} disabled={disabled} min={0} placeholder={placeholder} precision={0} size="large" />; }
 function VariantPreview({ variants }: Readonly<{ variants: TiendanubeBulkEditCategorySummary["products"][number]["variants"] }>) { return <Table dataSource={variants} pagination={false} rowKey="id" scroll={{ x: 700 }} size="small" columns={[{ title: "Talle / Color", key: "attributes", render: (_, item) => [item.size, item.color].filter(Boolean).join(" / ") || "—" }, { title: "SKU", dataIndex: "sku", render: (value) => value ?? "Sin SKU" }, { title: "Precio", dataIndex: "price", render: formatValue }, { title: "Promoción", dataIndex: "promotionalPrice", render: formatValue }, { title: "Stock", dataIndex: "stock", render: (value) => value ?? "—" }]} />; }
 function PreviewContent({ categoryName, error, preview }: Readonly<{ categoryName: string; error: string | null; preview: TiendanubeBulkEditPreview }>) { return <>{error ? <Alert className={styles.previewAlert} message={error} showIcon type="error" /> : null}<Descriptions bordered column={1}><Descriptions.Item label="Categoría">{categoryName}</Descriptions.Item><Descriptions.Item label="Productos">{preview.productCount}</Descriptions.Item><Descriptions.Item label="Variantes">{preview.variantCount}</Descriptions.Item>{preview.changes.price !== undefined ? <Descriptions.Item label={fieldLabels.price}>{formatValue(preview.changes.price)}</Descriptions.Item> : null}{preview.changes.promotionalPrice !== undefined ? <Descriptions.Item label={fieldLabels.promotionalPrice}>{formatValue(preview.changes.promotionalPrice)}</Descriptions.Item> : null}{preview.changes.stock !== undefined ? <Descriptions.Item label={fieldLabels.stock}>{preview.changes.stock}</Descriptions.Item> : null}<Descriptions.Item label="Campos que se conservarán">{preview.preservedFields.map((field) => fieldLabels[field]).join(", ") || "Ninguno"}</Descriptions.Item></Descriptions><Alert className={styles.previewAlert} message="Confirmá para iniciar la actualización real en Tiendanube." showIcon type="info" />{preview.incompatibilities.length > 0 ? <Alert className={styles.previewAlert} description={<ul>{preview.incompatibilities.map((item) => <li key={item.variantId}>{`Variante ${item.variantId}: ${item.reason}`}</li>)}</ul>} message="Incompatibilidades detectadas" showIcon type="warning" /> : null}</>; }
-function JobProgress({ job, pollingError, retrying, onRetryFailures }: Readonly<{ job: TiendanubeBulkEditJob; pollingError: string | null; retrying: boolean; onRetryFailures: () => void }>) { const percent = job.totalVariants === 0 ? 0 : Math.round(((job.completedVariants + job.failedVariants) / job.totalVariants) * 100); const finished = !isRunning(job.status); return <Card className={styles.card} title="Progreso de actualización">{pollingError ? <Alert description="El seguimiento se reintentará automáticamente. El proceso continúa en el backend." message={pollingError} showIcon type="warning" /> : null}<Alert message={finished ? "El backend confirmó que el proceso finalizó." : `Estado actual: ${job.status}.`} showIcon type={job.status === "FAILED" ? "error" : "info"} /><Progress percent={percent} status={job.status === "FAILED" ? "exception" : finished ? "success" : "active"} /><section className={styles.statistics}><Statistic title="Total de productos" value={job.totalProducts} /><Statistic title="Total de variantes" value={job.totalVariants} /><Statistic title="Variantes actualizadas" value={job.completedVariants} /><Statistic title="Variantes fallidas" value={job.failedVariants} /><Statistic title="Variantes pendientes" value={job.pendingVariants} /></section>{job.failures.length > 0 ? <FailuresTable failures={job.failures} /> : null}{finished && job.failedVariants > 0 ? <Button className={styles.retryButton} loading={retrying} onClick={onRetryFailures} type="primary">Reintentar solo los fallidos</Button> : null}</Card>; }
+function JobProgress({ failures, failuresError, job, pollingError, retrying, onRetryFailures }: Readonly<{ failures: readonly TiendanubeBulkEditFailure[]; failuresError: string | null; job: TiendanubeBulkEditJob; pollingError: string | null; retrying: boolean; onRetryFailures: () => void }>) { const percent = job.totalVariants === 0 ? 0 : Math.round(((job.completedVariants + job.failedVariants) / job.totalVariants) * 100); const finished = !isRunning(job.status); const hasErrors = job.failedVariants > 0 || job.status === "FAILED" || job.status === "COMPLETED_WITH_ERRORS"; return <Card className={styles.card} title="Progreso de actualización">{pollingError ? <Alert description="El seguimiento se reintentará automáticamente. El proceso continúa en el backend." message={pollingError} showIcon type="warning" /> : null}<Alert message={finished ? "El backend confirmó que el proceso finalizó." : `Estado actual: ${job.status}.`} showIcon type={hasErrors ? "warning" : "info"} /><Progress percent={percent} status={hasErrors ? "exception" : finished ? "success" : "active"} /><section className={styles.statistics}><Statistic title="Total de productos" value={job.totalProducts} /><Statistic title="Total de variantes" value={job.totalVariants} /><Statistic title="Variantes actualizadas" value={job.completedVariants} /><Statistic title="Variantes fallidas" value={job.failedVariants} /><Statistic title="Variantes pendientes" value={job.pendingVariants} /></section>{failuresError ? <Alert className={styles.previewAlert} message={failuresError} showIcon type="error" /> : null}{failures.length > 0 ? <FailuresTable failures={failures} /> : null}{finished && job.failedVariants > 0 ? <Button className={styles.retryButton} loading={retrying} onClick={onRetryFailures} type="primary">Reintentar solo los fallidos</Button> : null}</Card>; }
 function FailuresTable({ failures }: Readonly<{ failures: readonly TiendanubeBulkEditFailure[] }>) { return <Table className={styles.failuresTable} dataSource={failures} pagination={false} rowKey={(item) => item.variantId} scroll={{ x: 900 }} size="small" columns={[{ title: "Nombre", dataIndex: "productName" }, { title: "ID", dataIndex: "productId" }, { title: "SKU", dataIndex: "sku", render: (value) => value ?? "Sin SKU" }, { title: "Variante", dataIndex: "variant", render: (value) => value ?? "—" }, { title: "Error", dataIndex: "error" }]} />; }
 function isRunning(status: TiendanubeBulkEditJob["status"]): boolean { return status === "QUEUED" || status === "RUNNING" || status === "PAUSED"; }
 function categoryPath(category: TiendanubeCategory, categories: readonly TiendanubeCategory[]): string { const names = [category.name]; let parentId = category.parentId; while (parentId !== null) { const parent = categories.find((item) => item.id === parentId); if (!parent) break; names.unshift(parent.name); parentId = parent.parentId; } return names.join(" / "); }
@@ -198,4 +224,4 @@ function isFormValidationError(error: unknown): error is Readonly<{ errorFields:
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message.trim() ? error.message : fallback;
 }
-function createRequest(categoryId: number, values: FormValues): TiendanubeBulkEditRequest { if (!hasValue(values.price) && !hasValue(values.promotionalPrice) && !hasValue(values.stock)) throw new Error("Completá al menos un campo."); return { categoryId: String(categoryId), changes: { ...(hasValue(values.price) ? { price: String(values.price) } : {}), ...(hasValue(values.promotionalPrice) ? { promotionalPrice: String(values.promotionalPrice) } : {}), ...(hasValue(values.stock) ? { stock: values.stock } : {}) } }; }
+function createRequest(categoryId: number, values: FormValues, locations: TiendanubeBulkEditCategorySummary["locations"]): TiendanubeBulkEditRequest { if (!hasValue(values.price) && !hasValue(values.promotionalPrice) && !hasValue(values.stock)) throw new Error("Completá al menos un campo."); const locationId = hasValue(values.stock) ? values.locationId ?? (locations.length === 1 ? locations[0].id : undefined) : undefined; if (hasValue(values.stock) && locations.length > 1 && !locationId) throw new Error("Seleccioná el depósito que se actualizará."); return { categoryId: String(categoryId), ...(locationId ? { locationId } : {}), changes: { ...(hasValue(values.price) ? { price: String(values.price) } : {}), ...(hasValue(values.promotionalPrice) ? { promotionalPrice: String(values.promotionalPrice) } : {}), ...(hasValue(values.stock) ? { stock: values.stock } : {}) } }; }

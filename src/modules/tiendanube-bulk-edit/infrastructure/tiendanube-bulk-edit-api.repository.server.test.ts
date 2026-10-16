@@ -39,16 +39,36 @@ describe("TiendanubeBulkEditApiRepository", () => {
     expect(http.post).toHaveBeenCalledWith("/tiendanube/bulk-edition/preview", request);
   });
 
-  it("inicia y reintenta trabajos con los endpoints definitivos", async () => {
+  it("inicia el trabajo con snapshotId y consulta el progreso real", async () => {
     const http = client();
-    vi.mocked(http.post).mockResolvedValue(job());
+    vi.mocked(http.post).mockResolvedValue({ id: "job-1" });
+    vi.mocked(http.get).mockResolvedValue(job());
     const repository = new TiendanubeBulkEditApiRepository(http);
 
     await repository.createJob("preview-1");
-    await repository.retryFailed("job-1");
 
-    expect(http.post).toHaveBeenNthCalledWith(1, "/tiendanube/bulk-edition/jobs", { previewId: "preview-1" });
-    expect(http.post).toHaveBeenNthCalledWith(2, "/tiendanube/bulk-edition/jobs/job-1/retry-failed");
+    expect(http.post).toHaveBeenCalledWith("/tiendanube/bulk-edition/jobs", { snapshotId: "preview-1" });
+    expect(http.get).toHaveBeenCalledWith("/tiendanube/bulk-edition/jobs/job-1");
+  });
+
+  it("consulta los fallidos en su endpoint separado", async () => {
+    const http = client();
+    vi.mocked(http.get).mockResolvedValue([failure()]);
+
+    await new TiendanubeBulkEditApiRepository(http).getFailures("job-1");
+
+    expect(http.get).toHaveBeenCalledWith("/tiendanube/bulk-edition/jobs/job-1/failures");
+  });
+
+  it("reintenta fallidos y consulta luego el progreso real", async () => {
+    const http = client();
+    vi.mocked(http.post).mockResolvedValue({ id: "job-2" });
+    vi.mocked(http.get).mockResolvedValue({ ...job(), id: "job-2" });
+
+    await new TiendanubeBulkEditApiRepository(http).retryFailures("job-1");
+
+    expect(http.post).toHaveBeenCalledWith("/tiendanube/bulk-edition/jobs/job-1/retry-failures");
+    expect(http.get).toHaveBeenCalledWith("/tiendanube/bulk-edition/jobs/job-2");
   });
 });
 
@@ -67,5 +87,9 @@ function preview() {
 }
 
 function job() {
-  return { id: "job-1", status: "RUNNING", totalProducts: 2, totalVariants: 3, completedVariants: 1, failedVariants: 0, pendingVariants: 2, failures: [] };
+  return { id: "job-1", status: "RUNNING", totalProducts: 2, totalVariants: 3, completedVariants: 1, failedVariants: 0, pendingVariants: 2 };
+}
+
+function failure() {
+  return { productName: "Remera básica", productId: "1001", sku: "REM-M-NEG", variant: "M / Negro", variantId: "501", error: "Tiendanube rechazó la actualización" };
 }

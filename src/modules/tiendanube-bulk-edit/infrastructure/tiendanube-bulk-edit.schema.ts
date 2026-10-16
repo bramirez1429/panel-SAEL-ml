@@ -39,7 +39,8 @@ const bulkEditFailureSchema = z.object({
 export const jobSchema = z.object({
   id: z.string().min(1), status: z.enum(["QUEUED", "RUNNING", "COMPLETED", "COMPLETED_WITH_ERRORS", "PAUSED", "FAILED"]),
   totalProducts: count, totalVariants: count, completedVariants: count, failedVariants: count, pendingVariants: count,
-  failures: z.array(bulkEditFailureSchema),
 });
 
+export const jobReferenceSchema = z.object({ id: z.string().min(1) });
+export const failuresSchema = z.array(bulkEditFailureSchema);
 export const activeJobSchema = jobSchema.nullable();

@@ -2,6 +2,7 @@ export type TiendanubeBulkEditField = "price" | "promotionalPrice" | "stock";
 
 export type TiendanubeBulkEditRequest = Readonly<{
   categoryId: string;
+  locationId?: string;
   changes: Readonly<{
     price?: string;
     promotionalPrice?: string;
@@ -53,7 +54,6 @@ export type TiendanubeBulkEditJob = Readonly<{
   completedVariants: number;
   failedVariants: number;
   pendingVariants: number;
-  failures: readonly TiendanubeBulkEditFailure[];
 }>;
 
 export type TiendanubeBulkEditFailure = Readonly<{
