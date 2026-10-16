@@ -10,7 +10,7 @@ import { activeJobSchema, categorySummarySchema, previewSchema } from "./tiendan
 const basePath = "/tiendanube/bulk-edition";
 
 export class TiendanubeBulkEditApiRepository implements TiendanubeBulkEditRepository {
-  constructor(private readonly httpClient: Pick<AuthenticatedHttpClient, "get" | "post">) {}
+  constructor(private readonly httpClient: AuthenticatedHttpClient) {}
 
   async getCategorySummary(categoryId: number): Promise<TiendanubeBulkEditCategorySummary> {
     return this.parse(categorySummarySchema, await this.httpClient.get(`${basePath}/categories/${categoryId}/summary`), "el resumen de la categoría");

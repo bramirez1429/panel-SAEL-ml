@@ -6,8 +6,17 @@ vi.mock("server-only", () => ({}));
 import type { AuthenticatedHttpClient } from "@/shared/api/authenticated-http-client.server";
 import { TiendanubeBulkEditApiRepository } from "./tiendanube-bulk-edit-api.repository.server";
 
-function client(): Pick<AuthenticatedHttpClient, "get" | "post"> {
-  return { get: vi.fn(), post: vi.fn() };
+function client(): AuthenticatedHttpClient {
+  return {
+    get: vi.fn(),
+    getResponse: vi.fn(),
+    post: vi.fn(),
+    postResponse: vi.fn(),
+    patch: vi.fn(),
+    patchResponse: vi.fn(),
+    delete: vi.fn(),
+    deleteResponse: vi.fn(),
+  };
 }
 
 describe("TiendanubeBulkEditApiRepository", () => {
@@ -34,7 +43,7 @@ describe("TiendanubeBulkEditApiRepository", () => {
 function summary() {
   return {
     categoryId: "123", productCount: 2, variantCount: 3, locations: [{ id: "01GQ2ZHK064BQRHGDB7CCV0Y6N" }],
-    products: [{ id: "1001", name: "Remera básica", variants: [{ id: "501", sku: "REM-M-NEG", size: "M", color: "Negro", price: "45000.00", promotionalPrice: "31999.00", stock: 4 }]],
+    products: [{ id: "1001", name: "Remera básica", variants: [{ id: "501", sku: "REM-M-NEG", size: "M", color: "Negro", price: "45000.00", promotionalPrice: "31999.00", stock: 4 }] }],
   };
 }
 
