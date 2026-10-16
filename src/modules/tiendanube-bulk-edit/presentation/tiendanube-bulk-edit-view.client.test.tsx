@@ -9,7 +9,7 @@ import { TiendanubeBulkEditView } from "./tiendanube-bulk-edit-view.client";
 describe("TiendanubeBulkEditView", () => {
   afterEach(cleanup);
 
-  it("no permite previsualizar sin categoría ni campos habilitados", () => {
+  it("no permite previsualizar sin categoría ni valores cargados", () => {
     render(<TiendanubeBulkEditView {...actions()} categories={[]} categoryError={null} />);
     expect(screen.getByRole("button", { name: "Previsualizar cambios" })).toBeDisabled();
   });
@@ -22,13 +22,12 @@ describe("TiendanubeBulkEditView", () => {
     expect(await screen.findByText("No hay productos en esta categoría.")).toBeInTheDocument();
   });
 
-  it("envía únicamente los campos activados para la previsualización", async () => {
+  it("envía únicamente los campos completados para la previsualización", async () => {
     const user = userEvent.setup();
     const previewAction = vi.fn().mockResolvedValue(preview());
     render(<TiendanubeBulkEditView {...actions({ previewAction })} categories={[{ id: 1, name: "Remeras", parentId: null }]} categoryError={null} />);
     await user.click(screen.getByRole("combobox"));
     await user.click(await screen.findByText("Remeras"));
-    await user.click(screen.getAllByRole("switch")[0]!);
     const input = screen.getByPlaceholderText("$45.000");
     await user.type(input, "45000");
     await user.click(screen.getByRole("button", { name: "Previsualizar cambios" }));

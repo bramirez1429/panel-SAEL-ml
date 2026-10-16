@@ -7,8 +7,6 @@
 .statistics :global(.ant-statistic) { padding: 8px 0; }
 .statistics :global(.ant-statistic-content) { font-size: 30px; font-weight: 700; }
 .fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
-.editableField { display: grid; gap: 12px; }
-.editableField :global(.ant-space) { justify-content: space-between; }
 .input { width: 100%; }
 .primaryButton { margin-top: 20px; min-height: 44px; }
 .previewAlert { margin-top: 16px; }

@@ -25,7 +25,8 @@ export class TiendanubeBulkEditApiRepository implements TiendanubeBulkEditReposi
   }
 
   async getActive(): Promise<TiendanubeBulkEditJob | null> {
-    return this.parse(activeJobSchema, await this.httpClient.get(`${basePath}/jobs/active`), "la operación activa");
+    const parsed = activeJobSchema.safeParse(await this.httpClient.get(`${basePath}/jobs/active`));
+    return parsed.success ? parsed.data : null;
   }
 
   async getJob(jobId: string): Promise<TiendanubeBulkEditJob> {
