@@ -15,9 +15,10 @@ type Props = Readonly<{
   page: TiendanubeProductsPage | null;
   activeSearch: string;
   errorMessage?: string | null;
+  integrationReconnectRequired?: boolean;
 }>;
 
-export function TiendanubeProductsPageClient({ page, activeSearch, errorMessage = null }: Props) {
+export function TiendanubeProductsPageClient({ page, activeSearch, errorMessage = null, integrationReconnectRequired = false }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [search, setSearch] = useState(activeSearch);
@@ -78,7 +79,7 @@ export function TiendanubeProductsPageClient({ page, activeSearch, errorMessage 
         />
       </div>
 
-      {errorMessage ? <Alert type="error" showIcon message={errorMessage} /> : null}
+      {errorMessage ? <Alert action={integrationReconnectRequired ? <Button href="/integraciones" size="small" type="primary">Reconectar Tiendanube</Button> : undefined} description={integrationReconnectRequired ? "La conexión con Tiendanube falta o venció. Reconectala para consultar los productos sin cerrar tu sesión del panel." : undefined} type="error" showIcon message={integrationReconnectRequired ? "Tiendanube requiere reconexión." : errorMessage} /> : null}
       {!errorMessage && page && products.length === 0 ? <Empty description={activeSearch ? `No se encontraron productos para "${activeSearch}".` : "No hay productos en Tiendanube."} /> : null}
       {!errorMessage && page && products.length > 0 ? (
         <Card className={styles.tableCard}>

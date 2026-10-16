@@ -8,9 +8,8 @@ import {
   getAccessToken,
   getRefreshToken,
 } from "@/modules/auth/infrastructure/session/auth-session.server";
-import { AppError } from "@/shared/errors/app-error";
-import { ApiError } from "./api-error";
 import type { HttpClient, HttpResponse } from "./http-client.server";
+import { isPanelAuthenticationFailure } from "./panel-authentication-error";
 import { refreshPanelSession } from "./session-refresh.server";
 
 export type AuthenticatedHttpClient = Readonly<{
@@ -86,14 +85,14 @@ async function renewSessionOrRedirect(httpClient: Pick<HttpClient, "post">): Pro
     const tokens = await refreshPanelSession(httpClient, refreshToken);
     await createSession(tokens);
     return tokens.accessToken;
-  } catch {
-    return clearSessionAndRedirect();
+  } catch (error: unknown) {
+    if (isAuthenticationFailure(error)) return clearSessionAndRedirect();
+    throw error;
   }
 }
 
 export function isAuthenticationFailure(error: unknown): boolean {
-  if (error instanceof ApiError) return error.status === 401;
-  return error instanceof AppError && error.code === "AUTHENTICATION_REQUIRED";
+  return isPanelAuthenticationFailure(error);
 }
 
 async function clearSessionAndRedirect(): Promise<never> {

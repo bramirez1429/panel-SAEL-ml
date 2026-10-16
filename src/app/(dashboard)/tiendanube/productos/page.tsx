@@ -26,7 +26,7 @@ export default async function TiendanubeProductsPage({ searchParams }: Props) {
     const message = error instanceof ApiError
       ? error.message
       : "No se pudieron cargar los productos de Tiendanube.";
-    return <TiendanubeProductsPageClient activeSearch={activeSearch} errorMessage={message} page={null} />;
+    return <TiendanubeProductsPageClient activeSearch={activeSearch} errorMessage={message} integrationReconnectRequired={error instanceof ApiError && error.status === 401} page={null} />;
   }
 }
 
