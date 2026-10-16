@@ -61,7 +61,7 @@ describe("TiendanubeBulkEditView", () => {
     await user.click(screen.getByRole("combobox", { name: "Depósito para stock" }));
     await user.click(await screen.findByText("location-2"));
     await user.click(screen.getByRole("button", { name: "Previsualizar cambios" }));
-    await waitFor(() => expect(previewAction).toHaveBeenCalledWith({ categoryId: "1", locationId: "location-2", changes: { stock: 0 } }));
+    await waitFor(() => expect(previewAction).toHaveBeenCalledWith({ categoryId: "1", changes: { stock: 0, locationId: "location-2" } }));
   });
 
   it("no permite confirmar una previsualización con incompatibilidades", async () => {

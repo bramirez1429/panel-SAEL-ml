@@ -2,11 +2,11 @@ export type TiendanubeBulkEditField = "price" | "promotionalPrice" | "stock";
 
 export type TiendanubeBulkEditRequest = Readonly<{
   categoryId: string;
-  locationId?: string;
   changes: Readonly<{
     price?: string;
     promotionalPrice?: string;
     stock?: number;
+    locationId?: string;
   }>;
 }>;
 
