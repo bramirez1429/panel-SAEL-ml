@@ -31,17 +31,8 @@ describe("TiendanubeBulkEditView", () => {
     const input = screen.getByPlaceholderText("$45.000");
     await user.type(input, "45000");
     await user.click(screen.getByRole("button", { name: "Previsualizar cambios" }));
-    await waitFor(() => expect(previewAction).toHaveBeenCalledWith({ categoryId: 1, price: 45_000 }));
-    expect(screen.getByRole("button", { name: "Confirmar actualización global" })).toBeInTheDocument();
-  });
-
-  it("recupera errores del trabajo y permite reintentar sólo los fallidos", async () => {
-    const user = userEvent.setup();
-    const retryFailuresAction = vi.fn().mockResolvedValue(job());
-    render(<TiendanubeBulkEditView {...actions({ getActiveAction: vi.fn().mockResolvedValue(job()), getFailuresAction: vi.fn().mockResolvedValue({ total: 1, items: [{ id: "failure-1", productName: "Remera", tiendanubeProductId: "100", variantId: "200", sku: null, size: "M", color: "Negro", field: "stock", message: "No se pudo modificar el stock del talle M, color negro.", technicalDetail: "rate_limit", status: "PENDING_RETRY", adminUrl: null }] }), retryFailuresAction })} categories={[]} categoryError={null} />);
-    expect(await screen.findByText("Productos que no se pudieron actualizar")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Reintentar solamente los fallidos" }));
-    await waitFor(() => expect(retryFailuresAction).toHaveBeenCalledWith("job-1"));
+    await waitFor(() => expect(previewAction).toHaveBeenCalledWith({ categoryId: "1", changes: { price: "45000" } }));
+    expect(screen.getByText("La previsualización está disponible. La aplicación de cambios se habilitará cuando finalice el procesamiento masivo.")).toBeInTheDocument();
   });
 });
 
@@ -49,18 +40,13 @@ function actions(overrides: Partial<ComponentProps<typeof TiendanubeBulkEditView
   return {
     getActiveAction: vi.fn().mockResolvedValue(null),
     getCategorySummaryAction: vi.fn().mockResolvedValue(summary()),
-    getFailuresAction: vi.fn().mockResolvedValue({ items: [], total: 0 }),
-    getJobAction: vi.fn(),
     previewAction: vi.fn(),
-    retryFailuresAction: vi.fn(),
-    startAction: vi.fn(),
     ...overrides,
   };
 }
 
 function summary(): TiendanubeBulkEditCategorySummary {
-  return { productCount: 1, variantCount: 1, locations: [], products: [{ id: "p1", name: "Remera", variants: [] }] };
+  return { categoryId: "1", productCount: 1, variantCount: 1, locations: [], products: [{ id: "p1", name: "Remera", variants: [] }] };
 }
 function emptySummary(): TiendanubeBulkEditCategorySummary { return { ...summary(), productCount: 0, variantCount: 0, products: [] }; }
-function preview(): TiendanubeBulkEditPreview { return { id: "preview-1", categoryId: 1, productCount: 1, variantCount: 1, changes: { price: 45_000 }, preservedFields: ["stock", "promotionalPrice"], incompatibilities: [] }; }
-function job() { return { id: "job-1", status: "COMPLETED_WITH_ERRORS" as const, totalProducts: 1, totalVariants: 1, updatedVariants: 0, failedVariants: 1, pendingVariants: 0 }; }
+function preview(): TiendanubeBulkEditPreview { return { id: "preview-1", categoryId: "1", productCount: 1, variantCount: 1, products: [], locations: [], changes: { price: "45000" }, preservedFields: ["stock", "promotionalPrice"], incompatibilities: [], generatedAt: "2026-10-16T12:00:00.000Z", expiresAt: "2026-10-16T12:30:00.000Z" }; }

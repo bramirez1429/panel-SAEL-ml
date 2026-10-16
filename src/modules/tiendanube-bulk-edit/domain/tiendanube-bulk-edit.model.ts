@@ -1,17 +1,19 @@
 export type TiendanubeBulkEditField = "price" | "promotionalPrice" | "stock";
 
 export type TiendanubeBulkEditRequest = Readonly<{
-  categoryId: number;
-  price?: number;
-  promotionalPrice?: number;
-  stock?: number;
-  locationId?: string;
+  categoryId: string;
+  changes: Readonly<{
+    price?: string;
+    promotionalPrice?: string;
+    stock?: number;
+  }>;
 }>;
 
 export type TiendanubeBulkEditCategorySummary = Readonly<{
+  categoryId: string;
   productCount: number;
   variantCount: number;
-  locations: readonly Readonly<{ id: string; name: string }>[];
+  locations: readonly Readonly<{ id: string }>[];
   products: readonly Readonly<{
     id: string;
     name: string;
@@ -20,8 +22,8 @@ export type TiendanubeBulkEditCategorySummary = Readonly<{
       sku: string | null;
       size: string | null;
       color: string | null;
-      price: number | null;
-      promotionalPrice: number | null;
+      price: string;
+      promotionalPrice: string | null;
       stock: number | null;
     }>[];
   }>[];
@@ -29,12 +31,16 @@ export type TiendanubeBulkEditCategorySummary = Readonly<{
 
 export type TiendanubeBulkEditPreview = Readonly<{
   id: string;
-  categoryId: number;
+  categoryId: string;
   productCount: number;
   variantCount: number;
-  changes: Readonly<Partial<Record<TiendanubeBulkEditField, number>>>;
+  products: TiendanubeBulkEditCategorySummary["products"];
+  locations: TiendanubeBulkEditCategorySummary["locations"];
+  changes: Readonly<Partial<Record<TiendanubeBulkEditField, string | number>>>;
   preservedFields: readonly TiendanubeBulkEditField[];
-  incompatibilities: readonly string[];
+  incompatibilities: readonly Readonly<{ variantId: string; reason: string }>[];
+  generatedAt: string;
+  expiresAt: string;
 }>;
 
 export type TiendanubeBulkEditStatus = "QUEUED" | "RUNNING" | "COMPLETED" | "COMPLETED_WITH_ERRORS" | "PAUSED" | "FAILED";
@@ -44,27 +50,7 @@ export type TiendanubeBulkEditJob = Readonly<{
   status: TiendanubeBulkEditStatus;
   totalProducts: number;
   totalVariants: number;
-  updatedVariants: number;
+  completedVariants: number;
   failedVariants: number;
   pendingVariants: number;
-}>;
-
-export type TiendanubeBulkEditFailure = Readonly<{
-  id: string;
-  productName: string;
-  tiendanubeProductId: string;
-  variantId: string;
-  sku: string | null;
-  size: string | null;
-  color: string | null;
-  field: TiendanubeBulkEditField;
-  message: string;
-  technicalDetail: string | null;
-  status: "PENDING_RETRY" | "FAILED";
-  adminUrl: string | null;
-}>;
-
-export type TiendanubeBulkEditFailuresPage = Readonly<{
-  items: readonly TiendanubeBulkEditFailure[];
-  total: number;
 }>;
