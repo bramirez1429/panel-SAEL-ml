@@ -81,7 +81,7 @@ function summary() {
 
 function preview() {
   return {
-    ...summary(), id: "2e5ed8e3-00cb-4a26-bcec-7d7f44d21e0a", changes: { price: "36499", promotionalPrice: "31024", stock: 3 },
+    ...summary(), snapshotId: "2e5ed8e3-00cb-4a26-bcec-7d7f44d21e0a", changes: { price: "36499", promotionalPrice: "31024", stock: 3 },
     preservedFields: [], incompatibilities: [], generatedAt: "2026-10-16T12:00:00.000Z", expiresAt: "2026-10-16T12:30:00.000Z",
   };
 }

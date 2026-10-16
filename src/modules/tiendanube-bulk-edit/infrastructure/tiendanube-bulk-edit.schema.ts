@@ -19,12 +19,12 @@ export const categorySummarySchema = z.object({
 });
 
 export const previewSchema = z.object({
-  id: z.string().min(1), categoryId: z.string().min(1), productCount: count, variantCount: count,
+  snapshotId: z.string().min(1), categoryId: z.string().min(1), productCount: count, variantCount: count,
   products: z.array(productSchema), locations: z.array(locationSchema),
-  changes: z.object({ price: decimal.optional(), promotionalPrice: decimal.optional(), stock: count.optional() }),
+  changes: z.object({ price: decimal.optional(), promotionalPrice: decimal.optional(), stock: count.optional(), locationId: z.string().min(1).optional() }),
   preservedFields: z.array(field),
   incompatibilities: z.array(z.object({ variantId: z.string().min(1), reason: z.string().min(1) })),
-  generatedAt: z.string().datetime(), expiresAt: z.string().datetime(),
+  generatedAt: z.string().datetime().optional(), expiresAt: z.string().datetime().optional(),
 });
 
 const bulkEditFailureSchema = z.object({

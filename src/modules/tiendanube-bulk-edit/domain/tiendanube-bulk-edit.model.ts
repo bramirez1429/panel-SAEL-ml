@@ -31,17 +31,17 @@ export type TiendanubeBulkEditCategorySummary = Readonly<{
 }>;
 
 export type TiendanubeBulkEditPreview = Readonly<{
-  id: string;
+  snapshotId: string;
   categoryId: string;
   productCount: number;
   variantCount: number;
   products: TiendanubeBulkEditCategorySummary["products"];
   locations: TiendanubeBulkEditCategorySummary["locations"];
-  changes: Readonly<Partial<Record<TiendanubeBulkEditField, string | number>>>;
+  changes: Readonly<Partial<Record<TiendanubeBulkEditField, string | number>> & { locationId?: string }>;
   preservedFields: readonly TiendanubeBulkEditField[];
   incompatibilities: readonly Readonly<{ variantId: string; reason: string }>[];
-  generatedAt: string;
-  expiresAt: string;
+  generatedAt?: string;
+  expiresAt?: string;
 }>;
 
 export type TiendanubeBulkEditStatus = "QUEUED" | "RUNNING" | "COMPLETED" | "COMPLETED_WITH_ERRORS" | "PAUSED" | "FAILED";

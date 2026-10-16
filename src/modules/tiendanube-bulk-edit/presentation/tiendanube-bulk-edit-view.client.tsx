@@ -41,6 +41,8 @@ export function TiendanubeBulkEditView(props: Props) {
   const [pollingError, setPollingError] = useState<string | null>(null);
   const [failures, setFailures] = useState<readonly TiendanubeBulkEditFailure[]>([]);
   const [failuresError, setFailuresError] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const previewRequestInFlight = useRef(false);
 
   const categoryOptions = useMemo(() => props.categories.map((category) => ({ value: category.id, label: categoryPath(category, props.categories) })), [props.categories]);
@@ -128,23 +130,31 @@ export function TiendanubeBulkEditView(props: Props) {
   async function createPreview(): Promise<void> {
     if (submitting || previewRequestInFlight.current) return;
     if (selectedCategoryId === undefined) {
-      setError("Seleccioná una categoría");
+      const message = "Seleccioná una categoría";
+      setError(message);
+      setPreviewError(message);
       return;
     }
     previewRequestInFlight.current = true;
+    setPreviewLoading(true);
+    setPreviewError(null);
     try {
       const values = await form.validateFields();
       const request = createRequest(selectedCategoryId, values, summary?.locations ?? []);
       setSubmitting(true); setError(null);
       const result = await props.previewAction(request);
-      if (isError(result)) { setError(result.message); return; }
+      if (isError(result)) { setError(result.message); setPreviewError(result.message); return; }
+      setError(null);
       setPreview(result);
     } catch (caught: unknown) {
-      if (!isFormValidationError(caught)) {
-        setError(errorMessage(caught, "No se pudo generar la previsualización."));
-      }
+      const message = isFormValidationError(caught)
+        ? formValidationMessage(caught)
+        : errorMessage(caught, "No se pudo generar la previsualización.");
+      setError(message);
+      setPreviewError(message);
     } finally {
       previewRequestInFlight.current = false;
+      setPreviewLoading(false);
       setSubmitting(false);
     }
   }
@@ -153,7 +163,7 @@ export function TiendanubeBulkEditView(props: Props) {
     if (!preview || preview.incompatibilities.length > 0 || submitting) return;
     setSubmitting(true); setError(null);
     try {
-      const result = await props.createJobAction(preview.id);
+      const result = await props.createJobAction(preview.snapshotId);
       if (isError(result)) { setError(result.message); return; }
       applyJob(result); setPollingError(null); setPreview(null);
     } catch (caught: unknown) {
@@ -200,6 +210,8 @@ export function TiendanubeBulkEditView(props: Props) {
         {hasValue(stockValue) && summary && summary.locations.length > 1 ? <Form.Item label="Depósito para stock" name="locationId" rules={[{ required: true, message: "Seleccioná el depósito que se actualizará." }]}><Select className={styles.categorySelect} options={summary.locations.map((location) => ({ label: location.id, value: location.id }))} placeholder="Seleccionar depósito" size="large" /></Form.Item> : null}
         <Alert message="Los cambios se aplicarán a todas las variantes de los productos de la categoría seleccionada." showIcon type="info" />
         <Button className={styles.primaryButton} disabled={loadingSummary || summaryError !== null || noProducts} loading={submitting} onClick={() => void createPreview()} size="large" type="primary">Previsualizar cambios</Button>
+        {previewLoading ? <Typography.Text aria-live="polite" type="secondary">Generando previsualización...</Typography.Text> : null}
+        {!previewLoading && previewError ? <Alert aria-live="polite" message={previewError} showIcon type="error" /> : null}
       </Form>
     </Card>
 
@@ -210,18 +222,27 @@ export function TiendanubeBulkEditView(props: Props) {
   </main>;
 }
 
-function VariantPreview({ variants }: Readonly<{ variants: TiendanubeBulkEditCategorySummary["products"][number]["variants"] }>) { return <Table dataSource={variants} pagination={false} rowKey="id" scroll={{ x: 700 }} size="small" columns={[{ title: "Talle / Color", key: "attributes", render: (_, item) => [item.size, item.color].filter(Boolean).join(" / ") || "—" }, { title: "SKU", dataIndex: "sku", render: (value) => value ?? "Sin SKU" }, { title: "Precio", dataIndex: "price", render: formatValue }, { title: "Promoción", dataIndex: "promotionalPrice", render: formatValue }, { title: "Stock", dataIndex: "stock", render: (value) => value ?? "—" }]} />; }
-function PreviewContent({ categoryName, error, preview }: Readonly<{ categoryName: string; error: string | null; preview: TiendanubeBulkEditPreview }>) { return <>{error ? <Alert className={styles.previewAlert} message={error} showIcon type="error" /> : null}<Descriptions bordered column={1}><Descriptions.Item label="Categoría">{categoryName}</Descriptions.Item><Descriptions.Item label="Productos">{preview.productCount}</Descriptions.Item><Descriptions.Item label="Variantes">{preview.variantCount}</Descriptions.Item>{preview.changes.price !== undefined ? <Descriptions.Item label={fieldLabels.price}>{formatValue(preview.changes.price)}</Descriptions.Item> : null}{preview.changes.promotionalPrice !== undefined ? <Descriptions.Item label={fieldLabels.promotionalPrice}>{formatValue(preview.changes.promotionalPrice)}</Descriptions.Item> : null}{preview.changes.stock !== undefined ? <Descriptions.Item label={fieldLabels.stock}>{preview.changes.stock}</Descriptions.Item> : null}<Descriptions.Item label="Campos que se conservarán">{preview.preservedFields.map((field) => fieldLabels[field]).join(", ") || "Ninguno"}</Descriptions.Item></Descriptions><Alert className={styles.previewAlert} message="Confirmá para iniciar la actualización real en Tiendanube." showIcon type="info" />{preview.incompatibilities.length > 0 ? <Alert className={styles.previewAlert} description={<ul>{preview.incompatibilities.map((item) => <li key={item.variantId}>{`Variante ${item.variantId}: ${item.reason}`}</li>)}</ul>} message="Incompatibilidades detectadas" showIcon type="warning" /> : null}</>; }
+function VariantPreview({ variants, changes }: Readonly<{ variants: TiendanubeBulkEditCategorySummary["products"][number]["variants"]; changes?: TiendanubeBulkEditPreview["changes"] }>) { return <Table dataSource={variants} pagination={false} rowKey="id" scroll={{ x: 980 }} size="small" columns={[{ title: "Talle / Color", key: "attributes", render: (_, item) => [item.size, item.color].filter(Boolean).join(" / ") || "—" }, { title: "SKU", dataIndex: "sku", render: (value) => value ?? "Sin SKU" }, { title: "Precio actual", dataIndex: "price", render: formatValue }, { title: "Precio nuevo", key: "newPrice", render: () => formatChange(changes?.price) }, { title: "Promoción actual", dataIndex: "promotionalPrice", render: formatValue }, { title: "Promoción nueva", key: "newPromotionalPrice", render: () => formatChange(changes?.promotionalPrice) }, { title: "Stock actual", dataIndex: "stock", render: (value) => value ?? "—" }, { title: "Stock nuevo", key: "newStock", render: () => formatChange(changes?.stock) }]} />; }
+function PreviewContent({ categoryName, error, preview }: Readonly<{ categoryName: string; error: string | null; preview: TiendanubeBulkEditPreview }>) { return <>{error ? <Alert className={styles.previewAlert} message={error} showIcon type="error" /> : null}<Descriptions bordered column={1}><Descriptions.Item label="Categoría">{categoryName}</Descriptions.Item><Descriptions.Item label="Productos">{preview.productCount}</Descriptions.Item><Descriptions.Item label="Variantes">{preview.variantCount}</Descriptions.Item>{preview.changes.price !== undefined ? <Descriptions.Item label={fieldLabels.price}>{formatValue(preview.changes.price)}</Descriptions.Item> : null}{preview.changes.promotionalPrice !== undefined ? <Descriptions.Item label={fieldLabels.promotionalPrice}>{formatValue(preview.changes.promotionalPrice)}</Descriptions.Item> : null}{preview.changes.stock !== undefined ? <Descriptions.Item label={fieldLabels.stock}>{preview.changes.stock}</Descriptions.Item> : null}<Descriptions.Item label="Campos que se conservarán">{preview.preservedFields.map((field) => fieldLabels[field]).join(", ") || "Ninguno"}</Descriptions.Item></Descriptions><Typography.Title level={5}>Productos y variantes afectados</Typography.Title><Table dataSource={preview.products} expandable={{ expandedRowRender: (product) => <VariantPreview changes={preview.changes} variants={product.variants} />, rowExpandable: (product) => product.variants.length > 0 }} pagination={false} rowKey="id" scroll={{ x: 680 }} size="small" columns={[{ title: "Producto", dataIndex: "name" }, { title: "Variantes", key: "variants", render: (_, product) => product.variants.length }]} /><Alert className={styles.previewAlert} message="Confirmá para iniciar la actualización real en Tiendanube." showIcon type="info" />{preview.incompatibilities.length > 0 ? <Alert className={styles.previewAlert} description={<ul>{preview.incompatibilities.map((item) => <li key={item.variantId}>{`Variante ${item.variantId}: ${item.reason}`}</li>)}</ul>} message="Incompatibilidades detectadas" showIcon type="warning" /> : null}</>; }
 function JobProgress({ failures, failuresError, job, pollingError, retrying, onRetryFailures }: Readonly<{ failures: readonly TiendanubeBulkEditFailure[]; failuresError: string | null; job: TiendanubeBulkEditJob; pollingError: string | null; retrying: boolean; onRetryFailures: () => void }>) { const percent = job.totalVariants === 0 ? 0 : Math.round(((job.completedVariants + job.failedVariants) / job.totalVariants) * 100); const finished = !isRunning(job.status); const hasErrors = job.failedVariants > 0 || job.status === "FAILED" || job.status === "COMPLETED_WITH_ERRORS"; return <Card className={styles.card} title="Progreso de actualización">{pollingError ? <Alert description="El seguimiento se reintentará automáticamente. El proceso continúa en el backend." message={pollingError} showIcon type="warning" /> : null}<Alert message={finished ? "El backend confirmó que el proceso finalizó." : `Estado actual: ${job.status}.`} showIcon type={hasErrors ? "warning" : "info"} /><Progress percent={percent} status={hasErrors ? "exception" : finished ? "success" : "active"} /><section className={styles.statistics}><Statistic title="Total de productos" value={job.totalProducts} /><Statistic title="Total de variantes" value={job.totalVariants} /><Statistic title="Variantes actualizadas" value={job.completedVariants} /><Statistic title="Variantes fallidas" value={job.failedVariants} /><Statistic title="Variantes pendientes" value={job.pendingVariants} /></section>{failuresError ? <Alert className={styles.previewAlert} message={failuresError} showIcon type="error" /> : null}{failures.length > 0 ? <FailuresTable failures={failures} /> : null}{finished && job.failedVariants > 0 ? <Button className={styles.retryButton} loading={retrying} onClick={onRetryFailures} type="primary">Reintentar solo los fallidos</Button> : null}</Card>; }
 function FailuresTable({ failures }: Readonly<{ failures: readonly TiendanubeBulkEditFailure[] }>) { return <Table className={styles.failuresTable} dataSource={failures} pagination={false} rowKey={(item) => item.variantId} scroll={{ x: 900 }} size="small" columns={[{ title: "Nombre", dataIndex: "productName" }, { title: "ID", dataIndex: "productId" }, { title: "SKU", dataIndex: "sku", render: (value) => value ?? "Sin SKU" }, { title: "Variante", dataIndex: "variant", render: (value) => value ?? "—" }, { title: "Error", dataIndex: "error" }]} />; }
 function isRunning(status: TiendanubeBulkEditJob["status"]): boolean { return status === "QUEUED" || status === "RUNNING" || status === "PAUSED"; }
 function categoryPath(category: TiendanubeCategory, categories: readonly TiendanubeCategory[]): string { const names = [category.name]; let parentId = category.parentId; while (parentId !== null) { const parent = categories.find((item) => item.id === parentId); if (!parent) break; names.unshift(parent.name); parentId = parent.parentId; } return names.join(" / "); }
 function formatValue(value: string | number | null | undefined): string { return value === null || value === undefined ? "Valores diferentes" : currency.format(Number(value)); }
+function formatChange(value: string | number | undefined): string { return value === undefined ? "Sin cambio" : formatValue(value); }
 function hasValue(value: number | null | undefined): value is number { return typeof value === "number"; }
 function isFormValidationError(error: unknown): error is Readonly<{ errorFields: readonly unknown[] }> {
   return typeof error === "object" && error !== null && "errorFields" in error && Array.isArray(error.errorFields);
 }
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message.trim() ? error.message : fallback;
+}
+function formValidationMessage(error: Readonly<{ errorFields: readonly unknown[] }>): string {
+  const firstField = error.errorFields[0];
+  if (typeof firstField === "object" && firstField !== null && "errors" in firstField && Array.isArray(firstField.errors)) {
+    const messages = firstField.errors.filter((item): item is string => typeof item === "string");
+    if (messages.length > 0) return messages.join("; ");
+  }
+  return "Revisá los valores ingresados antes de previsualizar.";
 }
 function createRequest(categoryId: number, values: FormValues, locations: TiendanubeBulkEditCategorySummary["locations"]): TiendanubeBulkEditRequest { if (!hasValue(values.price) && !hasValue(values.promotionalPrice) && !hasValue(values.stock)) throw new Error("Completá al menos un campo."); const locationId = hasValue(values.stock) ? values.locationId ?? (locations.length === 1 ? locations[0]?.id : undefined) : undefined; if (hasValue(values.stock) && locations.length > 1 && !locationId) throw new Error("Seleccioná el depósito que se actualizará."); return { categoryId: String(categoryId), changes: { ...(hasValue(values.price) ? { price: String(values.price) } : {}), ...(hasValue(values.promotionalPrice) ? { promotionalPrice: String(values.promotionalPrice) } : {}), ...(hasValue(values.stock) ? { stock: values.stock } : {}), ...(locationId ? { locationId } : {}) } }; }

@@ -132,6 +132,6 @@ function summary(): TiendanubeBulkEditCategorySummary {
   return { categoryId: "1", productCount: 1, variantCount: 1, locations: [], products: [{ id: "p1", name: "Remera", variants: [] }] };
 }
 function emptySummary(): TiendanubeBulkEditCategorySummary { return { ...summary(), productCount: 0, variantCount: 0, products: [] }; }
-function preview(overrides: Partial<TiendanubeBulkEditPreview> = {}): TiendanubeBulkEditPreview { return { id: "preview-1", categoryId: "1", productCount: 1, variantCount: 1, products: [], locations: [], changes: { price: "45000" }, preservedFields: ["stock", "promotionalPrice"], incompatibilities: [], generatedAt: "2026-10-16T12:00:00.000Z", expiresAt: "2026-10-16T12:30:00.000Z", ...overrides }; }
+function preview(overrides: Partial<TiendanubeBulkEditPreview> = {}): TiendanubeBulkEditPreview { return { snapshotId: "preview-1", categoryId: "1", productCount: 1, variantCount: 1, products: [], locations: [], changes: { price: "45000" }, preservedFields: ["stock", "promotionalPrice"], incompatibilities: [], generatedAt: "2026-10-16T12:00:00.000Z", expiresAt: "2026-10-16T12:30:00.000Z", ...overrides }; }
 function queuedJob() { return { id: "job-1", status: "QUEUED" as const, totalProducts: 1, totalVariants: 1, completedVariants: 0, failedVariants: 0, pendingVariants: 1 }; }
 function completedJob() { return { id: "job-1", status: "COMPLETED" as const, totalProducts: 1, totalVariants: 1, completedVariants: 1, failedVariants: 0, pendingVariants: 0 }; }

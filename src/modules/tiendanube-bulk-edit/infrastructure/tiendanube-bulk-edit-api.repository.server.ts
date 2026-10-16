@@ -46,6 +46,9 @@ export class TiendanubeBulkEditApiRepository implements TiendanubeBulkEditReposi
   private parse<T>(schema: z.ZodType<T>, value: unknown, resource: string): T {
     const parsed = schema.safeParse(value);
     if (parsed.success) return parsed.data;
-    throw new ApiError(`El backend devolvió ${resource} inválidos.`, "API_INVALID_RESPONSE", { cause: parsed.error });
+    const details = parsed.error.issues
+      .map((issue) => `${issue.path.length > 0 ? issue.path.join(".") : "respuesta"}: ${issue.message}`)
+      .join("; ");
+    throw new ApiError(`El backend devolvió ${resource} inválidos. ${details}`, "API_INVALID_RESPONSE", { cause: parsed.error });
   }
 }
