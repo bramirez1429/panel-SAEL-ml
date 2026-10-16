@@ -9,9 +9,22 @@ import { TiendanubeBulkEditView } from "./tiendanube-bulk-edit-view.client";
 describe("TiendanubeBulkEditView", () => {
   afterEach(cleanup);
 
-  it("no permite previsualizar sin categoría ni valores cargados", () => {
+  it("mantiene visible y clickeable la previsualización sin categoría", async () => {
+    const user = userEvent.setup();
     render(<TiendanubeBulkEditView {...actions()} categories={[]} categoryError={null} />);
-    expect(screen.getByRole("button", { name: "Previsualizar cambios" })).toBeDisabled();
+    const button = screen.getByRole("button", { name: "Previsualizar cambios" });
+    expect(button).toBeEnabled();
+    await user.click(button);
+    expect(screen.getByText("Seleccioná una categoría")).toBeInTheDocument();
+  });
+
+  it("muestra un error cuando todos los campos están vacíos", async () => {
+    const user = userEvent.setup();
+    render(<TiendanubeBulkEditView {...actions()} categories={[{ id: 1, name: "Remeras", parentId: null }]} categoryError={null} />);
+    await user.click(screen.getByRole("combobox"));
+    await user.click(await screen.findByText("Remeras"));
+    await user.click(screen.getByRole("button", { name: "Previsualizar cambios" }));
+    expect(await screen.findByText("Completá al menos un campo.")).toBeInTheDocument();
   });
 
   it("muestra el estado vacío cuando la categoría no tiene productos", async () => {
