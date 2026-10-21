@@ -1,12 +1,13 @@
 "use client";
 
-import { Alert, Button, Form, InputNumber, Select, Spin, Typography } from "antd";
+import { Alert, Button, Form, InputNumber, Select, Spin, Table, Typography } from "antd";
 import { useMemo, useRef, useState } from "react";
 
 import { BULK_STOCK_PRODUCT_TYPE_OPTIONS } from "../bulk-stock.config";
 import { ALL_BULK_STOCK_FILTERS as ALL, distinctBulkStockFilterOptions, filterBulkStockCatalog } from "../application/bulk-stock-catalog-filters";
 import type {
   BulkStockPreview,
+  BulkStockVariant,
   BulkStockProductType,
   BulkStockSelectionPreviewRequest,
   LoadBulkStockCatalogAction,
@@ -126,6 +127,22 @@ export function BulkStockCatalogForm({ loading, error, catalogAction, onSubmit }
           <Typography.Paragraph>
             <strong>{selected.length}</strong> variantes coinciden con los filtros.
           </Typography.Paragraph>
+          <Table<BulkStockVariant>
+            aria-label="Variantes encontradas para stock masivo"
+            size="small"
+            rowKey="key"
+            dataSource={[...selected]}
+            pagination={{ pageSize: 10, showSizeChanger: false }}
+            scroll={{ x: 720 }}
+            style={{ marginBottom: 16 }}
+            columns={[
+              { title: "Publicación", dataIndex: "title", key: "title", ellipsis: true },
+              { title: "ID ML", dataIndex: "itemId", key: "itemId", width: 145 },
+              { title: "Color", dataIndex: "color", key: "color", width: 100, render: (value: string | null) => value ?? "—" },
+              { title: "Talle", dataIndex: "size", key: "size", width: 90 },
+              { title: "Stock actual", dataIndex: "currentStock", key: "currentStock", width: 115 },
+            ]}
+          />
           {selected.length > 1_000 ? (
             <Alert type="warning" message="Seleccioná menos variantes: el máximo por operación es 1000." showIcon style={{ marginBottom: 16 }} />
           ) : null}
