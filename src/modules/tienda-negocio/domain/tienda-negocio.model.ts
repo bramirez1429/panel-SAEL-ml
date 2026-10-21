@@ -18,3 +18,16 @@ export type TiendaNegocioStatus = Readonly<{
   stage: string;
   documentation: string;
 }>;
+
+export type TiendaNegocioProductPreview = Readonly<{
+  sourceKey: string;
+  name: string;
+  variantCount: number;
+  imageCount: number;
+  totalStock: number;
+  prices: readonly number[];
+  attributes: readonly string[];
+  publicationStatus: "DRAFT";
+  readyToMigrate: boolean;
+  note: string;
+}>;
