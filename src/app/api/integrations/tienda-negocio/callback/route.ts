@@ -11,7 +11,7 @@ export async function GET(request: NextRequest): Promise<Response> {
   const pending = request.cookies.get("tn_oauth_pending")?.value;
   const redirect = (state: "connected" | "error") => {
     const response = NextResponse.redirect(
-      new URL(`/tienda-negocio/sincronizacion?conexion=${state}`, request.url),
+      new URL(`/integraciones?tiendaNegocio=${state}`, request.url),
     );
     response.cookies.set("tn_oauth_pending", "", {
       path: CALLBACK_PATH,
