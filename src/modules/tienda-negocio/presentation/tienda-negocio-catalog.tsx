@@ -23,7 +23,7 @@ export function TiendaNegocioCatalog({ page }: Readonly<{ page: TiendaNegocioCat
             {page.products.map((product) => (
               <tr key={product.sourceKey}>
                 <td style={{ padding: 12, borderBottom: "1px solid #eee" }}>
-                  {product.title || product.sourceKey}
+                  <Link href={`/tienda-negocio/sincronizacion/producto?sourceKey=${encodeURIComponent(product.sourceKey)}`}>{product.title || product.sourceKey}</Link>
                 </td>
                 <td style={{ padding: 12, borderBottom: "1px solid #eee" }}>
                   {product.familyId ? "Familia" : "Clásico"}
