@@ -6,6 +6,7 @@ import type {
   TiendaNegocioCatalogPage,
   TiendaNegocioCatalogProduct,
   TiendaNegocioStatus,
+  TiendaNegocioProductPreview,
 } from "../domain/tienda-negocio.model";
 
 const client = () => createAuthenticatedHttpClient(new HttpClient(getApiConfig()));
@@ -41,6 +42,24 @@ export async function getTiendaNegocioCatalog(
     nextCursor: data.nextCursor,
     finished: data.finished,
   };
+}
+
+export async function previewTiendaNegocioProduct(
+  sourceKey: string,
+): Promise<TiendaNegocioProductPreview> {
+  const response = await client().get(
+    `${API}/vista-previa?sourceKey=${encodeURIComponent(sourceKey)}`,
+    { timeoutMs: 60_000 },
+  );
+  if (!isObject(response) || typeof response.name !== "string" ||
+    typeof response.variantCount !== "number" ||
+    typeof response.imageCount !== "number" ||
+    typeof response.totalStock !== "number" ||
+    !Array.isArray(response.prices) ||
+    !Array.isArray(response.attributes)) {
+    throw new Error("Vista previa de Tienda Negocio inválida");
+  }
+  return response as TiendaNegocioProductPreview;
 }
 
 function parseProduct(value: unknown): TiendaNegocioCatalogProduct {
