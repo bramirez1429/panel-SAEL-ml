@@ -1,7 +1,5 @@
 import type { BulkStockVariant } from "../domain/bulk-stock.model";
 
-export const ALL_BULK_STOCK_FILTERS = "__ALL__";
-
 export function normalizeBulkStockFilter(value: string): string {
   return value.normalize("NFD").replace(/\p{M}+/gu, "").trim().toUpperCase();
 }
@@ -18,16 +16,20 @@ export function distinctBulkStockFilterOptions(
     .sort((a, b) => a.label.localeCompare(b.label, "es", { numeric: true }));
 }
 
+/** Varias opciones dentro de cada filtro se combinan con OR; color y talle con AND.
+ * Una selección vacía equivale a "Todos", sin perder variantes. */
 export function filterBulkStockCatalog(
   variants: readonly BulkStockVariant[],
-  color: string,
-  size: string,
+  colors: readonly string[],
+  sizes: readonly string[],
 ): BulkStockVariant[] {
-  return variants.filter(
-    (variant) =>
-      (color === ALL_BULK_STOCK_FILTERS ||
-        normalizeBulkStockFilter(variant.color ?? "Sin color") === color) &&
-      (size === ALL_BULK_STOCK_FILTERS ||
-        normalizeBulkStockFilter(variant.size) === size),
+  const selectedColors = new Set(colors.map(normalizeBulkStockFilter));
+  const selectedSizes = new Set(sizes.map(normalizeBulkStockFilter));
+
+  return variants.filter((variant) =>
+    (selectedColors.size === 0 ||
+      selectedColors.has(normalizeBulkStockFilter(variant.color ?? "Sin color"))) &&
+    (selectedSizes.size === 0 ||
+      selectedSizes.has(normalizeBulkStockFilter(variant.size))),
   );
 }
