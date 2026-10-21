@@ -4,7 +4,7 @@ import { Alert, Button, Form, InputNumber, Select, Spin, Table, Typography } fro
 import { useMemo, useRef, useState } from "react";
 
 import { BULK_STOCK_PRODUCT_TYPE_OPTIONS } from "../bulk-stock.config";
-import { ALL_BULK_STOCK_FILTERS as ALL, distinctBulkStockFilterOptions, filterBulkStockCatalog } from "../application/bulk-stock-catalog-filters";
+import { distinctBulkStockFilterOptions, filterBulkStockCatalog } from "../application/bulk-stock-catalog-filters";
 import type {
   BulkStockPreview,
   BulkStockVariant,
@@ -26,8 +26,8 @@ export function BulkStockCatalogForm({ loading, error, catalogAction, onSubmit }
   const [catalog, setCatalog] = useState<BulkStockPreview | null>(null);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [catalogError, setCatalogError] = useState<string | null>(null);
-  const [color, setColor] = useState(ALL);
-  const [size, setSize] = useState(ALL);
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [quantity, setQuantity] = useState<number | null>(null);
   const requestId = useRef(0);
 
@@ -36,8 +36,8 @@ export function BulkStockCatalogForm({ loading, error, catalogAction, onSubmit }
     setProductType(next);
     setCatalog(null);
     setCatalogError(null);
-    setColor(ALL);
-    setSize(ALL);
+    setSelectedColors([]);
+    setSelectedSizes([]);
     setQuantity(null);
     setCatalogLoading(true);
     try {
@@ -63,8 +63,8 @@ export function BulkStockCatalogForm({ loading, error, catalogAction, onSubmit }
     [catalog],
   );
   const selected = useMemo(
-    () => filterBulkStockCatalog(catalog?.variants ?? [], color, size),
-    [catalog, color, size],
+    () => filterBulkStockCatalog(catalog?.variants ?? [], selectedColors, selectedSizes),
+    [catalog, selectedColors, selectedSizes],
   );
 
   const validQuantity = quantity !== null && Number.isSafeInteger(quantity) && quantity >= 0;
@@ -108,20 +108,32 @@ export function BulkStockCatalogForm({ loading, error, catalogAction, onSubmit }
             Encontradas {catalog.variants.length} variantes de {new Set(catalog.variants.flatMap((variant) => variant.relatedItemIds?.length ? variant.relatedItemIds : [variant.itemId])).size} publicaciones activas.
             Se incluyen publicaciones antiguas y nuevas, con cualquier precio y también sin stock.
           </Typography.Paragraph>
-          <Form.Item label="Color">
+          <Form.Item label="Colores" extra="Podés elegir varios. Si no elegís ninguno, se incluyen todos los colores.">
             <Select
-              aria-label="Color"
-              value={color}
-              options={[{ label: "Todos los colores", value: ALL }, ...colors]}
-              onChange={setColor}
+              aria-label="Colores"
+              mode="multiple"
+              allowClear
+              maxTagCount="responsive"
+              showSearch
+              optionFilterProp="label"
+              placeholder="Todos los colores"
+              value={selectedColors}
+              options={colors}
+              onChange={setSelectedColors}
             />
           </Form.Item>
-          <Form.Item label="Talle">
+          <Form.Item label="Talles" extra="Podés combinar varios talles. Sin seleccionar ninguno, se incluyen todos.">
             <Select
-              aria-label="Talle"
-              value={size}
-              options={[{ label: "Todos los talles", value: ALL }, ...sizes]}
-              onChange={setSize}
+              aria-label="Talles"
+              mode="multiple"
+              allowClear
+              maxTagCount="responsive"
+              showSearch
+              optionFilterProp="label"
+              placeholder="Todos los talles"
+              value={selectedSizes}
+              options={sizes}
+              onChange={setSelectedSizes}
             />
           </Form.Item>
           <Typography.Paragraph>
