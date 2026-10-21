@@ -112,6 +112,9 @@ function mapPreviewVariant(value: unknown, index: number): BulkStockVariant {
   return {
     key: identifier,
     itemId,
+    relatedItemIds: (readArray(item, ["relatedItemIds"]) ?? []).filter(
+      (id): id is string => typeof id === "string" && id.trim().length > 0,
+    ),
     familyId,
     variationId,
     userProductId,
