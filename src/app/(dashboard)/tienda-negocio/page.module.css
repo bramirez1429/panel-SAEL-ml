@@ -1,0 +1,13 @@
+.page { max-width: 980px; padding: 20px 24px 64px; margin: 0 auto; }
+.page h1 { font-size: 1.6rem; margin: 0 0 12px; }
+.page h2 { font-size: 1.3rem; }
+.page h3 { font-size: 1rem; margin: 22px 0 8px; }
+.form { display: grid; gap: 10px; margin: 24px 0; }
+.fields { display: flex; flex-wrap: wrap; gap: 10px; }
+.fields input { min-width: min(100%, 370px); flex: 1; padding: 12px; border: 1px solid #b9b9b9; border-radius: 8px; background: transparent; color: inherit; }
+.fields button { cursor: pointer; border: 0; border-radius: 8px; padding: 12px 18px; background: #e30613; color: #fff; font-weight: 600; }
+.panel { border: 1px solid #ddd; border-radius: 12px; padding: 20px; overflow: auto; }
+.table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+.table th, .table td { text-align: left; padding: 10px; border-bottom: 1px solid #ddd; }
+.panel pre { white-space: pre-wrap; word-break: break-word; font-size: 12px; }
+.error { color: #c32323; }

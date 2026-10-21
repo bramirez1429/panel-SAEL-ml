@@ -26,6 +26,7 @@ export type DashboardSection = Readonly<{
 export const dashboardSections = [
   { href: "/dashboard", title: "Dashboard", icon: createElement(DashboardOutlined) },
   { href: "/tiendanube/productos", title: "Tiendanube", icon: createElement(ShopOutlined) },
+  { href: "/tienda-negocio", title: "Tienda Negocio · Vista previa", icon: createElement(SwapOutlined) },
   { href: "/tiendanube/edicion-masiva", title: "Tiendanube — Edición masiva", icon: createElement(TagsOutlined) },
   { href: "/sincronizacion", title: "Sincronización", icon: createElement(SyncOutlined) },
   { href: "/publicaciones", title: "Publicaciones", icon: createElement(FileTextOutlined) },
