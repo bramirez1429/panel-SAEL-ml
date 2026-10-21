@@ -19,6 +19,8 @@ import {
   createBulkStockJobAction,
   getBulkStockJobAction,
   previewBulkStockAction,
+  loadBulkStockCatalogAction,
+  previewBulkStockSelectionAction,
 } from "./bulk-stock.action";
 
 export const dynamic = "force-dynamic";
@@ -98,6 +100,6 @@ export default async function PublicationsPage({
   const result = await loadPublications(filters);
 
   return (
-    <PublicationsView filters={filters} replicateAction={replicatePublicationAction} updateAction={updatePublicationAction} deleteVariationAction={deletePublicationVariationAction} loadVariantsAction={loadPublicationVariantsAction} previewBulkStockAction={previewBulkStockAction} createBulkStockJobAction={createBulkStockJobAction} getBulkStockJobAction={getBulkStockJobAction} tiendanubeStatusBySourceKey={result.state === "error" ? {} : result.tiendanubeStatusBySourceKey} categories={result.state === "error" ? [] : result.categories} {...result} />
+    <PublicationsView filters={filters} replicateAction={replicatePublicationAction} updateAction={updatePublicationAction} deleteVariationAction={deletePublicationVariationAction} loadVariantsAction={loadPublicationVariantsAction} previewBulkStockAction={previewBulkStockAction} loadBulkStockCatalogAction={loadBulkStockCatalogAction} previewBulkStockSelectionAction={previewBulkStockSelectionAction} createBulkStockJobAction={createBulkStockJobAction} getBulkStockJobAction={getBulkStockJobAction} tiendanubeStatusBySourceKey={result.state === "error" ? {} : result.tiendanubeStatusBySourceKey} categories={result.state === "error" ? [] : result.categories} {...result} />
   );
 }
