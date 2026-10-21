@@ -5,6 +5,8 @@ import type { HttpGetClient, HttpPostClient } from "@/shared/api/http-client.ser
 
 import type {
   BulkStockJob,
+  BulkStockCatalogRequest,
+  BulkStockSelectionPreviewRequest,
   BulkStockJobItem,
   BulkStockJobItemState,
   BulkStockJobState,
@@ -24,6 +26,24 @@ type BulkStockHttpClient = HttpGetClient & HttpPostClient;
 /** Única capa que conoce el contrato HTTP del proceso de stock masivo. */
 export class BulkStockApiRepository {
   constructor(private readonly httpClient: BulkStockHttpClient) {}
+
+  async catalog(request: BulkStockCatalogRequest): Promise<BulkStockPreview> {
+    const response = await this.httpClient.post(
+      `${BULK_STOCK_ENDPOINT}/catalog`,
+      request,
+      { timeoutMs: BULK_STOCK_TIMEOUT_MS },
+    );
+    return mapPreview(response);
+  }
+
+  async selectionPreview(request: BulkStockSelectionPreviewRequest): Promise<BulkStockPreview> {
+    const response = await this.httpClient.post(
+      `${BULK_STOCK_ENDPOINT}/selection-preview`,
+      request,
+      { timeoutMs: BULK_STOCK_TIMEOUT_MS },
+    );
+    return mapPreview(response);
+  }
 
   async preview(request: BulkStockPreviewRequest): Promise<BulkStockPreview> {
     const response = await this.httpClient.post(
