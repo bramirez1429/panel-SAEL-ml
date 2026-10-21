@@ -19,11 +19,11 @@ export async function GET(request: Request): Promise<Response> {
       secure: new URL(request.url).protocol === "https:",
       sameSite: "lax",
       path: "/api/integrations/tienda-negocio/callback",
-      maxAge: 120,
+      maxAge: 60,
     });
     return response;
   } catch {
-    return NextResponse.redirect(new URL("/tienda-negocio/sincronizacion?conexion=error", request.url));
+    return NextResponse.redirect(new URL("/integraciones?tiendaNegocio=error", request.url));
   }
 }
 
