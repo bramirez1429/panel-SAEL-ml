@@ -1,6 +1,7 @@
 "use client";
 
-import { Alert, Button, Form, InputNumber, Select, Spin, Table, Typography } from "antd";
+import { Alert, Button, Form, InputNumber, Select, Spin, Table, Tag, Typography } from "antd";
+import type { SelectProps } from "antd";
 import { useMemo, useRef, useState } from "react";
 
 import { BULK_STOCK_PRODUCT_TYPE_OPTIONS } from "../bulk-stock.config";
@@ -112,10 +113,10 @@ export function BulkStockCatalogForm({ loading, error, catalogAction, onSubmit }
             <Select
               aria-label="Colores"
               mode="multiple"
+              tagRender={renderColorTag}
               allowClear
               maxTagCount="responsive"
-              showSearch
-              optionFilterProp="label"
+              showSearch={{ optionFilterProp: "label" }}
               placeholder="Todos los colores"
               value={selectedColors}
               options={colors}
@@ -182,3 +183,30 @@ export function BulkStockCatalogForm({ loading, error, catalogAction, onSubmit }
   );
 }
 
+
+/**
+ * Personaliza únicamente las etiquetas de colores.
+ * `mode="multiple"` controla la selección; `tagRender` dibuja cada Tag.
+ */
+const renderColorTag: NonNullable<SelectProps["tagRender"]> = ({
+  label,
+  closable,
+  onClose,
+}) => (
+  <Tag
+    closable={closable}
+    onClose={onClose}
+    onMouseDown={(event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    }}
+    style={{
+      borderRadius: 14,
+      paddingInline: 10,
+      marginInlineEnd: 4,
+      fontWeight: 500,
+    }}
+  >
+    {label}
+  </Tag>
+);
