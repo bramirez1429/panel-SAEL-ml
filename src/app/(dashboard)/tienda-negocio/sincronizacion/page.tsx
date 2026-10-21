@@ -8,11 +8,11 @@ import {
 export const dynamic = "force-dynamic";
 
 type Props = Readonly<{
-  searchParams: Promise<{ cursor?: string | string[] }>;
+  searchParams: Promise<{ cursor?: string | string[]; conexion?: string }>;
 }>;
 
 export default async function TiendaNegocioPage({ searchParams }: Props) {
-  const { cursor: rawCursor } = await searchParams;
+  const { cursor: rawCursor, conexion } = await searchParams;
   const cursor = typeof rawCursor === "string" && rawCursor.length <= 2048
     ? rawCursor
     : undefined;
@@ -28,7 +28,15 @@ export default async function TiendaNegocioPage({ searchParams }: Props) {
       <p style={{ color: "#777" }}>
         Migración independiente de Tiendanube · Mercado Libre → Tienda Negocio
       </p>
-      <TiendaNegocioSetup />
+      {conexion === "error" ? (
+        <p role="alert">No se completó la autorización. Revisá la configuración OAuth de la aplicación.</p>
+      ) : null}
+      {conexion === "connected" ? (
+        <p role="status">Conexión autorizada correctamente.</p>
+      ) : null}
+      <TiendaNegocioSetup
+        connected={status.status === "fulfilled" && status.value.connected}
+      />
       <p aria-live="polite">
         {status.status === "fulfilled"
           ? status.value.connected
