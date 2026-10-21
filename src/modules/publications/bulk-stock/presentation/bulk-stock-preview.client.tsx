@@ -193,7 +193,9 @@ function IdentifierList({
 }>) {
   return (
     <Space wrap size={[12, 2]} style={{ marginTop: 4 }}>
-      <CopyableIdentifier label="ID ML" value={variant.itemId} onCopy={onCopy} />
+      {(variant.relatedItemIds?.length ? variant.relatedItemIds : [variant.itemId]).map((itemId) => (
+        <CopyableIdentifier key={itemId} label="ID ML" value={itemId} onCopy={onCopy} />
+      ))}
       {variant.variationId ? <CopyableIdentifier label="ID variante" value={variant.variationId} onCopy={onCopy} /> : null}
       {variant.userProductId ? <CopyableIdentifier label="ID producto" value={variant.userProductId} onCopy={onCopy} /> : null}
       {variant.familyId ? <Typography.Text type="secondary">Familia: {variant.familyId}</Typography.Text> : null}

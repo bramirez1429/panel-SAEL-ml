@@ -13,6 +13,8 @@ import type {
   CreateBulkStockJobAction,
   GetBulkStockJobAction,
   PreviewBulkStockAction,
+  LoadBulkStockCatalogAction,
+  PreviewBulkStockSelectionAction,
 } from "../bulk-stock/domain/bulk-stock.model";
 
 type PublicationsViewProps = Readonly<{
@@ -24,6 +26,8 @@ type PublicationsViewProps = Readonly<{
   deleteVariationAction?: DeleteVariationAction;
   loadVariantsAction?: LoadPublicationVariantsAction;
   previewBulkStockAction?: PreviewBulkStockAction;
+  loadBulkStockCatalogAction?: LoadBulkStockCatalogAction;
+  previewBulkStockSelectionAction?: PreviewBulkStockSelectionAction;
   createBulkStockJobAction?: CreateBulkStockJobAction;
   getBulkStockJobAction?: GetBulkStockJobAction;
 }> & (Readonly<{ state: "loading" }> | Readonly<{ state: "error"; errorMessage: string }> | Readonly<{ state: "empty" | "success"; page: PublicationsPage }>);
@@ -42,12 +46,14 @@ export function PublicationsView(props: PublicationsViewProps) {
 
   return (
     <div className={styles.view} data-dashboard-full-width="true">
-      {props.previewBulkStockAction && props.createBulkStockJobAction && props.getBulkStockJobAction ? (
+      {props.previewBulkStockAction && props.loadBulkStockCatalogAction && props.previewBulkStockSelectionAction && props.createBulkStockJobAction && props.getBulkStockJobAction ? (
         <div className={styles.bulkStockAction}>
           <BulkStockButton
             createJobAction={props.createBulkStockJobAction}
             getJobAction={props.getBulkStockJobAction}
             previewAction={props.previewBulkStockAction}
+            catalogAction={props.loadBulkStockCatalogAction}
+            selectionPreviewAction={props.previewBulkStockSelectionAction}
           />
         </div>
       ) : null}

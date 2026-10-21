@@ -55,6 +55,35 @@ describe("BulkStockApiRepository preview", () => {
     );
   });
 
+  it("obtiene el catálogo completo sin imponer talles ni cantidades", async () => {
+    const post = vi.fn<HttpPostClient["post"]>().mockResolvedValue(previewResponse);
+    const repository = new BulkStockApiRepository({ get: vi.fn<HttpGetClient["get"]>(), post });
+    const request = { productType: "BUZO_MUJER" as const };
+    const result = await repository.catalog(request);
+    expect(result.variants).toHaveLength(2);
+    expect(post).toHaveBeenCalledWith(
+      "/mercadolibre/direct/stock-bulk/catalog",
+      request,
+      { timeoutMs: 60_000 },
+    );
+  });
+
+  it("revalida IDs seleccionados y stock cero antes de mostrar la vista previa", async () => {
+    const post = vi.fn<HttpPostClient["post"]>().mockResolvedValue(previewResponse);
+    const repository = new BulkStockApiRepository({ get: vi.fn<HttpGetClient["get"]>(), post });
+    const request = {
+      productType: "BUZO_MUJER" as const,
+      identifiers: ["MLAU1", "MLA2:22"],
+      quantity: 0,
+    };
+    await repository.selectionPreview(request);
+    expect(post).toHaveBeenCalledWith(
+      "/mercadolibre/direct/stock-bulk/selection-preview",
+      request,
+      { timeoutMs: 60_000 },
+    );
+  });
+
   it("rechaza una respuesta que no cumple el contrato del preview", async () => {
     const post = vi.fn<HttpPostClient["post"]>().mockResolvedValue({ results: [] });
     const get = vi.fn<HttpGetClient["get"]>();
