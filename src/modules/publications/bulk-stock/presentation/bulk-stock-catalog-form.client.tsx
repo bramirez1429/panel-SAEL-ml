@@ -4,14 +4,13 @@ import { Alert, Button, Form, InputNumber, Select, Spin, Typography } from "antd
 import { useMemo, useRef, useState } from "react";
 
 import { BULK_STOCK_PRODUCT_TYPE_OPTIONS } from "../bulk-stock.config";
+import { ALL_BULK_STOCK_FILTERS as ALL, distinctBulkStockFilterOptions, filterBulkStockCatalog } from "../application/bulk-stock-catalog-filters";
 import type {
   BulkStockPreview,
   BulkStockProductType,
   BulkStockSelectionPreviewRequest,
   LoadBulkStockCatalogAction,
 } from "../domain/bulk-stock.model";
-
-const ALL = "__ALL__";
 
 type Props = Readonly<{
   loading: boolean;
@@ -55,18 +54,15 @@ export function BulkStockCatalogForm({ loading, error, catalogAction, onSubmit }
   };
 
   const colors = useMemo(
-    () => distinctOptions(catalog?.variants.map((variant) => variant.color ?? "Sin color") ?? []),
+    () => distinctBulkStockFilterOptions(catalog?.variants.map((variant) => variant.color ?? "Sin color") ?? []),
     [catalog],
   );
   const sizes = useMemo(
-    () => distinctOptions(catalog?.variants.map((variant) => variant.size) ?? []),
+    () => distinctBulkStockFilterOptions(catalog?.variants.map((variant) => variant.size) ?? []),
     [catalog],
   );
   const selected = useMemo(
-    () => (catalog?.variants ?? []).filter(
-      (variant) => (color === ALL || normalized(variant.color ?? "Sin color") === color) &&
-        (size === ALL || normalized(variant.size) === size),
-    ),
+    () => filterBulkStockCatalog(catalog?.variants ?? [], color, size),
     [catalog, color, size],
   );
 
@@ -157,16 +153,3 @@ export function BulkStockCatalogForm({ loading, error, catalogAction, onSubmit }
   );
 }
 
-function normalized(value: string): string {
-  return value.normalize("NFD").replace(/\p{M}+/gu, "").trim().toUpperCase();
-}
-
-function distinctOptions(values: readonly string[]): Array<{ label: string; value: string }> {
-  const options = new Map<string, string>();
-  for (const label of values) {
-    const key = normalized(label);
-    if (key && !options.has(key)) options.set(key, label);
-  }
-  return [...options].map(([value, label]) => ({ label, value }))
-    .sort((a, b) => a.label.localeCompare(b.label, "es", { numeric: true }));
-}
