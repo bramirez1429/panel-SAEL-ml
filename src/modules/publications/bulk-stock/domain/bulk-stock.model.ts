@@ -40,6 +40,7 @@ export type BulkStockPreviewSummary = Readonly<{
 export type BulkStockVariant = Readonly<{
   key: string;
   itemId: string;
+  relatedItemIds?: readonly string[];
   familyId: string | null;
   variationId: string | null;
   userProductId: string | null;
