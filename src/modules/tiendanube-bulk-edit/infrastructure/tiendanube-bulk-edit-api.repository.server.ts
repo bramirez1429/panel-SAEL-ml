@@ -1,0 +1,54 @@
+import "server-only";
+
+import { z } from "zod";
+import { ApiError } from "@/shared/api/api-error";
+import type { AuthenticatedHttpClient } from "@/shared/api/authenticated-http-client.server";
+import type { TiendanubeBulkEditRepository } from "../domain/tiendanube-bulk-edit.repository";
+import type { TiendanubeBulkEditCategorySummary, TiendanubeBulkEditFailure, TiendanubeBulkEditJob, TiendanubeBulkEditPreview, TiendanubeBulkEditRequest } from "../domain/tiendanube-bulk-edit.model";
+import { activeJobSchema, categorySummarySchema, failuresSchema, jobReferenceSchema, jobSchema, previewSchema } from "./tiendanube-bulk-edit.schema";
+
+const basePath = "/tiendanube/bulk-edition";
+
+export class TiendanubeBulkEditApiRepository implements TiendanubeBulkEditRepository {
+  constructor(private readonly httpClient: AuthenticatedHttpClient) {}
+
+  async getCategorySummary(categoryId: number): Promise<TiendanubeBulkEditCategorySummary> {
+    return this.parse(categorySummarySchema, await this.httpClient.get(`${basePath}/categories/${categoryId}/summary`), "el resumen de la categoría");
+  }
+
+  async preview(request: TiendanubeBulkEditRequest): Promise<TiendanubeBulkEditPreview> {
+    return this.parse(previewSchema, await this.httpClient.post(`${basePath}/preview`, request), "la previsualización");
+  }
+
+  async getActive(): Promise<TiendanubeBulkEditJob | null> {
+    const parsed = activeJobSchema.safeParse(await this.httpClient.get(`${basePath}/jobs/active`));
+    return parsed.success ? parsed.data : null;
+  }
+
+  async createJob(snapshotId: string): Promise<TiendanubeBulkEditJob> {
+    const job = this.parse(jobReferenceSchema, await this.httpClient.post(`${basePath}/jobs`, { snapshotId }), "el trabajo de actualización");
+    return this.getJob(job.id);
+  }
+
+  async getJob(jobId: string): Promise<TiendanubeBulkEditJob> {
+    return this.parse(jobSchema, await this.httpClient.get(`${basePath}/jobs/${encodeURIComponent(jobId)}`), "el progreso de actualización");
+  }
+
+  async getFailures(jobId: string): Promise<readonly TiendanubeBulkEditFailure[]> {
+    return this.parse(failuresSchema, await this.httpClient.get(`${basePath}/jobs/${encodeURIComponent(jobId)}/failures`), "los errores de variantes");
+  }
+
+  async retryFailures(jobId: string): Promise<TiendanubeBulkEditJob> {
+    const retriedJob = this.parse(jobReferenceSchema, await this.httpClient.post(`${basePath}/jobs/${encodeURIComponent(jobId)}/retry-failures`), "el reintento de variantes fallidas");
+    return this.getJob(retriedJob.id);
+  }
+
+  private parse<T>(schema: z.ZodType<T>, value: unknown, resource: string): T {
+    const parsed = schema.safeParse(value);
+    if (parsed.success) return parsed.data;
+    const details = parsed.error.issues
+      .map((issue) => `${issue.path.length > 0 ? issue.path.join(".") : "respuesta"}: ${issue.message}`)
+      .join("; ");
+    throw new ApiError(`El backend devolvió ${resource} inválidos. ${details}`, "API_INVALID_RESPONSE", { cause: parsed.error });
+  }
+}

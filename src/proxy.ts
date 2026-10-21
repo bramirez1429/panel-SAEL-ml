@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { AUTH_COOKIE_NAMES, getAuthCookieOptions, getExpiredAuthCookieOptions } from "@/modules/auth/infrastructure/session/auth-cookie.config";
 import { getApiConfig } from "@/shared/api/api-config";
 import { HttpClient } from "@/shared/api/http-client.server";
+import { isPanelAuthenticationFailure } from "@/shared/api/panel-authentication-error";
 import { refreshPanelSession } from "@/shared/api/session-refresh.server";
 
 /**
@@ -28,8 +29,9 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     response.cookies.set(AUTH_COOKIE_NAMES.accessToken, tokens.accessToken, getAuthCookieOptions(tokens.accessTokenExpiresAt));
     response.cookies.set(AUTH_COOKIE_NAMES.refreshToken, tokens.refreshToken, getAuthCookieOptions(tokens.refreshTokenExpiresAt));
     return response;
-  } catch {
-    return redirectToLogin(request);
+  } catch (error: unknown) {
+    if (isPanelAuthenticationFailure(error)) return redirectToLogin(request);
+    return NextResponse.next();
   }
 }
 
@@ -49,5 +51,13 @@ export const config = {
     "/promociones/:path*",
     "/publicaciones/:path*",
     "/tiendanube/:path*",
+    "/sincronizacion/:path*",
+    "/replicar/:path*",
+    "/migracion-global/:path*",
+    "/publicacion-promocion/:path*",
+    "/ranking-productos/:path*",
+    "/ventas/:path*",
+    "/usuarios/:path*",
+    "/catalogo/:path*",
   ],
 };

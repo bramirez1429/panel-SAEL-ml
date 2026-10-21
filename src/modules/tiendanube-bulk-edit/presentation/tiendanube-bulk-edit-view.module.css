@@ -1,0 +1,18 @@
+.page { display: grid; gap: 24px; max-width: 1440px; margin: 0 auto; padding: 8px 24px 40px; }
+.header { display: grid; gap: 4px; }
+.header h1 { margin-bottom: 0; }
+.card { border-radius: 14px; }
+.categorySelect { width: 100%; max-width: 760px; }
+.statistics { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; }
+.statistics :global(.ant-statistic) { padding: 8px 0; }
+.statistics :global(.ant-statistic-content) { font-size: 30px; font-weight: 700; }
+.fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.input { width: 100%; }
+.primaryButton { margin-top: 20px; min-height: 44px; }
+.confirmButton { background: #1677ff; }
+.retryButton { margin-top: 20px; }
+.failuresTable { margin-top: 20px; }
+.previewAlert { margin-top: 16px; }
+.card :global(.ant-progress) { margin: 22px 0 10px; }
+@media (max-width: 900px) { .fields { grid-template-columns: 1fr; } .page { padding-inline: 16px; } }
+@media (max-width: 560px) { .page { gap: 16px; padding-inline: 12px; } .statistics { grid-template-columns: 1fr; } .header h1 { font-size: 28px; } }

@@ -124,6 +124,29 @@ describe("createAuthenticatedHttpClient", () => {
     expect(session.remove).not.toHaveBeenCalled();
   });
 
+  it("propaga un 401 de Tiendanube sin renovar ni cerrar la sesión del panel", async () => {
+    const deps = dependencies();
+    const integrationError = new ApiError("La autorización de Tiendanube venció", "API_HTTP_ERROR", {
+      status: 401,
+      responseBody: { statusCode: 401, error: "Unauthorized" },
+    });
+    deps.get.mockRejectedValueOnce(integrationError);
+
+    await expect(createAuthenticatedHttpClient(deps).get("/tiendanube/products/catalog")).rejects.toBe(integrationError);
+    expect(deps.post).not.toHaveBeenCalled();
+    expect(session.remove).not.toHaveBeenCalled();
+  });
+
+  it("propaga fallas de red durante la renovación sin borrar cookies", async () => {
+    session.getAccess.mockResolvedValue(null);
+    const deps = dependencies();
+    const networkError = new ApiError("Backend inaccesible", "API_UNREACHABLE");
+    deps.post.mockRejectedValueOnce(networkError);
+
+    await expect(createAuthenticatedHttpClient(deps).get("/private")).rejects.toBe(networkError);
+    expect(session.remove).not.toHaveBeenCalled();
+  });
+
   it.each([
     [404, "Not found"],
     [409, "Conflict"],
@@ -185,7 +208,7 @@ describe("createAuthenticatedHttpClient", () => {
     session.getRefresh.mockResolvedValue("failed-refresh-jwt");
     const deps = dependencies();
     deps.get.mockRejectedValue(unauthorized());
-    deps.post.mockRejectedValue(new ApiError("Refresh vencido", "API_HTTP_ERROR", { status: 401 }));
+    deps.post.mockRejectedValue(new ApiError("Refresh vencido", "API_HTTP_ERROR", { status: 401, responseBody: { code: "AUTHENTICATION_REQUIRED" } }));
 
     await expect(createAuthenticatedHttpClient(deps).get("/private")).rejects.toThrow("REDIRECT:/login");
     expect(deps.post).toHaveBeenCalledOnce();

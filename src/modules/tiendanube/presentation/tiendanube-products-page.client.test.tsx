@@ -45,6 +45,13 @@ describe("TiendanubeProductsPageClient", () => {
 
     expect(screen.getByText("SKU-4")).toBeInTheDocument();
   });
+
+  it("guía a reconectar Tiendanube sin reemplazar el error de la sesión del panel", () => {
+    render(<TiendanubeProductsPageClient activeSearch="" errorMessage="Unauthorized" integrationReconnectRequired page={null} />);
+
+    expect(screen.getByText("Tiendanube requiere reconexión.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Reconectar Tiendanube" })).toHaveAttribute("href", "/integraciones");
+  });
 });
 
 function page(variantCount = 4): TiendanubeProductsPage {

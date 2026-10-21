@@ -1,0 +1,87 @@
+.page {
+  display: grid;
+  gap: 32px;
+  padding: 32px;
+}
+
+.intro {
+  text-align: center;
+}
+
+.intro :global(.ant-typography) {
+  margin-bottom: 12px;
+}
+
+.alert {
+  max-width: 560px;
+  margin: 20px auto 0;
+  text-align: left;
+}
+
+.progressSection {
+  display: flex;
+  justify-content: center;
+}
+
+.progressCard {
+  width: min(100%, 480px);
+  text-align: center;
+}
+
+.progressCard :global(.ant-progress) {
+  margin-bottom: 20px;
+  transition: all 0.3s ease;
+}
+
+.progressCard :global(.ant-progress-text) {
+  font-size: 34px;
+  font-weight: 700;
+}
+
+.progressCard > :global(.ant-card-body) {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+}
+
+.results {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  align-items: start;
+}
+
+.results section {
+  display: grid;
+  gap: 16px;
+}
+
+@media (max-width: 720px) {
+  .page {
+    padding: 20px 16px;
+  }
+
+  .results {
+    grid-template-columns: 1fr;
+  }
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 20px auto 0;
+}
+
+@media (max-width: 540px) {
+  .controls {
+    flex-direction: column;
+  }
+
+  .controls > * {
+    width: 100%;
+    max-width: 320px;
+  }
+}
