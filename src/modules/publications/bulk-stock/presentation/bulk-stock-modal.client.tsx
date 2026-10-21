@@ -6,7 +6,6 @@ import { useEffect, useMemo, useState } from "react";
 import type {
   BulkStockJob,
   BulkStockPreview,
-  BulkStockPreviewRequest,
   BulkStockProductType,
   BulkStockJobItem,
   BulkStockJobTarget,
@@ -15,9 +14,12 @@ import type {
   CreateBulkStockJobRequest,
   GetBulkStockJobAction,
   PreviewBulkStockAction,
+  LoadBulkStockCatalogAction,
+  PreviewBulkStockSelectionAction,
+  BulkStockSelectionPreviewRequest,
 } from "../domain/bulk-stock.model";
 import { isBulkStockJobRunning } from "../domain/bulk-stock.model";
-import { BulkStockForm } from "./bulk-stock-form.client";
+import { BulkStockCatalogForm } from "./bulk-stock-catalog-form.client";
 import { BulkStockPreviewView, isSelectable } from "./bulk-stock-preview.client";
 import { BulkStockProgress } from "./bulk-stock-progress.client";
 import { BulkStockFinalSummary } from "./bulk-stock-summary.client";
@@ -30,6 +32,8 @@ type Phase = "configuration" | "preview" | "execution";
 type BulkStockModalProps = Readonly<{
   open: boolean;
   previewAction: PreviewBulkStockAction;
+  catalogAction: LoadBulkStockCatalogAction;
+  selectionPreviewAction: PreviewBulkStockSelectionAction;
   createJobAction: CreateBulkStockJobAction;
   getJobAction: GetBulkStockJobAction;
   onClose: () => void;
@@ -37,7 +41,8 @@ type BulkStockModalProps = Readonly<{
 
 export function BulkStockModal({
   open,
-  previewAction,
+  catalogAction,
+  selectionPreviewAction,
   createJobAction,
   getJobAction,
   onClose,
@@ -96,10 +101,10 @@ export function BulkStockModal({
     };
   }, [getJobAction, jobId, open, phase]);
 
-  const findVariants = async (request: BulkStockPreviewRequest) => {
+  const findVariants = async (request: BulkStockSelectionPreviewRequest) => {
     setLoading(true);
     setError(null);
-    const result = await previewAction(request);
+    const result = await selectionPreviewAction(request);
     setLoading(false);
     if (!result.ok) {
       setError(result.message);
@@ -186,7 +191,12 @@ export function BulkStockModal({
     >
       {phase === "configuration" ? (
         <div style={{ flex: "1 1 auto", minHeight: 0, overflowY: "auto" }}>
-          <BulkStockForm error={error} loading={loading} onSubmit={(request) => void findVariants(request)} />
+          <BulkStockCatalogForm
+            error={error}
+            loading={loading}
+            catalogAction={catalogAction}
+            onSubmit={(request) => void findVariants(request)}
+          />
         </div>
       ) : null}
       {phase === "preview" && preview ? (
