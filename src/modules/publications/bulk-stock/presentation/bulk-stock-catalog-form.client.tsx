@@ -105,7 +105,7 @@ export function BulkStockCatalogForm({ loading, error, catalogAction, onSubmit }
       {catalog ? (
         <>
           <Typography.Paragraph type="secondary">
-            Encontradas {catalog.variants.length} variantes de {new Set(catalog.variants.map((variant) => variant.itemId)).size} publicaciones activas.
+            Encontradas {catalog.variants.length} variantes de {new Set(catalog.variants.flatMap((variant) => variant.relatedItemIds?.length ? variant.relatedItemIds : [variant.itemId])).size} publicaciones activas.
             Se incluyen publicaciones antiguas y nuevas, con cualquier precio y también sin stock.
           </Typography.Paragraph>
           <Form.Item label="Color">
@@ -137,7 +137,7 @@ export function BulkStockCatalogForm({ loading, error, catalogAction, onSubmit }
             style={{ marginBottom: 16 }}
             columns={[
               { title: "Publicación", dataIndex: "title", key: "title", ellipsis: true },
-              { title: "ID ML", dataIndex: "itemId", key: "itemId", width: 145 },
+              { title: "ID ML", dataIndex: "itemId", key: "itemId", width: 190, render: (_: string, row: BulkStockVariant) => (row.relatedItemIds?.length ? row.relatedItemIds : [row.itemId]).join(", ") },
               { title: "Color", dataIndex: "color", key: "color", width: 100, render: (value: string | null) => value ?? "—" },
               { title: "Talle", dataIndex: "size", key: "size", width: 90 },
               { title: "Stock actual", dataIndex: "currentStock", key: "currentStock", width: 115 },
