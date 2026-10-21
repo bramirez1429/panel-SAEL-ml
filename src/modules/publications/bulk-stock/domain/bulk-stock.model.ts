@@ -17,6 +17,13 @@ export type BulkStockPreviewRequest = Readonly<{
   sizes: readonly BulkStockSize[];
 }>;
 
+export type BulkStockCatalogRequest = Readonly<{ productType: BulkStockProductType }>;
+export type BulkStockSelectionPreviewRequest = Readonly<{
+  productType: BulkStockProductType;
+  identifiers: readonly string[];
+  quantity: number;
+}>;
+
 export type BulkStockPublicationType = "USER_PRODUCT" | "LEGACY";
 
 export type BulkStockPreviewSummary = Readonly<{
@@ -124,6 +131,14 @@ export type BulkStockJob = Readonly<{
 export type BulkStockActionResult<T> =
   | Readonly<{ ok: true; data: T }>
   | Readonly<{ ok: false; message: string }>;
+
+export type LoadBulkStockCatalogAction = (
+  request: BulkStockCatalogRequest,
+) => Promise<BulkStockActionResult<BulkStockPreview>>;
+
+export type PreviewBulkStockSelectionAction = (
+  request: BulkStockSelectionPreviewRequest,
+) => Promise<BulkStockActionResult<BulkStockPreview>>;
 
 export type PreviewBulkStockAction = (
   request: BulkStockPreviewRequest,
