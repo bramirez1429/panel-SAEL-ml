@@ -7,7 +7,12 @@ import styles from "./integraciones.module.css";
 
 export const dynamic = "force-dynamic";
 
-export default async function IntegrationsPage() {
+type Props = Readonly<{
+  searchParams: Promise<{ tiendaNegocio?: string }>;
+}>;
+
+export default async function IntegrationsPage({ searchParams }: Props) {
+  const { tiendaNegocio: authorizationResult } = await searchParams;
   const [mercadoLibre, tiendanube, tiendaNegocio] = await Promise.all([
     readMercadoLibre(),
     readTiendanube(),
@@ -15,13 +20,19 @@ export default async function IntegrationsPage() {
   ]);
   return <>
     <PageHeader description="Administra las conexiones con tus canales de venta." />
+    {authorizationResult === "connected" ? (
+      <p role="status">Tienda Negocio se autorizó correctamente.</p>
+    ) : null}
+    {authorizationResult === "error" ? (
+      <p role="alert">No se pudo completar la autorización de Tienda Negocio. Revisá la configuración OAuth.</p>
+    ) : null}
     <div className={styles.grid}>
       <IntegrationCard name="Mercado Libre" description="Conectá tu cuenta para gestionar tus publicaciones." icon="ML" status={mercadoLibre.status} detail={mercadoLibre.sellerId ? `Seller ID: ${mercadoLibre.sellerId}` : null} connectHref="/api/integrations/mercado-libre/connect" disconnectAction={disconnectMercadoLibre} />
       <IntegrationCard name="Tiendanube" description="Conectá tu tienda para replicar productos." icon="TN" status={tiendanube.status} detail={tiendanube.storeId ? `Store ID: ${tiendanube.storeId}` : null} connectHref="/api/integrations/tiendanube/connect" disconnectAction={disconnectTiendanube} />
       <IntegrationCard
         name="Tienda Negocio"
         description="Autorizá tu tienda para sincronizar publicaciones de Mercado Libre."
-        icon="TN"
+        icon="NG"
         status={tiendaNegocio.status}
         detail={tiendaNegocio.storeId ? `Store ID: ${tiendaNegocio.storeId}` : null}
         connectHref="/api/integrations/tienda-negocio/connect"
