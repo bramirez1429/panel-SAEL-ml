@@ -83,6 +83,16 @@ describe("IntegrationsPage", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Tienda Negocio se autorizó correctamente");
   });
 
+  it("muestra el motivo OAuth sin exponer tokens ni códigos", async () => {
+    mocks.mercadoLibreGetConnection.mockResolvedValue({ connected: true, sellerId: 12 });
+    render(await IntegrationsPage({
+      searchParams: Promise.resolve({ tiendaNegocio: "error", reason: "exchange" }),
+    }));
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "el backend no pudo obtener o guardar el token",
+    );
+  });
+
   it("mapea un error inesperado de Mercado Libre como unknown", async () => {
     mocks.mercadoLibreGetConnection.mockRejectedValue(
       new Error("unexpected"),
