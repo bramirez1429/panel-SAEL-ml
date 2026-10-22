@@ -8,11 +8,11 @@ import styles from "./integraciones.module.css";
 export const dynamic = "force-dynamic";
 
 type Props = Readonly<{
-  searchParams: Promise<{ tiendaNegocio?: string }>;
+  searchParams: Promise<{ tiendaNegocio?: string; reason?: string }>;
 }>;
 
 export default async function IntegrationsPage({ searchParams }: Props) {
-  const { tiendaNegocio: authorizationResult } = await searchParams;
+  const { tiendaNegocio: authorizationResult, reason } = await searchParams;
   const [mercadoLibre, tiendanube, tiendaNegocio] = await Promise.all([
     readMercadoLibre(),
     readTiendanube(),
@@ -24,7 +24,7 @@ export default async function IntegrationsPage({ searchParams }: Props) {
       <p role="status">Tienda Negocio se autorizó correctamente.</p>
     ) : null}
     {authorizationResult === "error" ? (
-      <p role="alert">No se pudo completar la autorización de Tienda Negocio. Revisá la configuración OAuth.</p>
+      <p role="alert">{getAuthorizationError(reason)}</p>
     ) : null}
     <div className={styles.grid}>
       <IntegrationCard name="Mercado Libre" description="Conectá tu cuenta para gestionar tus publicaciones." icon="ML" status={mercadoLibre.status} detail={mercadoLibre.sellerId ? `Seller ID: ${mercadoLibre.sellerId}` : null} connectHref="/api/integrations/mercado-libre/connect" disconnectAction={disconnectMercadoLibre} />
@@ -76,5 +76,22 @@ async function readTiendaNegocio(): Promise<{
     };
   } catch {
     return { status: "unknown", storeId: null, authorizationConfigured: false };
+  }
+}
+
+function getAuthorizationError(reason?: string): string {
+  switch (reason) {
+    case "start":
+      return "No pudimos iniciar la autorización. Comprobá la sesión del panel y el backend.";
+    case "session":
+      return "La sesión de instalación de Tienda Negocio no se encontró o venció. Volvé a conectar desde este panel.";
+    case "missing_code":
+      return "Tienda Negocio regresó sin el código de autorización. Revisá la URL de redirección configurada en la aplicación.";
+    case "rejected":
+      return "La autorización fue rechazada o cancelada en Tienda Negocio.";
+    case "exchange":
+      return "Recibimos la autorización, pero el backend no pudo obtener o guardar el token. Revisá el backend y sus registros.";
+    default:
+      return "No se pudo completar la autorización de Tienda Negocio. Revisá la configuración OAuth.";
   }
 }
