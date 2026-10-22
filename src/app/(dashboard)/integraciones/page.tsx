@@ -1,6 +1,7 @@
 import { createMercadoLibreApiRepository, createTiendanubeApiRepository, createTiendaNegocioApiRepository } from "@/modules/integrations/integrations.composition.server";
 import type { IntegrationStatus } from "@/modules/integrations/domain/integration.model";
 import { IntegrationCard } from "@/modules/integrations/presentation/integration-card.client";
+import { ApiError } from "@/shared/api/api-error";
 import { PageHeader } from "@/shared/ui/page-header/page-header";
 import { disconnectMercadoLibre, disconnectTiendanube, disconnectTiendaNegocio } from "./actions";
 import styles from "./integraciones.module.css";
@@ -34,9 +35,9 @@ export default async function IntegrationsPage({ searchParams }: Props) {
         description="Autorizá tu tienda para sincronizar publicaciones de Mercado Libre."
         icon="NG"
         status={tiendaNegocio.status}
-        detail={tiendaNegocio.storeId ? `Store ID: ${tiendaNegocio.storeId}` : null}
+        detail={tiendaNegocio.storeId ? `Store ID: ${tiendaNegocio.storeId}` : tiendaNegocio.detail}
         connectHref="/api/integrations/tienda-negocio/connect"
-        connectDisabled={!tiendaNegocio.authorizationConfigured}
+        connectDisabled={tiendaNegocio.authorizationConfigured === false}
         connectDisabledReason="Falta configurar la aplicación OAuth de Tienda Negocio en el backend."
         disconnectAction={disconnectTiendaNegocio}
       />
@@ -65,7 +66,8 @@ async function readTiendanube(): Promise<{ status: IntegrationStatus; storeId: s
 async function readTiendaNegocio(): Promise<{
   status: IntegrationStatus;
   storeId: string | null;
-  authorizationConfigured: boolean;
+  authorizationConfigured: boolean | null;
+  detail: string | null;
 }> {
   try {
     const result = await createTiendaNegocioApiRepository().getConnection();
@@ -73,10 +75,24 @@ async function readTiendaNegocio(): Promise<{
       status: result.connected ? "connected" : "not-connected",
       storeId: result.connected ? result.storeId : null,
       authorizationConfigured: result.authorizationConfigured,
+      detail: null,
     };
-  } catch {
-    return { status: "unknown", storeId: null, authorizationConfigured: false };
+  } catch (error: unknown) {
+    logTiendaNegocioStatusError(error);
+    return {
+      status: "unknown",
+      storeId: null,
+      authorizationConfigured: null,
+      detail: "No se pudo consultar Tienda Negocio. Revisá la comunicación con el backend e intentá nuevamente.",
+    };
   }
+}
+
+function logTiendaNegocioStatusError(error: unknown): void {
+  const details = error instanceof ApiError
+    ? { code: error.code, status: error.status }
+    : { name: error instanceof Error ? error.name : "UnknownError" };
+  console.error("[integrations] Unable to read Tienda Negocio connection status", details);
 }
 
 function getAuthorizationError(reason?: string): string {

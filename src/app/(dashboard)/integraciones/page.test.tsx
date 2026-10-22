@@ -102,4 +102,13 @@ describe("IntegrationsPage", () => {
 
     expect(screen.getByText("Mercado Libre|unknown|")).toBeInTheDocument();
   });
+
+  it("no marca OAuth como ausente ante un error de comunicaciÃ³n", async () => {
+    mocks.mercadoLibreGetConnection.mockResolvedValue({ connected: true, sellerId: 12 });
+    mocks.tiendaNegocioGetConnection.mockRejectedValue(new Error("network"));
+
+    render(await IntegrationsPage({ searchParams: Promise.resolve({}) }));
+
+    expect(screen.getByText(/Tienda Negocio\|unknown\|No se pudo consultar/)).toBeInTheDocument();
+  });
 });
