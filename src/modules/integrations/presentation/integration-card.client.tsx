@@ -13,10 +13,12 @@ type Props = Readonly<{
   status: IntegrationStatus;
   detail?: string | null;
   connectHref: string;
+  connectDisabled?: boolean;
+  connectDisabledReason?: string;
   disconnectAction: () => Promise<{ ok: true } | { ok: false; message: string }>;
 }>;
 
-export function IntegrationCard({ name, description, icon, status, detail, connectHref, disconnectAction }: Props) {
+export function IntegrationCard({ name, description, icon, status, detail, connectHref, connectDisabled = false, connectDisabledReason, disconnectAction }: Props) {
   const [loading, setLoading] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
   const router = useRouter();
@@ -36,6 +38,9 @@ export function IntegrationCard({ name, description, icon, status, detail, conne
   return <>{contextHolder}<Card className={styles.card}>
     <div className={styles.heading}><div className={styles.identity}><span className={styles.icon} aria-hidden>{icon}</span><div><h2>{name}</h2><p>{description}</p></div></div><Tag color={status === "connected" ? "success" : status === "reconnect-required" ? "error" : status === "unknown" ? "warning" : undefined}>{label}</Tag></div>
     {detail ? <p className={styles.detail}>{detail}</p> : null}
-    <div className={styles.actions}>{status === "connected" ? <Button loading={loading} onClick={disconnect}>Desconectar</Button> : status === "reconnect-required" ? <><Button href={connectHref} type="primary">{`Reconectar ${name}`}</Button><Button loading={loading} onClick={disconnect}>Desconectar</Button></> : status === "not-connected" ? <Button href={connectHref} type="primary">{`Conectar ${name}`}</Button> : <span className={styles.muted}>Reintentá más tarde.</span>}</div>
+    {connectDisabled && status !== "connected" && connectDisabledReason ? (
+      <p className={styles.detail}>{connectDisabledReason}</p>
+    ) : null}
+    <div className={styles.actions}>{status === "connected" ? <Button loading={loading} onClick={disconnect}>Desconectar</Button> : status === "reconnect-required" ? <><Button href={connectDisabled ? undefined : connectHref} disabled={connectDisabled} type="primary">{`Reconectar ${name}`}</Button><Button loading={loading} onClick={disconnect}>Desconectar</Button></> : status === "not-connected" ? <Button href={connectDisabled ? undefined : connectHref} disabled={connectDisabled} type="primary">{`Conectar ${name}`}</Button> : <span className={styles.muted}>Reintentá más tarde.</span>}</div>
   </Card></>;
 }
