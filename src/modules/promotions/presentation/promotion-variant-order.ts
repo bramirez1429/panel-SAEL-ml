@@ -1,4 +1,3 @@
-import type { PromotionRow } from "../domain/promotion.model";
 import type { SelectedPromotion } from "./promotion-global.store";
 
 const collator = new Intl.Collator("es-AR", { sensitivity: "base", numeric: true });

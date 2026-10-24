@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PromotionRow } from "../domain/promotion.model";
+import type { SelectedPromotion } from "./promotion-global.store";
 import { sortPromotionPublications, sortPromotionSelections } from "./promotion-variant-order";
 
 function row(id: string, title: string, extra: Partial<PromotionRow> = {}): PromotionRow {
@@ -53,6 +54,6 @@ describe("promotion variant ordering", () => {
       { key: "m", itemId: "m", publicationTitle: "Remera Negro M", familyId: "F1", option: options },
       { key: "s", itemId: "s", publicationTitle: "Remera Negro S", familyId: "F1", option: options },
     ];
-    expect(sortPromotionSelections(selected as never).map((s) => s.key)).toEqual(["s", "m"]);
+    expect(sortPromotionSelections(selected as unknown as readonly SelectedPromotion[]).map((s) => s.key)).toEqual(["s", "m"]);
   });
 });
