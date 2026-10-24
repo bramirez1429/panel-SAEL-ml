@@ -78,9 +78,9 @@ const rowSchema = z.object({
   ]),
   price: z.number(),
   currentPromotion: promotionSchema.nullable(),
-  hasActivePromotion: z.boolean(),
-  availablePromotionsCount: z.number().int().nonnegative(),
-  promotionStatus: z.enum(["ACTIVE", "AVAILABLE", "PENDING", "NONE"]),
+  hasActivePromotion: z.boolean().nullable(),
+  availablePromotionsCount: z.number().int().nonnegative().nullable(),
+  promotionStatus: z.enum(["ACTIVE", "AVAILABLE", "PENDING", "NONE"]).nullable(),
 });
 
 export const catalogSchema = z.object({

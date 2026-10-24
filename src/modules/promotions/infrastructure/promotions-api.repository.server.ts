@@ -188,6 +188,7 @@ function catalogParams(request: PromotionsRequest): URLSearchParams {
   if (request.promotionStatus)
     params.set("promotionStatus", request.promotionStatus);
   if (request.promotionType) params.set("promotionType", request.promotionType);
+  if (request.lightweight) params.set("lightweight", "true");
   return params;
 }
 

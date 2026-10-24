@@ -35,9 +35,9 @@ export type PromotionRow = Readonly<{
   productGroup?: PromotionProductGroup;
   price: number | null;
   currentPromotion: PromotionDetails | null;
-  hasActivePromotion: boolean;
-  availablePromotionsCount?: number;
-  promotionStatus?: PromotionStatus;
+  hasActivePromotion: boolean | null;
+  availablePromotionsCount?: number | null;
+  promotionStatus?: PromotionStatus | null;
 }>;
 
 export type PromotionsPage = Readonly<{
