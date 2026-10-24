@@ -109,7 +109,9 @@ function ExecutionList({
           </Typography.Text>
           <br />
           <Typography.Text type="secondary">
-            {execution.message ?? statusText(execution.status)}
+            {execution.status === "error"
+              ? `MLA ${execution.selection.itemId}: ${execution.message ?? statusText(execution.status)}`
+              : execution.message ?? statusText(execution.status)}
           </Typography.Text>
         </div>
       ))}

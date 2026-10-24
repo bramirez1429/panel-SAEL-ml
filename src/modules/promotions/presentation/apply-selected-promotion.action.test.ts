@@ -38,6 +38,7 @@ describe("applySelectedPromotion", () => {
     expect(mocks.preview).not.toHaveBeenCalled();
     expect(mocks.apply).toHaveBeenCalledWith("item:MLA1", request);
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/promociones");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/publicacion-promocion");
   });
 
   it("rechaza un precio fuera del rango antes de apply", async () => {
@@ -59,6 +60,7 @@ describe("applySelectedPromotion", () => {
 
   it.each([
     ["PROMOTION_APPLICATION_FAILED", "No se pudo aplicar la promoción completa."],
+    ["PROMOTION_PARTIAL_FAILURE", "La promoción se aplicó sólo a parte de la publicación."],
     ["PROMOTION_VERIFICATION_FAILED", "No pudimos confirmar el estado final de la promoción."],
     ["PROMOTION_CHANGED_DURING_OPERATION", "Mercado Libre modificó la disponibilidad de esta promoción. Volvé a consultar."],
   ])("conserva el error específico de apply: %s", async (errorCode, message) => {
@@ -98,6 +100,21 @@ describe("applySelectedPromotion", () => {
     expect(result.message).toContain("No se pudo aplicar la promoción completa.");
     expect(result.message).toContain("Mercado Libre: invalid deal price");
   });
+
+  it("rechaza una respuesta exitosa que no confirma el MLA aplicado", async () => {
+    mocks.apply.mockResolvedValue({
+      ...successResult(),
+      results: [],
+    });
+
+    await expect(applySelectedPromotion({ itemId: "MLA1", option: dealOption(), selectedPrice: 14_449 }))
+      .resolves.toEqual({
+        ok: false,
+        message: "No pudimos confirmar el estado final de la promoción.",
+        diagnosticCode: "PROMOTION_VERIFICATION_FAILED",
+      });
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
 });
 
 function dealOption(): PromotionOption {
@@ -105,5 +122,5 @@ function dealOption(): PromotionOption {
 }
 
 function successResult() {
-  return { success: true, status: "SUCCESS", totalItems: 1, successfulItems: 1, failedItems: 0, results: [] };
+  return { success: true, status: "SUCCESS", totalItems: 1, successfulItems: 1, failedItems: 0, results: [{ itemId: "MLA1", success: true, stage: "APPLICATION" }] };
 }

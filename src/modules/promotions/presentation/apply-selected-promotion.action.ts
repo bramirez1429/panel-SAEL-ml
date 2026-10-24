@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import type { PromotionActionFailure } from "../domain/promotion-action.model";
 import { publicationSourceKey } from "../domain/publication-promotion.model";
+import type { PublicationPromotionResult } from "../domain/publication-promotion.model";
 import type { PromotionOption } from "../domain/promotions.repository";
 import { createPromotionsRepository } from "../promotions.composition.server";
 import { promotionOptionToApplyRequest } from "./promotion-apply-request.mapper";
@@ -30,20 +31,32 @@ export async function applySelectedPromotion(input: ApplySelectedPromotionInput)
       familyId: null,
     });
     const result = await repository.apply(sourceKey, request);
-    if (!result.success) {
-      const friendlyMessage = promotionErrorMessage(result.errorCode ?? "PROMOTION_APPLICATION_FAILED");
-      const providerMessage = result.providerMessage?.trim();
+    const itemResult = result.results.find(({ itemId }) => itemId === input.itemId);
+    if (!isConfirmedForItem(result, input.itemId)) {
+      const errorCode = itemResult?.errorCode ?? result.errorCode ?? "PROMOTION_VERIFICATION_FAILED";
+      const friendlyMessage = promotionErrorMessage(errorCode);
+      const providerMessage = itemResult?.providerMessage?.trim() ?? result.providerMessage?.trim();
       return {
         ok: false,
         message: providerMessage ? `${friendlyMessage} Mercado Libre: ${providerMessage}` : friendlyMessage,
-        ...(result.errorCode ? { diagnosticCode: result.errorCode } : {}),
+        diagnosticCode: errorCode,
       };
     }
     revalidatePath("/promociones");
+    revalidatePath("/publicacion-promocion");
     return { ok: true };
   } catch (error: unknown) {
     return mapPromotionError(error);
   }
+}
+
+function isConfirmedForItem(result: PublicationPromotionResult, itemId: string): boolean {
+  return result.success
+    && result.status === "SUCCESS"
+    && result.totalItems === 1
+    && result.successfulItems === 1
+    && result.failedItems === 0
+    && result.results.some((item) => item.itemId === itemId && item.success);
 }
 
 function optionWithSelectedPrice(option: PromotionOption, selectedPrice: number | null): PromotionOption | null {

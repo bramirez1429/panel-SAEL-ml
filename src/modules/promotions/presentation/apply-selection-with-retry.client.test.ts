@@ -8,16 +8,13 @@ vi.mock("./apply-selected-promotion.action", () => ({ applySelectedPromotion: vi
 const input = { itemId: "MLA1", option: {}, selectedPrice: null } as unknown as ApplySelectedPromotionInput;
 
 describe("applySelectionWithRetry", () => {
-  it.each(["PROMOTION_TIMEOUT", "PROMOTION_PROVIDER_UNAVAILABLE"])("reintenta una sola vez para %s", async (diagnosticCode) => {
-    const execute = vi.fn()
-      .mockResolvedValueOnce({ ok: false, message: "Error transitorio", diagnosticCode })
-      .mockResolvedValueOnce({ ok: true });
-    const wait = vi.fn().mockResolvedValue(undefined);
+  it.each(["PROMOTION_TIMEOUT", "PROMOTION_PROVIDER_UNAVAILABLE"])("no reintenta una escritura para %s", async (diagnosticCode) => {
+    const failure = { ok: false as const, message: "Error transitorio", diagnosticCode };
+    const execute = vi.fn().mockResolvedValue(failure);
 
-    await expect(applySelectionWithRetry(input, execute, wait)).resolves.toEqual({ ok: true });
+    await expect(applySelectionWithRetry(input, execute)).resolves.toEqual(failure);
 
-    expect(execute).toHaveBeenCalledTimes(2);
-    expect(wait).toHaveBeenCalledWith(1_000);
+    expect(execute).toHaveBeenCalledTimes(1);
   });
 
   it.each([
@@ -27,11 +24,8 @@ describe("applySelectionWithRetry", () => {
   ])("no reintenta el error de negocio %s", async (diagnosticCode) => {
     const failure = { ok: false as const, message: "Error de negocio", diagnosticCode };
     const execute = vi.fn().mockResolvedValue(failure);
-    const wait = vi.fn().mockResolvedValue(undefined);
-
-    await expect(applySelectionWithRetry(input, execute, wait)).resolves.toEqual(failure);
+    await expect(applySelectionWithRetry(input, execute)).resolves.toEqual(failure);
 
     expect(execute).toHaveBeenCalledTimes(1);
-    expect(wait).not.toHaveBeenCalled();
   });
 });

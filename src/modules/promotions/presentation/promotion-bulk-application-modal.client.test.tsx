@@ -347,13 +347,15 @@ describe("aplicación masiva secuencial", () => {
     await openAndStart(user, 3);
     expect(await screen.findByText("Proceso completado")).toBeInTheDocument();
     expect(screen.getByText("2 correctas · 1 con error")).toBeInTheDocument();
-    expect(screen.getByText("Mercado Libre rechazó la promoción")).toBeInTheDocument();
+    expect(screen.getByText(/MLA MLA2: Mercado Libre rechazó la promoción/)).toBeInTheDocument();
     expect(mocks.apply).toHaveBeenCalledTimes(3);
     const remaining = usePromotionGlobalStore.getState().selections;
     expect(remaining[first.key]).toBeUndefined();
     expect(remaining[third.key]).toBeUndefined();
     expect(remaining[failed.key]).toBeDefined();
-    expect(usePromotionGlobalStore.getState().optionsByItem).toEqual({});
+    expect(usePromotionGlobalStore.getState().optionsByItem).toEqual({
+      [failed.itemId]: { status: "success", options: [failed.option] },
+    });
   });
 
   it("actualiza el progreso y evita otra cola con doble submit", async () => {
@@ -397,6 +399,62 @@ describe("aplicación masiva secuencial", () => {
     expect(mocks.apply.mock.calls.map((call) => call[0].itemId)).toEqual(
       Array.from({ length: 50 }, (_, index) => `MLA${index + 1}`),
     );
+  });
+
+  it("muestra el MLA afectado y no reintenta un timeout", async () => {
+    const user = userEvent.setup();
+    mocks.apply.mockResolvedValue({
+      ok: false,
+      message: "Mercado Libre está tardando más de lo esperado.",
+      diagnosticCode: "PROMOTION_TIMEOUT",
+    });
+    const failed = selection("MLA2");
+    select(failed);
+    render(<PromotionSelectionSummary />);
+
+    await openAndStart(user, 1);
+
+    expect(await screen.findByText("Proceso completado")).toBeInTheDocument();
+    expect(screen.getByText(/MLA MLA2: Mercado Libre/)).toBeInTheDocument();
+    expect(mocks.apply).toHaveBeenCalledTimes(1);
+    expect(usePromotionGlobalStore.getState().selections[failed.key]).toBeDefined();
+  });
+
+  it("aplica el cambio de precio de una promoción existente", async () => {
+    const user = userEvent.setup();
+    mocks.apply.mockResolvedValue({ ok: true });
+    select(selection("MLA1", option({
+      promotionPrice: 12_000,
+      suggestedPromotionPrice: 12_000,
+      minPromotionPrice: 10_000,
+      maxPromotionPrice: 15_000,
+    })));
+    render(<PromotionSelectionSummary />);
+    await openPricing(user);
+
+    setInput(screen.getByRole("spinbutton", { name: "Precio a aplicar MLA1" }), 13_000);
+    await user.click(screen.getByRole("button", { name: "Confirmar 1 promociones" }));
+
+    expect(await screen.findByText("Proceso completado")).toBeInTheDocument();
+    expect(mocks.apply).toHaveBeenCalledWith(expect.objectContaining({
+      itemId: "MLA1",
+      selectedPrice: 13_000,
+      option: expect.objectContaining({ promotionPrice: 13_000 }),
+    }));
+  });
+
+  it("muestra el resumen aunque falle la actualización de la vista", async () => {
+    const user = userEvent.setup();
+    const onCompleted = vi.fn().mockRejectedValue(new Error("refresh failed"));
+    mocks.apply.mockResolvedValue({ ok: true });
+    select(selection("MLA1"));
+    render(<PromotionSelectionSummary onCompleted={onCompleted} />);
+
+    await openAndStart(user, 1);
+
+    expect(await screen.findByText("Proceso completado")).toBeInTheDocument();
+    expect(screen.getByText("1 correctas · 0 con error")).toBeInTheDocument();
+    expect(onCompleted).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -14,6 +14,7 @@ import {
 import { PromotionBulkPriceEditor } from "./promotion-bulk-price-editor.client";
 import {
   applyCampaignPrice,
+  canEditPromotionPrice,
   initialCampaignPriceExclusions,
   initialPromotionPrices,
   promotionCampaignKey,
@@ -132,10 +133,11 @@ export function PromotionBulkApplicationModal({ selections, onClose, onCompleted
         setExecutions([...completed]);
 
         try {
-          const selectedPrice = prices[selection.key] ?? null;
+          const editablePrice = canEditPromotionPrice(selection.option);
+          const selectedPrice = editablePrice ? prices[selection.key] ?? null : null;
           const result = await applySelectionWithRetry({
             itemId: selection.itemId,
-            option: selectedPrice === null
+            option: !editablePrice || selectedPrice === null
               ? selection.option
               : { ...selection.option, promotionPrice: selectedPrice },
             selectedPrice,
@@ -164,9 +166,13 @@ export function PromotionBulkApplicationModal({ selections, onClose, onCompleted
 
       removeSelections(successfulKeys);
       invalidateOptions([...new Set(successfulItemIds)]);
-      if (successfulItemIds.length > 0) await onCompleted?.();
+      try {
+        if (successfulItemIds.length > 0) await onCompleted?.();
+      } catch {}
+      try {
+        router.refresh();
+      } catch {}
       setFinished(true);
-      router.refresh();
     } finally {
       setRunning(false);
       activeRef.current = false;

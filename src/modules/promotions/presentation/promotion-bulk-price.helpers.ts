@@ -14,6 +14,7 @@ export type CampaignPriceSummary = Readonly<{
 export function canEditPromotionPrice(option: Pick<PromotionOptionLike, "type" | "status" | "canApply" | "requiresPriceSelection" | "minPromotionPrice" | "maxPromotionPrice" | "suggestedPromotionPrice">): boolean {
   const type = option.type?.toUpperCase();
   if (option.status?.toLowerCase() !== "candidate" || option.canApply !== true) return false;
+  if (option.requiresPriceSelection === false) return false;
   if (type !== "PRICE_DISCOUNT" && type !== "DEAL" && type !== "SELLER_CAMPAIGN") return false;
   return option.requiresPriceSelection === true
     || option.minPromotionPrice !== null
