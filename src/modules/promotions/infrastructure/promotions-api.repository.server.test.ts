@@ -16,6 +16,16 @@ const request: PromotionApplyRequest = {
 };
 
 describe("PromotionsApiRepository publication operations", () => {
+  it("consulta el snapshot rápido sin escanear cada MLA", async () => {
+    const http = client();
+    vi.mocked(http.get).mockResolvedValue({ done: true, nextCursor: null, count: 0, publications: [] });
+    await new PromotionsApiRepository(http).getSnapshot();
+    expect(http.get).toHaveBeenCalledWith(
+      "/mercadolibre/direct/promociones/snapshot",
+      { timeoutMs: 15_000 },
+    );
+  });
+
   it("solicita el catálogo liviano sin cargar opciones de todos los MLA", async () => {
     const http = client();
     vi.mocked(http.get).mockResolvedValue({ done: true, nextCursor: null, count: 0, publications: [] });

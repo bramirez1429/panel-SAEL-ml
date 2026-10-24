@@ -18,15 +18,19 @@ export async function PromotionsCatalog({ searchParams }: Props) {
   const criteria = parsePublicationSearch(first(params.search) ?? "");
   const search = criteria?.value ?? "";
   let page: PromotionsPage;
+  const groupedMode = !search && !first(params.cursor) && !first(params.productGroup) && !first(params.promotionStatus) && !first(params.promotionType);
   try {
     const repository = createPromotionsRepository();
     const request = { limit: 20, lightweight: true, cursor: first(params.cursor) ?? null, productGroup: oneOf(first(params.productGroup), productGroups), promotionStatus: oneOf(first(params.promotionStatus), statuses), promotionType: first(params.promotionType) };
-    page = criteria?.type === "FAMILY"
-      ? await searchPublicationsByFamily(repository, criteria.value, request)
-      : await repository.getCatalog({ ...request, ...(search ? { search } : {}) });
+    // The unfiltered page must show every color/pack immediately, without scanning Mercado Libre.
+     page = groupedMode
+      ? await repository.getSnapshot()
+      : criteria?.type === "FAMILY"
+        ? await searchPublicationsByFamily(repository, criteria.value, request)
+        : await repository.getCatalog({ ...request, ...(search ? { search } : {}) });
   } catch (error) {
-    const message = error instanceof ApiError && error.code === "API_TIMEOUT" ? "Mercado Libre tardó demasiado en responder. Volvé a intentar." : "No se pudieron cargar las promociones de Mercado Libre.";
+    const message = error instanceof ApiError && error.code === "API_TIMEOUT" ? "Mercado Libre tardó demasiado en responder. Volvé a intentar." : "No se pudo cargar el catálogo de promociones. Verificá la sincronización de publicaciones e intentá nuevamente.";
     return <><PromotionsSearchTopbar key={search} initialSearch={search} /><Alert type="error" showIcon message={message} /></>;
   }
-  return <><PromotionsSearchTopbar key={search} initialSearch={search} /><PromotionsCatalogClient page={page} activeSearch={search} /></>;
+  return <><PromotionsSearchTopbar key={search} initialSearch={search} /><PromotionsCatalogClient page={page} activeSearch={search} groupedMode={groupedMode} /></>;
 }

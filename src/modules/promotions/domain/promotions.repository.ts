@@ -94,6 +94,7 @@ export type PromotionCampaignItemsRequest = Readonly<{
 }>;
 
 export interface PromotionsRepository {
+  getSnapshot(): Promise<PromotionsPage>;
   getCatalog(request: PromotionsRequest): Promise<PromotionsPage>;
   getCampaigns(audience?: PromotionAudience): Promise<PromotionCampaigns>;
   getCampaignItems(request: PromotionCampaignItemsRequest): Promise<PromotionCampaignItems>;
