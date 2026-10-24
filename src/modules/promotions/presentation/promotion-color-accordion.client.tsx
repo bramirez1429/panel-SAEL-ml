@@ -32,7 +32,7 @@ export function PromotionColorAccordion({ label, count, expanded, onToggle }: Pr
       }}
     >
       <span><span aria-hidden="true">{expanded ? "▾" : "▸"}</span>{" "}<strong>{label}</strong></span>
-      <span>{count} ${count === 1 ? "publicación" : "publicaciones"}</span>
+      <span>{count} {count === 1 ? "publicación" : "publicaciones"}</span>
     </Button>
   );
 }
