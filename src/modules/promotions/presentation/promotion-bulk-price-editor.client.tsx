@@ -231,8 +231,11 @@ function PromotionPriceRow({
           Precio sugerido ML: {money(selection.option.suggestedPromotionPrice)}
         </Typography.Text>
         <Typography.Text>
-          Precio promocional actual: {money(selection.option.promotionPrice)}
+          {existing ? "Precio de campaña actual" : "Precio promocional propuesto"}: {money(existing ? selection.option.currentEditablePrice ?? selection.option.promotionPrice : selection.option.promotionPrice)}
         </Typography.Text>
+        {existing && selection.option.buyerPrice != null && selection.option.buyerPrice !== selection.option.currentEditablePrice ? (
+          <Typography.Text>Precio final al comprador: {money(selection.option.buyerPrice)}</Typography.Text>
+        ) : null}
         {editable ? (
           <Checkbox
             aria-label={`Aplicar este precio a ${selection.itemId}`}
@@ -245,7 +248,7 @@ function PromotionPriceRow({
           </Checkbox>
         ) : null}
         <Typography.Text>
-          Rango permitido: {money(selection.option.minPromotionPrice)} - {money(selection.option.maxPromotionPrice)}
+          Rango permitido: {money(existing ? selection.option.minUpdatePrice ?? null : selection.option.minPromotionPrice)} - {money(existing ? selection.option.maxUpdatePrice ?? null : selection.option.maxPromotionPrice)}
         </Typography.Text>
         <Typography.Text>{editable ? "Nuevo precio promocional" : "Precio promocional actual"}</Typography.Text>
         <PromotionCurrencyInput

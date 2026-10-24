@@ -57,27 +57,35 @@ describe("PromotionsApiRepository publication operations", () => {
     );
   });
 
-  it("actualiza el precio por el endpoint UPDATE_PRICE con el importe solicitado", async () => {
+  it("envía el importe mediante dealPrice al endpoint real de NestJS", async () => {
     const http = client();
-    vi.mocked(http.put).mockResolvedValue(result(1, 1));
+    vi.mocked(http.post).mockResolvedValue(result(1, 1));
     const updateRequest = { ...request, dealPrice: 68_999 };
 
     await new PromotionsApiRepository(http).updatePrice("item:MLA2904936668", updateRequest);
 
-    expect(http.put).toHaveBeenCalledWith(
-      "/mercadolibre/direct/promociones/MLA2904936668/precio",
-      { type: "DEAL", promotionId: "deal-1", price: 68_999 },
+    expect(http.post).toHaveBeenCalledWith(
+      "/mercadolibre/direct/promociones/publicacion/item%3AMLA2904936668/actualizar-precio",
+      { type: "DEAL", promotionId: "deal-1", dealPrice: 68_999 },
       { timeoutMs: 120_000 },
     );
   });
 
-  it("normaliza la respuesta individual de UPDATE_PRICE", async () => {
+  it("normaliza exclusivamente el precio de campaña confirmado, sin usar buyerPrice", async () => {
     const http = client();
-    vi.mocked(http.put).mockResolvedValue({
-      itemId: "MLA2904936644",
+    vi.mocked(http.post).mockResolvedValue({
       success: true,
-      stage: "UPDATE_PRICE",
-      confirmedPrice: 68_999,
+      status: "SUCCESS",
+      totalItems: 1,
+      successfulItems: 1,
+      failedItems: 0,
+      results: [{
+        itemId: "MLA2904936644",
+        success: true,
+        stage: "COMPLETED",
+        promotionPrice: 68_999,
+        buyerPrice: 67_500,
+      }],
     });
 
     await expect(new PromotionsApiRepository(http).updatePrice("item:MLA2904936644", {

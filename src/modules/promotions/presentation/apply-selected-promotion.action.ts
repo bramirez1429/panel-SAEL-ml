@@ -63,7 +63,7 @@ function isConfirmedForItem(result: PublicationPromotionResult, itemId: string, 
     && result.successfulItems === 1
     && result.failedItems === 0
     && item?.success === true
-    && (selectedPrice === null || item.confirmedPrice === selectedPrice);
+    && (selectedPrice === null || (typeof item.confirmedPrice === "number" && Math.round(item.confirmedPrice * 100) === Math.round(selectedPrice * 100)));
 }
 
 function verificationErrorCode(selectedPrice: number | null, confirmedPrice: number | null | undefined): string {
@@ -72,10 +72,12 @@ function verificationErrorCode(selectedPrice: number | null, confirmedPrice: num
 }
 
 function optionWithSelectedPrice(option: PromotionOption, selectedPrice: number | null): PromotionOption | null {
-  if (isExistingPromotion(option) && (!canEditPromotionPrice(option) || selectedPrice === option.promotionPrice)) return null;
+  if (isExistingPromotion(option) && (!canEditPromotionPrice(option) || (selectedPrice !== null && Math.round(selectedPrice * 100) === Math.round((option.currentEditablePrice ?? option.promotionPrice ?? 0) * 100)))) return null;
   if (!canEditPromotionPrice(option)) return option;
   if (selectedPrice === null || !Number.isFinite(selectedPrice) || selectedPrice <= 0) return null;
-  if (option.minPromotionPrice !== null && selectedPrice < option.minPromotionPrice) return null;
-  if (option.maxPromotionPrice !== null && selectedPrice > option.maxPromotionPrice) return null;
+  const minimum = isExistingPromotion(option) ? option.minUpdatePrice ?? null : option.minPromotionPrice;
+  const maximum = isExistingPromotion(option) ? option.maxUpdatePrice ?? null : option.maxPromotionPrice;
+  if (minimum !== null && selectedPrice < minimum) return null;
+  if (maximum !== null && selectedPrice > maximum) return null;
   return { ...option, promotionPrice: selectedPrice };
 }

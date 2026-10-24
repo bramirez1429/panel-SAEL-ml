@@ -31,6 +31,9 @@ type PromotionOptionLike = Readonly<{
     reason: string | null;
   }> | null;
   promotionPrice: number | null;
+  currentEditablePrice?: number | null;
+  minUpdatePrice?: number | null;
+  maxUpdatePrice?: number | null;
   requiresPriceSelection: boolean | null;
   minPromotionPrice: number | null;
   maxPromotionPrice: number | null;
@@ -45,15 +48,11 @@ export function promotionLifecycle(
   const status = option.status?.toLowerCase();
   const operation = normalizeOperation(option.priceModification?.operation);
 
+  // The provider lifecycle wins: a priced candidate is not an active participation.
+  if (status === "candidate") return "new";
   if (status === "started" || status === "active") return "active";
   if (status === "pending" || status === "scheduled") return "scheduled";
-  if (option.canUpdatePrice !== null && option.canUpdatePrice !== undefined && positivePrice(option.promotionPrice)) {
-    return "active";
-  }
-  if (positivePrice(option.promotionPrice)) return "active";
-  if (status === "candidate" && operation !== "UPDATE" && !option.canRemove) return "new";
-  if (operation === "UPDATE" || option.canRemove) return "active";
-  if (status === "candidate") return "new";
+  if (operation === "UPDATE" || option.canRemove || option.canUpdatePrice === true) return "active";
   return "unknown";
 }
 
@@ -70,7 +69,7 @@ export function canEditPromotionPrice(
   const type = option.type?.toUpperCase();
   const lifecycle = promotionLifecycle(option);
   if (type !== "PRICE_DISCOUNT" && type !== "DEAL" && type !== "SELLER_CAMPAIGN") return false;
-  if (type === "SELLER_CAMPAIGN" && option.promotionSubtype?.toUpperCase() !== "FLEXIBLE_PERCENTAGE") return false;
+  if (type === "SELLER_CAMPAIGN" && lifecycle !== "new" && option.promotionSubtype?.toUpperCase() !== "FLEXIBLE_PERCENTAGE") return false;
   if (lifecycle === "new") {
     if (option.canApply !== true || !isCreateOperation(option)) return false;
     if (option.priceModification || option.canEditPrice === true) return true;
@@ -141,7 +140,7 @@ export function hasPendingPromotionOperation(
   if (operation !== "UPDATE" || !canEditPromotionPrice(selection.option)) return false;
   return validSelectionPrice(selection, price)
     && price !== null
-    && price !== selection.option.promotionPrice;
+    && Math.round(price * 100) !== Math.round((selection.option.currentEditablePrice ?? selection.option.promotionPrice ?? 0) * 100);
 }
 
 export type CommonPriceRange = Readonly<{
@@ -156,7 +155,8 @@ export function initialPromotionPrices(
   return Object.fromEntries(
     selections.map((selection) => [
       selection.key,
-      ownPromotionPrice(selection) ?? suggestedPrice(selection) ?? validMaxPrice(selection),
+      (isExistingPromotion(selection.option) ? selection.option.currentEditablePrice : null)
+        ?? ownPromotionPrice(selection) ?? suggestedPrice(selection) ?? validMaxPrice(selection),
     ]),
   );
 }
@@ -234,8 +234,10 @@ export function commonPromotionPriceRange(
 ): CommonPriceRange | null {
   const editable = selections.filter((selection) => canEditPromotionPrice(selection.option));
   if (editable.length === 0) return null;
-  const minimums = editable.map((selection) => selection.option.minPromotionPrice).filter((value): value is number => value !== null);
-  const maximums = editable.map((selection) => selection.option.maxPromotionPrice).filter((value): value is number => value !== null);
+  const minimums = editable.map((selection) => isExistingPromotion(selection.option)
+    ? selection.option.minUpdatePrice ?? null : selection.option.minPromotionPrice).filter((value): value is number => value !== null);
+  const maximums = editable.map((selection) => isExistingPromotion(selection.option)
+    ? selection.option.maxUpdatePrice ?? null : selection.option.maxPromotionPrice).filter((value): value is number => value !== null);
   const minimum = minimums.length > 0 ? Math.max(...minimums) : null;
   const maximum = maximums.length > 0 ? Math.min(...maximums) : null;
   return { minimum, maximum, hasIntersection: minimum === null || maximum === null || minimum <= maximum };
@@ -274,16 +276,17 @@ export function validSelectionPrice(selection: SelectedPromotion, price: number 
   if (!canEditPromotionPrice(selection.option)) {
     return promotionOperation(selection.option) === "CREATE";
   }
-  if (price === null || !Number.isFinite(price) || price <= 0) return false;
-  if (selection.option.minPromotionPrice !== null && price < selection.option.minPromotionPrice) return false;
-  return selection.option.maxPromotionPrice === null || price <= selection.option.maxPromotionPrice;
+  return validCampaignPrice(selection, price);
 }
 
 function validCampaignPrice(selection: SelectedPromotion, price: number | null): boolean {
   if (!canEditPromotionPrice(selection.option)) return false;
   if (price === null || !Number.isFinite(price) || price <= 0) return false;
-  if (selection.option.minPromotionPrice !== null && price < selection.option.minPromotionPrice) return false;
-  return selection.option.maxPromotionPrice === null || price <= selection.option.maxPromotionPrice;
+  const existing = isExistingPromotion(selection.option);
+  const min = existing ? selection.option.minUpdatePrice ?? null : selection.option.minPromotionPrice;
+  const max = existing ? selection.option.maxUpdatePrice ?? null : selection.option.maxPromotionPrice;
+  if (min !== null && price < min) return false;
+  return max === null || price <= max;
 }
 
 function isCreateOperation(option: Pick<PromotionOptionLike, "priceModification" | "canApply">): boolean {

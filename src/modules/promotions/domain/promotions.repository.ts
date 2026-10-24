@@ -41,6 +41,11 @@ export type PromotionOption = Readonly<{
   priceEditabilityReason?: string | null;
   originalPrice: number | null;
   promotionPrice: number | null;
+  // Campaign price may differ from the buyer-facing discounted price.
+  currentEditablePrice?: number | null;
+  buyerPrice?: number | null;
+  minUpdatePrice?: number | null;
+  maxUpdatePrice?: number | null;
   minPromotionPrice: number | null;
   maxPromotionPrice: number | null;
   suggestedPromotionPrice: number | null;
