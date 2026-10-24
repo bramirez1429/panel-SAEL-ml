@@ -26,7 +26,7 @@ import {
   type CampaignPrices,
   type CampaignPriceWarnings,
 } from "./promotion-bulk-price.helpers";
-import type { SelectedPromotion } from "./promotion-global.store";
+import { promotionSelectionKey, type SelectedPromotion } from "./promotion-global.store";
 import { usePromotionGlobalStore } from "./promotion-global.store";
 
 type Props = Readonly<{
@@ -35,9 +35,10 @@ type Props = Readonly<{
   onCompleted?: () => void | Promise<void>;
 }>;
 
-export function PromotionBulkApplicationModal({ selections, onClose, onCompleted }: Props) {
+export function PromotionBulkApplicationModal({ selections: initialSelections, onClose, onCompleted }: Props) {
   const router = useRouter();
   const activeRef = useRef(false);
+  const [selections, setSelections] = useState<readonly SelectedPromotion[]>(initialSelections);
   const [running, setRunning] = useState(false);
   const [finished, setFinished] = useState(false);
   const [campaignPrices, setCampaignPrices] = useState<CampaignPrices>({});
@@ -59,7 +60,7 @@ export function PromotionBulkApplicationModal({ selections, onClose, onCompleted
   const unknownCapabilityItemIds = [...new Set(selections
     .filter(({ option }) => isExistingPromotion(option) && option.canUpdatePrice == null)
     .map(({ itemId }) => itemId))];
-  const hasPendingOperations = selections.length > 0 && selections.every((selection) => (
+  const pendingSelections = selections.filter((selection) => (
     hasPendingPromotionOperation(selection, prices[selection.key] ?? null)
   ));
   const hasUnappliedCampaignPrice = Object.entries(campaignPrices).some(
@@ -67,7 +68,7 @@ export function PromotionBulkApplicationModal({ selections, onClose, onCompleted
       price !== null && campaignPriceApplied[campaignKey] !== true
     ),
   );
-  const canConfirm = hasPendingOperations && !hasUnappliedCampaignPrice;
+  const canConfirm = pendingSelections.length > 0 && !hasUnappliedCampaignPrice;
   const processed = executions.filter((execution) => (
     execution.status === "success" || execution.status === "error"
   )).length;
@@ -146,12 +147,26 @@ export function PromotionBulkApplicationModal({ selections, onClose, onCompleted
         options: await getPromotionOptions(itemId),
       })));
       refreshed.forEach(({ itemId, options }) => saveOptions(itemId, options));
-      await onCompleted?.();
+      const refreshedSelections = selections.map((selection) => {
+        const item = refreshed.find(({ itemId }) => itemId === selection.itemId);
+        const option = item?.options.find((candidate) => (
+          promotionSelectionKey(selection.itemId, candidate) === selection.key
+        ));
+        return option ? { ...selection, option } : selection;
+      });
+      setSelections(refreshedSelections);
+      setPrices(initialPromotionPrices(refreshedSelections));
+      setExcludedFromCampaign(initialCampaignPriceExclusions(refreshedSelections));
+      setCampaignPrices({});
+      setCampaignPriceApplied({});
+      setCampaignWarnings({});
+      setCapabilityRefreshError(null);
       router.refresh();
-      onClose();
-    } catch {
-      unknownCapabilityItemIds.forEach(failOptions);
-      setCapabilityRefreshError("No pudimos reconsultar las capacidades de Mercado Libre.");
+    } catch (error: unknown) {
+      unknownCapabilityItemIds.forEach((itemId) => failOptions(itemId));
+      setCapabilityRefreshError(error instanceof Error
+        ? `No se pudieron reconsultar las capacidades: ${error.message}`
+        : "No se pudieron reconsultar las capacidades del backend local.");
     } finally {
       setRefreshingCapabilities(false);
     }
@@ -163,11 +178,11 @@ export function PromotionBulkApplicationModal({ selections, onClose, onCompleted
     activeRef.current = true;
     setRunning(true);
 
-    const completed: PromotionExecution[] = pendingExecutions(selections);
+    const completed: PromotionExecution[] = pendingExecutions(pendingSelections);
 
     try {
-      for (let index = 0; index < selections.length; index += 1) {
-        const selection = selections[index];
+      for (let index = 0; index < pendingSelections.length; index += 1) {
+        const selection = pendingSelections[index];
         if (!selection) continue;
 
         completed[index] = {
@@ -251,10 +266,12 @@ export function PromotionBulkApplicationModal({ selections, onClose, onCompleted
         ? <Button type="primary" onClick={onClose}>Listo</Button>
         : running
           ? null
-          : (
-            <Button type="primary" disabled={!canConfirm} onClick={() => void start()}>
-              Confirmar {selections.length} promociones
+          : canConfirm ? (
+            <Button type="primary" onClick={() => void start()}>
+              Confirmar {pendingSelections.length} promociones
             </Button>
+          ) : (
+            <span>No hay cambios pendientes</span>
           )}
     >
       {finished ? (
@@ -263,7 +280,7 @@ export function PromotionBulkApplicationModal({ selections, onClose, onCompleted
         <PromotionExecutionProgress
           executions={executions}
           processed={processed}
-          total={selections.length}
+          total={pendingSelections.length}
         />
       ) : (
         <>
@@ -271,7 +288,7 @@ export function PromotionBulkApplicationModal({ selections, onClose, onCompleted
             <Alert
               showIcon
               type="warning"
-              title="No pudimos verificar si se puede modificar."
+              title="El backend no informó si se puede modificar."
               description="Reconsultá las capacidades antes de intentar cambiar el precio."
               action={(
                 <Button loading={refreshingCapabilities} onClick={() => void refreshCapabilities()}>

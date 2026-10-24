@@ -50,6 +50,8 @@ function client(): AuthenticatedHttpClient {
     getResponse: vi.fn<AuthenticatedHttpClient["getResponse"]>(),
     post: vi.fn<AuthenticatedHttpClient["post"]>(),
     postResponse: vi.fn<AuthenticatedHttpClient["postResponse"]>(),
+    put: vi.fn<AuthenticatedHttpClient["put"]>(),
+    putResponse: vi.fn<AuthenticatedHttpClient["putResponse"]>(),
     patch: vi.fn<AuthenticatedHttpClient["patch"]>(),
     patchResponse: vi.fn<AuthenticatedHttpClient["patchResponse"]>(),
     delete: vi.fn<AuthenticatedHttpClient["delete"]>(),

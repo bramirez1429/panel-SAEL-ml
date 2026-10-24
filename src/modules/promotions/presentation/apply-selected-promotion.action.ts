@@ -20,6 +20,7 @@ export type ApplySelectedPromotionInput = Readonly<{
 export type ApplySelectedPromotionResult = Readonly<{ ok: true; confirmedPrice?: number | null }> | PromotionActionFailure;
 
 export async function applySelectedPromotion(input: ApplySelectedPromotionInput): Promise<ApplySelectedPromotionResult> {
+  const existingPromotion = isExistingPromotion(input.option);
   const pricedOption = optionWithSelectedPrice(input.option, input.selectedPrice);
   if (!pricedOption) return { ok: false, message: "El precio elegido no es válido." };
 
@@ -30,7 +31,7 @@ export async function applySelectedPromotion(input: ApplySelectedPromotionInput)
       itemId: input.itemId,
       familyId: null,
     });
-    const result = isExistingPromotion(pricedOption)
+    const result = existingPromotion
       ? await repository.updatePrice(sourceKey, request)
       : await repository.apply(sourceKey, request);
     const itemResult = result.results.find(({ itemId }) => itemId === input.itemId);

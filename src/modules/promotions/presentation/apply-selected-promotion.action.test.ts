@@ -57,9 +57,10 @@ describe("applySelectedPromotion", () => {
     });
     const fixedPriceOption = { ...dealOption(), promotionPrice: 12_000, requiresPriceSelection: false };
 
-    await expect(applySelectedPromotion({ itemId: "MLA1", option: fixedPriceOption, selectedPrice: null })).resolves.toEqual({ ok: true, confirmedPrice: 12_000 });
+    await expect(applySelectedPromotion({ itemId: "MLA1", option: fixedPriceOption, selectedPrice: null }))
+      .resolves.toEqual({ ok: false, message: "El precio elegido no es válido." });
 
-    expect(mocks.apply).toHaveBeenCalledWith("item:MLA1", { type: "DEAL", promotionId: "P-1", dealPrice: 12_000 });
+    expect(mocks.apply).not.toHaveBeenCalled();
   });
 
   it.each([

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { z } from "zod";
+
 import type { AuthenticatedHttpClient } from "@/shared/api/authenticated-http-client.server";
 import { ApiError } from "@/shared/api/api-error";
 
@@ -12,6 +14,7 @@ import type {
   PromotionsRequest,
 } from "../domain/promotions.repository";
 import type { PromotionRemovalSelection } from "../domain/promotion-removal.model";
+import type { PublicationPromotionResult } from "../domain/publication-promotion.model";
 import type { PromotionAudience } from "../domain/promotion-analysis.model";
 import { promotionAnalysisResponseSchema } from "./promotion-analysis.schema";
 import { promotionCampaignsSchema } from "./promotion-campaigns.schema";
@@ -141,21 +144,77 @@ export class PromotionsApiRepository implements PromotionsRepository {
   }
 
   async updatePrice(sourceKey: string, request: PromotionApplyRequest) {
-    const response = await this.http.post(
-      `${publicationPath(sourceKey)}/actualizar-precio`,
-      request,
+    const itemId = sourceKey.replace(/^(item|family):/, "");
+    const response = await this.http.put(
+      `/mercadolibre/direct/promociones/${encodeURIComponent(itemId)}/precio`,
+      updatePriceRequest(request),
       { timeoutMs: WRITE_TIMEOUT_MS },
     );
+    if (individualUpdateResultSchema.safeParse(response).success) {
+      return parseUpdatePriceResponse(response, sourceKey);
+    }
     const parsed = publicationResultSchema.safeParse(response);
     if (!parsed.success) {
       throw invalidResponse("Resultado de actualización de precio promocional inválido.", parsed.error);
     }
-    return parsed.data;
+    return parseUpdatePriceResponse(response, sourceKey);
   }
+}
+
+function updatePriceRequest(request: PromotionApplyRequest): Readonly<Record<string, string | number>> {
+  if (request.type === "SMART") {
+    return { type: request.type, promotionId: request.promotionId };
+  }
+  return {
+    type: request.type,
+    promotionId: request.type === "PRICE_DISCOUNT" ? "" : request.promotionId,
+    price: request.dealPrice,
+  };
 }
 
 function publicationPath(sourceKey: string): string {
   return `/mercadolibre/direct/promociones/publicacion/${encodeURIComponent(sourceKey)}`;
+}
+
+const individualUpdateResultSchema = z.object({
+  itemId: z.string().optional(),
+  success: z.boolean(),
+  stage: z.string().optional(),
+  confirmedPrice: z.number().nullable().optional(),
+  errorCode: z.string().optional(),
+  providerMessage: z.string().optional(),
+  message: z.string().optional(),
+});
+
+function parseUpdatePriceResponse(response: unknown, sourceKey: string): PublicationPromotionResult {
+  const publicationResult = publicationResultSchema.safeParse(response);
+  if (publicationResult.success) return publicationResult.data;
+
+  const individualResult = individualUpdateResultSchema.safeParse(response);
+  if (!individualResult.success) {
+    throw invalidResponse("Resultado de actualización de precio promocional inválido.", individualResult.error);
+  }
+
+  const item = individualResult.data;
+  const itemId = item.itemId ?? sourceKey.split(":").at(-1) ?? sourceKey;
+  const providerMessage = item.providerMessage ?? item.message;
+  return {
+    success: item.success,
+    status: item.success ? "SUCCESS" : "FAILURE",
+    errorCode: item.errorCode,
+    providerMessage,
+    totalItems: 1,
+    successfulItems: item.success ? 1 : 0,
+    failedItems: item.success ? 0 : 1,
+    results: [{
+      itemId,
+      success: item.success,
+      stage: item.stage ?? "UPDATE_PRICE",
+      confirmedPrice: item.confirmedPrice,
+      errorCode: item.errorCode,
+      providerMessage,
+    }],
+  };
 }
 
 function applyRequestParams(request: PromotionApplyRequest): URLSearchParams {

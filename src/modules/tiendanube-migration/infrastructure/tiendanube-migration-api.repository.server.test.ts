@@ -9,7 +9,7 @@ vi.mock("server-only", () => ({}));
 import { TiendanubeMigrationApiRepository } from "./tiendanube-migration-api.repository.server";
 
 function createClient(get: AuthenticatedHttpClient["get"], post: AuthenticatedHttpClient["post"]): AuthenticatedHttpClient {
-  return { get, getResponse: vi.fn(), post, postResponse: vi.fn(), patch: vi.fn(), patchResponse: vi.fn(), delete: vi.fn(), deleteResponse: vi.fn() };
+  return { get, getResponse: vi.fn(), post, postResponse: vi.fn(), put: vi.fn(), putResponse: vi.fn(), patch: vi.fn(), patchResponse: vi.fn(), delete: vi.fn(), deleteResponse: vi.fn() };
 }
 
 const progress = {

@@ -6,6 +6,15 @@ const priceModificationSchema = z.object({
   reason: z.string().nullable(),
 });
 
+const priceUpdateRestrictionSchema = z.union([
+  z.string(),
+  z.object({
+    code: z.string().nullable().optional(),
+    reason: z.string().nullable().optional(),
+    message: z.string().nullable().optional(),
+  }),
+]);
+
 const promotionSchema = z.object({
   id: z.string().nullable(),
   offerId: z.string().nullable(),
@@ -21,8 +30,9 @@ const promotionSchema = z.object({
 export const optionsSchema = z.array(
   promotionSchema.extend({
     status: z.string().nullable(),
-    subType: z.string().nullable().optional(),
+    promotionSubtype: z.string().nullable().optional(),
     canUpdatePrice: z.boolean().nullable().optional(),
+    priceUpdateRestriction: priceUpdateRestrictionSchema.nullable().optional(),
     priceModification: priceModificationSchema.nullable().optional(),
     canEditPrice: z.boolean().nullable().optional(),
     priceEditabilityReason: z.string().nullable().optional(),

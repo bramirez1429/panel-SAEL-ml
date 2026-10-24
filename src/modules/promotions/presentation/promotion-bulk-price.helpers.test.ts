@@ -46,8 +46,8 @@ describe("capacidades de precio promocional", () => {
       priceModification: { operation: "UPDATE", allowed: true, reason: null },
     };
 
-    expect(canEditPromotionPrice(option({ ...base, subType: "FLEXIBLE_PERCENTAGE" }))).toBe(true);
-    expect(canEditPromotionPrice(option({ ...base, subType: "FIXED_AMOUNT" }))).toBe(false);
+    expect(canEditPromotionPrice(option({ ...base, promotionSubtype: "FLEXIBLE_PERCENTAGE" }))).toBe(true);
+    expect(canEditPromotionPrice(option({ ...base, promotionSubtype: "FIXED_AMOUNT" }))).toBe(false);
   });
 
   it("conserva centavos reales sin redondear precios enteros", () => {

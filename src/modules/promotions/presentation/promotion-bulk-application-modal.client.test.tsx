@@ -372,6 +372,32 @@ describe("aplicación masiva secuencial", () => {
     expect(screen.getByRole("button", { name: "Confirmar 1 promociones" })).toBeDisabled();
   });
 
+  it("mantiene editable MLA2904936644 cuando NestJS confirma canUpdatePrice", async () => {
+    const user = userEvent.setup();
+    mocks.apply.mockResolvedValue({ ok: true, confirmedPrice: 68_999 });
+    select(selection("MLA2904936644", option({
+      status: "started",
+      promotionPrice: 71_911.2,
+      minPromotionPrice: 60_000,
+      maxPromotionPrice: 72_000,
+      canRemove: true,
+      canUpdatePrice: true,
+      priceModification: { operation: "UPDATE", allowed: true, reason: null },
+    })));
+    render(<PromotionSelectionSummary />);
+    await openPricing(user);
+
+    const input = screen.getByRole("spinbutton", { name: "Precio a aplicar MLA2904936644" });
+    expect(input).not.toBeDisabled();
+    setInput(input, 68_999);
+    await user.click(screen.getByRole("button", { name: "Confirmar 1 promociones" }));
+
+    expect(mocks.apply).toHaveBeenCalledWith(expect.objectContaining({
+      itemId: "MLA2904936644",
+      selectedPrice: 68_999,
+    }));
+  });
+
   it("ejecuta 1, 2 y 3 en orden, sin solaparlas, y refresca al finalizar", async () => {
     const user = userEvent.setup();
     let active = 0;

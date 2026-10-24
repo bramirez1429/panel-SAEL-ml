@@ -17,6 +17,8 @@ export type AuthenticatedHttpClient = Readonly<{
   getResponse(path: string, options?: AuthenticatedRequestOptions): Promise<HttpResponse>;
   post(path: string, body?: unknown, options?: AuthenticatedRequestOptions): Promise<unknown>;
   postResponse(path: string, body?: unknown, options?: AuthenticatedRequestOptions): Promise<HttpResponse>;
+  put(path: string, body?: unknown, options?: AuthenticatedRequestOptions): Promise<unknown>;
+  putResponse(path: string, body?: unknown, options?: AuthenticatedRequestOptions): Promise<HttpResponse>;
   patch(path: string, body?: unknown): Promise<unknown>;
   patchResponse(path: string, body?: unknown): Promise<HttpResponse>;
   delete(path: string, options?: AuthenticatedRequestOptions): Promise<unknown>;
@@ -26,7 +28,7 @@ export type AuthenticatedRequestOptions = Readonly<{ timeoutMs?: number }>;
 
 type RawHttpClient = Pick<
   HttpClient,
-  "get" | "getResponse" | "post" | "postResponse" | "patch" | "patchResponse" | "delete" | "deleteResponse"
+  "get" | "getResponse" | "post" | "postResponse" | "put" | "putResponse" | "patch" | "patchResponse" | "delete" | "deleteResponse"
 >;
 
 /**
@@ -39,6 +41,8 @@ export function createAuthenticatedHttpClient(httpClient: RawHttpClient): Authen
     getResponse: (path, options) => withPanelSession(httpClient, (token) => httpClient.getResponse(path, { ...options, bearerToken: token })),
     post: (path, body, options) => withPanelSession(httpClient, (token) => httpClient.post(path, body, { ...options, bearerToken: token })),
     postResponse: (path, body, options) => withPanelSession(httpClient, (token) => httpClient.postResponse(path, body, { ...options, bearerToken: token })),
+    put: (path, body, options) => withPanelSession(httpClient, (token) => httpClient.put(path, body, { ...options, bearerToken: token })),
+    putResponse: (path, body, options) => withPanelSession(httpClient, (token) => httpClient.putResponse(path, body, { ...options, bearerToken: token })),
     patch: (path, body) => withPanelSession(httpClient, (token) => httpClient.patch(path, body, { bearerToken: token })),
     patchResponse: (path, body) => withPanelSession(httpClient, (token) => httpClient.patchResponse(path, body, { bearerToken: token })),
     delete: (path, options) => withPanelSession(httpClient, (token) => httpClient.delete(path, { ...options, bearerToken: token })),

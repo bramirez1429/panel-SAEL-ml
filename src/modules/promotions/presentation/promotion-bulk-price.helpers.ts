@@ -14,10 +14,15 @@ export type CampaignPriceSummary = Readonly<{
 type PromotionOptionLike = Readonly<{
   type: string | null;
   status: string | null;
-  subType?: string | null;
+  promotionSubtype?: string | null;
   canApply: boolean;
   canRemove: boolean;
   canUpdatePrice?: boolean | null;
+  priceUpdateRestriction?: string | Readonly<{
+    code?: string | null;
+    reason?: string | null;
+    message?: string | null;
+  }> | null;
   canEditPrice?: boolean | null;
   priceEditabilityReason?: string | null;
   priceModification?: Readonly<{
@@ -45,8 +50,9 @@ export function promotionLifecycle(
   if (option.canUpdatePrice !== null && option.canUpdatePrice !== undefined && positivePrice(option.promotionPrice)) {
     return "active";
   }
+  if (positivePrice(option.promotionPrice)) return "active";
   if (status === "candidate" && operation !== "UPDATE" && !option.canRemove) return "new";
-  if (operation === "UPDATE" || option.canRemove || positivePrice(option.promotionPrice)) return "active";
+  if (operation === "UPDATE" || option.canRemove) return "active";
   if (status === "candidate") return "new";
   return "unknown";
 }
@@ -59,12 +65,12 @@ export function isExistingPromotion(
 }
 
 export function canEditPromotionPrice(
-  option: Pick<PromotionOptionLike, "type" | "status" | "subType" | "canApply" | "canRemove" | "canUpdatePrice" | "canEditPrice" | "priceEditabilityReason" | "priceModification" | "promotionPrice" | "requiresPriceSelection" | "minPromotionPrice" | "maxPromotionPrice" | "suggestedPromotionPrice">,
+  option: Pick<PromotionOptionLike, "type" | "status" | "promotionSubtype" | "canApply" | "canRemove" | "canUpdatePrice" | "priceUpdateRestriction" | "canEditPrice" | "priceEditabilityReason" | "priceModification" | "promotionPrice" | "requiresPriceSelection" | "minPromotionPrice" | "maxPromotionPrice" | "suggestedPromotionPrice">,
 ): boolean {
   const type = option.type?.toUpperCase();
   const lifecycle = promotionLifecycle(option);
   if (type !== "PRICE_DISCOUNT" && type !== "DEAL" && type !== "SELLER_CAMPAIGN") return false;
-  if (type === "SELLER_CAMPAIGN" && option.subType?.toUpperCase() !== "FLEXIBLE_PERCENTAGE") return false;
+  if (type === "SELLER_CAMPAIGN" && option.promotionSubtype?.toUpperCase() !== "FLEXIBLE_PERCENTAGE") return false;
   if (lifecycle === "new") {
     if (option.canApply !== true || !isCreateOperation(option)) return false;
     if (option.priceModification || option.canEditPrice === true) return true;
@@ -80,7 +86,7 @@ export function canEditPromotionPrice(
 }
 
 export function promotionPriceEditabilityReason(
-  option: Pick<PromotionOptionLike, "type" | "status" | "subType" | "canApply" | "canRemove" | "canUpdatePrice" | "canEditPrice" | "priceEditabilityReason" | "priceModification" | "promotionPrice" | "requiresPriceSelection">,
+  option: Pick<PromotionOptionLike, "type" | "status" | "promotionSubtype" | "canApply" | "canRemove" | "canUpdatePrice" | "priceUpdateRestriction" | "canEditPrice" | "priceEditabilityReason" | "priceModification" | "promotionPrice" | "requiresPriceSelection">,
 ): string | null {
   if (canEditPromotionPrice({
     ...option,
@@ -89,16 +95,19 @@ export function promotionPriceEditabilityReason(
     suggestedPromotionPrice: null,
   })) return null;
 
-  const explicitReason = option.priceModification?.reason ?? option.priceEditabilityReason;
+  const restrictionReason = typeof option.priceUpdateRestriction === "string"
+    ? option.priceUpdateRestriction
+    : option.priceUpdateRestriction?.reason ?? option.priceUpdateRestriction?.message;
+  const explicitReason = restrictionReason ?? option.priceModification?.reason ?? option.priceEditabilityReason;
   if (explicitReason?.trim()) return explicitReason;
   if (option.canUpdatePrice === false) {
     return "Mercado Libre no permite modificar el precio de esta participación.";
   }
-  if (option.type?.toUpperCase() === "SELLER_CAMPAIGN" && option.subType?.toUpperCase() !== "FLEXIBLE_PERCENTAGE") {
+  if (option.type?.toUpperCase() === "SELLER_CAMPAIGN" && option.promotionSubtype?.toUpperCase() !== "FLEXIBLE_PERCENTAGE") {
     return "Sólo las campañas SELLER_CAMPAIGN de subtipo FLEXIBLE_PERCENTAGE permiten modificar el precio por publicación.";
   }
   if (promotionLifecycle(option) === "active" || promotionLifecycle(option) === "scheduled") {
-    return "No pudimos verificar si se puede modificar.";
+    return "El backend no informó canUpdatePrice ni priceUpdateRestriction; no se puede verificar la edición con esta versión.";
   }
   if (option.status?.toLowerCase() === "candidate" && option.canApply !== true) {
     return "Mercado Libre no permite participar en esta promoción.";

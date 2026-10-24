@@ -59,16 +59,34 @@ describe("PromotionsApiRepository publication operations", () => {
 
   it("actualiza el precio por el endpoint UPDATE_PRICE con el importe solicitado", async () => {
     const http = client();
-    vi.mocked(http.post).mockResolvedValue(result(1, 1));
+    vi.mocked(http.put).mockResolvedValue(result(1, 1));
     const updateRequest = { ...request, dealPrice: 68_999 };
 
     await new PromotionsApiRepository(http).updatePrice("item:MLA2904936668", updateRequest);
 
-    expect(http.post).toHaveBeenCalledWith(
-      "/mercadolibre/direct/promociones/publicacion/item%3AMLA2904936668/actualizar-precio",
-      updateRequest,
+    expect(http.put).toHaveBeenCalledWith(
+      "/mercadolibre/direct/promociones/MLA2904936668/precio",
+      { type: "DEAL", promotionId: "deal-1", price: 68_999 },
       { timeoutMs: 120_000 },
     );
+  });
+
+  it("normaliza la respuesta individual de UPDATE_PRICE", async () => {
+    const http = client();
+    vi.mocked(http.put).mockResolvedValue({
+      itemId: "MLA2904936644",
+      success: true,
+      stage: "UPDATE_PRICE",
+      confirmedPrice: 68_999,
+    });
+
+    await expect(new PromotionsApiRepository(http).updatePrice("item:MLA2904936644", {
+      ...request,
+      dealPrice: 68_999,
+    })).resolves.toMatchObject({
+      success: true,
+      results: [{ itemId: "MLA2904936644", confirmedPrice: 68_999 }],
+    });
   });
 
   it("acepta un failure total con el error real del MLA", async () => {
@@ -228,6 +246,8 @@ function client() {
     getResponse: vi.fn<AuthenticatedHttpClient["getResponse"]>(),
     post: vi.fn<AuthenticatedHttpClient["post"]>(),
     postResponse: vi.fn<AuthenticatedHttpClient["postResponse"]>(),
+    put: vi.fn<AuthenticatedHttpClient["put"]>(),
+    putResponse: vi.fn<AuthenticatedHttpClient["putResponse"]>(),
     patch: vi.fn<AuthenticatedHttpClient["patch"]>(),
     patchResponse: vi.fn<AuthenticatedHttpClient["patchResponse"]>(),
     delete: vi.fn<AuthenticatedHttpClient["delete"]>(),

@@ -6,6 +6,7 @@ import { ApiError } from "./api-error";
 export type HttpGetClient = Pick<HttpClient, "get">;
 export type HttpPostClient = Pick<HttpClient, "post">;
 export type HttpPatchClient = Pick<HttpClient, "patch">;
+export type HttpPutClient = Pick<HttpClient, "put">;
 export type HttpDeleteClient = Pick<HttpClient, "delete">;
 export type HttpRequestOptions = Readonly<{
   bearerToken?: string;
@@ -16,6 +17,7 @@ export type HttpRequestOptions = Readonly<{
 export type HttpGetOptions = HttpRequestOptions;
 export type HttpPostOptions = HttpRequestOptions;
 export type HttpPatchOptions = HttpRequestOptions;
+export type HttpPutOptions = HttpRequestOptions;
 export type HttpDeleteOptions = HttpRequestOptions;
 export type HttpResponse = Readonly<{
   body: unknown;
@@ -116,6 +118,26 @@ export class HttpClient {
     const hasBody = body !== undefined;
     return this.request(path, {
       method: "PATCH",
+      credentials: options.credentials,
+      headers: {
+        Accept: "application/json, text/plain;q=0.9",
+        ...(hasBody ? { "Content-Type": "application/json" } : {}),
+        ...(options.bearerToken ? { Authorization: `Bearer ${options.bearerToken}` } : {}),
+        ...(options.cookieHeader ? { Cookie: options.cookieHeader } : {}),
+      },
+      body: hasBody ? JSON.stringify(body) : undefined,
+    }, options.timeoutMs);
+  }
+
+  async put(path: string, body?: unknown, options: HttpPutOptions = {}): Promise<unknown> {
+    const response = await this.putResponse(path, body, options);
+    return response.body;
+  }
+
+  async putResponse(path: string, body?: unknown, options: HttpPutOptions = {}): Promise<HttpResponse> {
+    const hasBody = body !== undefined;
+    return this.request(path, {
+      method: "PUT",
       credentials: options.credentials,
       headers: {
         Accept: "application/json, text/plain;q=0.9",

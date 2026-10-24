@@ -30,7 +30,7 @@ const refreshedSession = {
 };
 
 function dependencies() {
-  return { get: vi.fn(), getResponse: vi.fn(), post: vi.fn(), postResponse: vi.fn(), patch: vi.fn(), patchResponse: vi.fn(), delete: vi.fn(), deleteResponse: vi.fn() };
+  return { get: vi.fn(), getResponse: vi.fn(), post: vi.fn(), postResponse: vi.fn(), put: vi.fn(), putResponse: vi.fn(), patch: vi.fn(), patchResponse: vi.fn(), delete: vi.fn(), deleteResponse: vi.fn() };
 }
 
 function unauthorized(body: unknown = { code: "AUTHENTICATION_REQUIRED" }): ApiError {

@@ -21,14 +21,21 @@ export type PromotionPriceModification = Readonly<{
   reason: string | null;
 }>;
 
+export type PromotionPriceUpdateRestriction = Readonly<{
+  code?: string | null;
+  reason?: string | null;
+  message?: string | null;
+}> | string;
+
 export type PromotionOption = Readonly<{
   id: string | null;
   offerId: string | null;
   type: string | null;
   name: string | null;
   status: string | null;
-  subType?: string | null;
+  promotionSubtype?: string | null;
   canUpdatePrice?: boolean | null;
+  priceUpdateRestriction?: PromotionPriceUpdateRestriction | null;
   priceModification?: PromotionPriceModification | null;
   canEditPrice?: boolean | null;
   priceEditabilityReason?: string | null;

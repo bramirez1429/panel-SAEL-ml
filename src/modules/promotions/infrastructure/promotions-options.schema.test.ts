@@ -35,7 +35,7 @@ describe("optionsSchema", () => {
   it("conserva la capacidad real de modificación informada por backend", () => {
     const result = optionsSchema.parse([option({
       status: "started",
-      subType: "FLEXIBLE_PERCENTAGE",
+      promotionSubtype: "FLEXIBLE_PERCENTAGE",
       canUpdatePrice: true,
       priceModification: {
         operation: "UPDATE",
@@ -49,7 +49,7 @@ describe("optionsSchema", () => {
       allowed: true,
       reason: null,
     });
-    expect(result[0]?.subType).toBe("FLEXIBLE_PERCENTAGE");
+    expect(result[0]?.promotionSubtype).toBe("FLEXIBLE_PERCENTAGE");
     expect(result[0]?.canUpdatePrice).toBe(true);
   });
 });

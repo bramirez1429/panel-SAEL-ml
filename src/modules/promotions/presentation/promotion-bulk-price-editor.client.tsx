@@ -100,12 +100,19 @@ export function PromotionBulkPriceEditor({
                 {campaignSelections.length} {campaignSelections.length === 1 ? "publicación" : "publicaciones"}
               </Typography.Text>
               <CommonRange range={commonPromotionPriceRange(campaignSelections)} />
+              {editableSelections.length === 0 ? (
+                <Alert
+                  showIcon
+                  type="info"
+                  title={promotionPriceEditabilityReason(campaignSelections[0]!.option) ?? "Esta promoción no admite modificar el precio."}
+                />
+              ) : null}
               <Typography.Text strong>Modificar precio para esta campaña</Typography.Text>
               <Space wrap>
                 <PromotionCurrencyInput
                   aria-label={`Precio campaña ${promotionName(campaignSelections[0]!)}`}
                   controls={false}
-                  disabled={editableSelections.length === 0}
+                  style={{ display: editableSelections.length === 0 ? "none" : undefined }}
                   min={0}
                   value={campaignPrice}
                   onChange={(price) => onCampaignPriceChange(key, price)}
@@ -114,6 +121,7 @@ export function PromotionBulkPriceEditor({
                   aria-label={`Aplicar precio ${promotionName(campaignSelections[0]!)}`}
                   disabled={!canApplyCampaignPrice}
                   onClick={() => onApplyCampaignPrice(key)}
+                  style={{ display: editableSelections.length === 0 ? "none" : undefined }}
                 >
                   Aplicar
                 </Button>
@@ -126,6 +134,7 @@ export function PromotionBulkPriceEditor({
               />
 
               <Checkbox
+                style={{ display: editableSelections.length === 0 ? "none" : undefined }}
                 checked={allCampaignItemsSelected}
                 indeterminate={someCampaignItemsSelected}
                 onChange={(event) => {
@@ -242,11 +251,10 @@ function PromotionPriceRow({
         <PromotionCurrencyInput
           aria-label={`Precio a aplicar ${selection.itemId}`}
           controls={false}
-          disabled={!editable}
+          style={{ ...({ width: "100%" }), display: editable ? undefined : "none" }}
           status={valid ? undefined : "error"}
           value={price}
           onChange={onPriceChange}
-          style={{ width: "100%" }}
         />
         {!editable ? (
           <Typography.Text type="secondary">

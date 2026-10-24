@@ -11,6 +11,8 @@ function client() {
     getResponse: vi.fn(),
     post: vi.fn(),
     postResponse: vi.fn(),
+    put: vi.fn(),
+    putResponse: vi.fn(),
     patch: vi.fn(),
     patchResponse: vi.fn(),
     delete: vi.fn(),
