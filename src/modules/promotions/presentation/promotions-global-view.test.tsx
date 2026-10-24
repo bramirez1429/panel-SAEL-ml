@@ -52,6 +52,53 @@ describe("vista global de promociones", () => {
   });
   afterEach(cleanup);
 
+  it("solo pide promociones del color que se abre, con sus columnas y caché", async () => {
+    const user = userEvent.setup();
+    mocks.getOptions.mockResolvedValue([candidate()]);
+    render(<PromotionsCatalogClient page={page([
+      publication({ itemId: "MLA-S", title: "Remera Pack 1 S", variantColor: "Pack 1" }),
+      publication({ itemId: "MLA-XL", title: "Remera Pack 1 XL", variantColor: "Pack 1" }),
+      publication({ itemId: "MLA-M", title: "Remera Pack 2 M", variantColor: "Pack 2" }),
+    ])} />);
+
+    expect(mocks.getOptions).not.toHaveBeenCalled();
+    expect(screen.queryByRole("columnheader")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Mostrar talles de Pack 1" }));
+    await waitFor(() => expect(mocks.getOptions).toHaveBeenCalledTimes(2));
+    expect(mocks.getOptions).toHaveBeenCalledWith("MLA-S");
+    expect(mocks.getOptions).toHaveBeenCalledWith("MLA-XL");
+    expect(mocks.getOptions).not.toHaveBeenCalledWith("MLA-M");
+    for (const col of ["PUBLICACIÓN", "PROMOCIÓN", "DESCUENTO", "PRECIO FINAL", "RECIBÍS", "TAREAS Y RECOMENDACIONES"]) {
+      expect(screen.getByRole("columnheader", { name: col })).toBeInTheDocument();
+    }
+
+    await user.click(screen.getByRole("button", { name: "Ocultar talles de Pack 1" }));
+    expect(screen.queryByRole("columnheader")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Mostrar talles de Pack 1" }));
+    expect(mocks.getOptions).toHaveBeenCalledTimes(2);
+  });
+
+  it("un fallo muestra Reintentar y no repite solicitudes automáticamente", async () => {
+    const user = userEvent.setup();
+    mocks.getOptions.mockRejectedValueOnce(new Error("Fallo del proveedor")).mockResolvedValueOnce([candidate()]);
+    render(<PromotionsCatalogClient page={page([
+      publication({ itemId: "MLA1", title: "Remera Rosa S", variantColor: "Rosa" }),
+    ])} />);
+
+    expect(mocks.getOptions).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Mostrar talles de Rosa" }));
+    expect(await screen.findByRole("button", { name: "Reintentar" })).toBeInTheDocument();
+    expect(mocks.getOptions).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole("button", { name: "Ocultar talles de Rosa" }));
+    await user.click(screen.getByRole("button", { name: "Mostrar talles de Rosa" }));
+    expect(mocks.getOptions).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole("button", { name: "Reintentar" }));
+    await waitFor(() => expect(mocks.getOptions).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText(/Cyber Fest/i)).toBeInTheDocument();
+  });
+
   it("carga opciones al entrar en viewport, sin desplegable, y reutiliza la caché", async () => {
     mocks.getOptions.mockResolvedValue([candidate()]);
     const { rerender } = render(<PromotionsCatalogClient page={page([publication()])} />);
