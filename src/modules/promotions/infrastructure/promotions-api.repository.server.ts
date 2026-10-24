@@ -142,7 +142,7 @@ export class PromotionsApiRepository implements PromotionsRepository {
 
   async updatePrice(sourceKey: string, request: PromotionApplyRequest) {
     if (request.type !== "DEAL" && request.type !== "SELLER_CAMPAIGN") {
-      throw new ApiError("Esta promoción no admite modificar el precio directamente.", "PROMOTION_NOT_EDITABLE");
+      throw new ApiError("Esta promoción no admite modificar el precio directamente.", "API_INVALID_RESPONSE");
     }
 
     // Use the publication-scoped endpoint. NestJS expects dealPrice, not price.
