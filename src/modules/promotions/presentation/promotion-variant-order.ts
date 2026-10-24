@@ -56,6 +56,47 @@ export function sortPromotionPublications<T extends VariantRow>(items: readonly 
     }).map(({ item }) => item);
 }
 
+export type PromotionVariantGroup<T> = Readonly<{
+  key: string;
+  label: string | null;
+  publications: readonly T[];
+}>;
+
+/**
+ * Create collapsible groups within each product family, by color or pack.
+ * Listings without a verifiable color stay separate rather than being
+ * mistakenly grouped as the same anonymous variant.
+ */
+export function groupPromotionPublications<T extends VariantRow>(
+  publications: readonly T[],
+): PromotionVariantGroup<T>[] {
+  const groups: Array<{ key: string; label: string | null; publications: T[] }> = [];
+  const groupByKey = new Map<string, (typeof groups)[number]>();
+
+  for (const publication of sortPromotionPublications(publications)) {
+    const keys = variantKeys(publication);
+    const key = JSON.stringify([keys.group, keys.product, keys.color ?? ("ITEM:" + publication.itemId)]);
+    let group = groupByKey.get(key);
+    if (!group) {
+      group = {
+        key,
+        label: keys.color ? formatVariantGroupLabel(keys.color) : null,
+        publications: [],
+      };
+      groupByKey.set(key, group);
+      groups.push(group);
+    }
+    group.publications.push(publication);
+  }
+  return groups;
+}
+
+function formatVariantGroupLabel(color: string): string {
+  if (color.startsWith("PACK ")) return "Pack " + color.slice(5);
+  return color.toLocaleLowerCase("es-AR")
+    .replace(/(^|\s)\p{L}/gu, (letter) => letter.toLocaleUpperCase("es-AR"));
+}
+
 export function sortPromotionSelections(selections: readonly SelectedPromotion[]): SelectedPromotion[] {
   return sortPromotionPublications(selections.map((selection) => ({
     ...selection,

@@ -44,7 +44,7 @@ import {
 } from "./promotion-global.store";
 import { getPromotionOptions } from "./promotion-options.action";
 import { canEditPromotionPrice } from "./promotion-bulk-price.helpers";
-import { sortPromotionPublications } from "./promotion-variant-order";
+import { groupPromotionPublications } from "./promotion-variant-order";
 import {
   enqueuePromotionOptionsLoad,
 } from "./promotion-options.queue.client";
@@ -84,6 +84,7 @@ type IndividualSelection = Readonly<{
 }>;
 
 type DisplayState =
+  | "group"
   | "loading"
   | "error"
   | "empty"
@@ -97,6 +98,9 @@ type DisplayRow = Readonly<{
   publicationRowSpan: number;
   firstInGroup: boolean;
   lastInGroup: boolean;
+  variantGroupKey?: string;
+  variantGroupLabel?: string;
+  variantGroupCount?: number;
 }>;
 
 const missingValue = "—";
@@ -204,25 +208,72 @@ export function PromotionsTable({
     await onChanged?.();
   }
 
-  const rows = displayRows(
-    sortPromotionPublications(page.publications),
-    optionsByItem,
-  );
+  const [expandedGroups, setExpandedGroups] = useState<Readonly<Record<string, boolean>>>({});
+
+  const rows: DisplayRow[] = groupPromotionPublications(page.publications).flatMap((group) => {
+    if (!group.label || group.publications.length < 2) {
+      return displayRows(group.publications, optionsByItem);
+    }
+    const header: DisplayRow = {
+      key: "variant-group:" + group.key,
+      publication: group.publications[0]!,
+      option: null,
+      state: "group",
+      publicationRowSpan: 1,
+      firstInGroup: true,
+      lastInGroup: false,
+      variantGroupKey: group.key,
+      variantGroupLabel: group.label,
+      variantGroupCount: group.publications.length,
+    };
+    return [
+      header,
+      ...(expandedGroups[group.key] === true ? displayRows(group.publications, optionsByItem) : []),
+    ];
+  });
 
   const columns: TableColumnsType<DisplayRow> = [
     {
       title: "PUBLICACIÓN",
       key: "publication",
       width: 310,
-      onCell: (row) => ({
-        rowSpan: row.publicationRowSpan,
-        style: groupCellStyle(
-          row,
-          true,
-        ),
-      }),
+      onCell: (row) => row.state === "group"
+        ? {
+            colSpan: compact ? 6 : 7,
+            style: { ...groupCellStyle(row, true), background: "#f3f7fc", paddingBlock: 8 },
+          }
+        : {
+            rowSpan: row.publicationRowSpan,
+            style: groupCellStyle(row, true),
+          },
       render: (_, row) =>
-        row.publicationRowSpan > 0 ? (
+        row.state === "group" && row.variantGroupKey ? (
+          <Button
+            type="text"
+            aria-expanded={expandedGroups[row.variantGroupKey] === true}
+            aria-label={`${expandedGroups[row.variantGroupKey] === true ? "Ocultar" : "Mostrar"} talles de ${row.variantGroupLabel}`}
+            onClick={() => {
+              const key = row.variantGroupKey!;
+              setExpandedGroups((current) => ({ ...current, [key]: current[key] !== true }));
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              width: "100%",
+              height: "auto",
+              minHeight: 36,
+              textAlign: "left",
+              paddingInline: 10,
+            }}
+          >
+            <span>
+              <span aria-hidden="true">{expandedGroups[row.variantGroupKey] === true ? "▾" : "▸"}</span>{" "}
+              <strong>{row.variantGroupLabel}</strong>
+            </span>
+            <span>{row.variantGroupCount} publicaciones</span>
+          </Button>
+        ) : row.publicationRowSpan > 0 ? (
           <PromotionViewportLoader
             itemId={row.publication.itemId}
             onVisible={() =>
@@ -240,6 +291,7 @@ export function PromotionsTable({
       key: "selection",
       width: 42,
       onCell: (row) => ({
+        colSpan: row.state === "group" ? 0 : undefined,
         style: groupCellStyle(row),
       }),
       render: (_, row) =>
@@ -263,6 +315,7 @@ export function PromotionsTable({
       key: "promotion",
       width: 245,
       onCell: (row) => ({
+        colSpan: row.state === "group" ? 0 : undefined,
         style: groupCellStyle(row),
       }),
       render: (_, row) => (
@@ -279,6 +332,7 @@ export function PromotionsTable({
       key: "discount",
       width: 200,
       onCell: (row) => ({
+        colSpan: row.state === "group" ? 0 : undefined,
         style: groupCellStyle(row),
       }),
       render: (_, row) =>
@@ -297,6 +351,7 @@ export function PromotionsTable({
       key: "price",
       width: 150,
       onCell: (row) => ({
+        colSpan: row.state === "group" ? 0 : undefined,
         style: groupCellStyle(row),
       }),
       render: (_, row) =>
@@ -315,6 +370,7 @@ export function PromotionsTable({
       key: "net",
       width: 160,
       onCell: (row) => ({
+        colSpan: row.state === "group" ? 0 : undefined,
         style: groupCellStyle(row),
       }),
       render: (_, row) =>
@@ -331,11 +387,8 @@ export function PromotionsTable({
       key: "tasks",
       width: 260,
       onCell: (row) => ({
-        style: groupCellStyle(
-          row,
-          false,
-          true,
-        ),
+        colSpan: row.state === "group" ? 0 : undefined,
+        style: groupCellStyle(row, false, true),
       }),
       render: (_, row) =>
         row.state === "loading" ? (
@@ -578,6 +631,7 @@ function PromotionCell({
   row: DisplayRow;
   onRetry: () => void;
 }>) {
+  if (row.state === "group") return null;
   if (row.state === "loading") {
     return (
       <FieldSkeleton
