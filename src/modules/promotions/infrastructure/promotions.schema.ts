@@ -50,6 +50,8 @@ const rowSchema = z.object({
     .string()
     .nullish()
     .transform((value) => value ?? null),
+  variantColor: z.string().nullish().transform((value) => value ?? null),
+  variantSize: z.string().nullish().transform((value) => value ?? null),
 
   stock: z
     .number()
@@ -76,9 +78,9 @@ const rowSchema = z.object({
   ]),
   price: z.number(),
   currentPromotion: promotionSchema.nullable(),
-  hasActivePromotion: z.boolean(),
-  availablePromotionsCount: z.number().int().nonnegative(),
-  promotionStatus: z.enum(["ACTIVE", "AVAILABLE", "PENDING", "NONE"]),
+  hasActivePromotion: z.boolean().nullable(),
+  availablePromotionsCount: z.number().int().nonnegative().nullable(),
+  promotionStatus: z.enum(["ACTIVE", "AVAILABLE", "PENDING", "NONE"]).nullable(),
 });
 
 export const catalogSchema = z.object({

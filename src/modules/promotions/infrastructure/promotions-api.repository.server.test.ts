@@ -16,6 +16,17 @@ const request: PromotionApplyRequest = {
 };
 
 describe("PromotionsApiRepository publication operations", () => {
+  it("solicita el catálogo liviano sin cargar opciones de todos los MLA", async () => {
+    const http = client();
+    vi.mocked(http.get).mockResolvedValue({ done: true, nextCursor: null, count: 0, publications: [] });
+
+    await new PromotionsApiRepository(http).getCatalog({ limit: 20, cursor: null, lightweight: true });
+
+    expect(http.get).toHaveBeenCalledWith(
+      "/mercadolibre/direct/promociones?limit=20&lightweight=true",
+    );
+  });
+
   it("usa el endpoint real del catálogo para la búsqueda server-side", async () => {
     const http = client();
     vi.mocked(http.get).mockResolvedValue({ done: true, nextCursor: null, count: 0, publications: [] });

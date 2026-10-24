@@ -44,6 +44,8 @@ import {
 } from "./promotion-global.store";
 import { getPromotionOptions } from "./promotion-options.action";
 import { canEditPromotionPrice } from "./promotion-bulk-price.helpers";
+import { groupPromotionPublications } from "./promotion-variant-order";
+import { PromotionColorAccordion } from "./promotion-color-accordion.client";
 import {
   enqueuePromotionOptionsLoad,
 } from "./promotion-options.queue.client";
@@ -167,7 +169,8 @@ export function PromotionsTable({
 
     if (
       cached?.status === "loading" ||
-      cached?.status === "success"
+      cached?.status === "success" ||
+      cached?.status === "error"
     ) {
       return;
     }
@@ -188,9 +191,14 @@ export function PromotionsTable({
     });
   }, [failOptions, saveOptions, startOptionsLoad]);
 
+  // "Load all" applies only to publications immediately visible. Closed
+  // color/pack groups must not call /opciones until the user opens them.
   useEffect(() => {
     if (!loadAllOnMount) return;
-    page.publications.forEach(loadOptions);
+    for (const group of groupPromotionPublications(page.publications)) {
+      if (group.label) continue;
+      group.publications.forEach(loadOptions);
+    }
   }, [loadAllOnMount, loadOptions, page.publications]);
 
   function reloadOptions(publication: PromotionRow): void {
@@ -203,10 +211,39 @@ export function PromotionsTable({
     await onChanged?.();
   }
 
-  const rows = displayRows(
-    page.publications,
-    optionsByItem,
-  );
+  const [expandedGroups, setExpandedGroups] = useState<Readonly<Record<string, boolean>>>({});
+
+  // The table and its column headings only exist when a pack is expanded.
+  // Adjacent standalone publications share one table to avoid duplicate headings.
+  const sections: Array<{
+    key: string;
+    label: string | null;
+    publications: PromotionRow[];
+  }> = [];
+  for (const group of groupPromotionPublications(page.publications)) {
+    const collapsible = Boolean(group.label);
+    if (!collapsible) {
+      const previous = sections[sections.length - 1];
+      if (previous && previous.label === null) {
+        previous.publications.push(...group.publications);
+      } else {
+        sections.push({ key: group.key, label: null, publications: [...group.publications] });
+      }
+      continue;
+    }
+    sections.push({ key: group.key, label: group.label, publications: [...group.publications] });
+  }
+
+  function toggleGroup(key: string, publications: readonly PromotionRow[]): void {
+    if (expandedGroups[key] !== true) {
+      // Read detail only on first open; loadOptions consults the cache and
+      // caps concurrent Mercado Libre GET requests through the existing queue.
+      publications.forEach(loadOptions);
+    }
+    setExpandedGroups((current) => ({ ...current, [key]: current[key] !== true }));
+  }
+
+  const collapsibleItemIds = new Set(sections.filter((section) => section.label !== null).flatMap((section) => section.publications.map((item) => item.itemId)));
 
   const columns: TableColumnsType<DisplayRow> = [
     {
@@ -215,24 +252,19 @@ export function PromotionsTable({
       width: 310,
       onCell: (row) => ({
         rowSpan: row.publicationRowSpan,
-        style: groupCellStyle(
-          row,
-          true,
-        ),
+        style: groupCellStyle(row, true),
       }),
-      render: (_, row) =>
-        row.publicationRowSpan > 0 ? (
-          <PromotionViewportLoader
-            itemId={row.publication.itemId}
-            onVisible={() =>
-              loadOptions(row.publication)
-            }
-          >
-            <PublicationCell
-              publication={row.publication}
-            />
+      render: (_, row) => {
+        if (row.publicationRowSpan === 0) return null;
+        if (collapsibleItemIds.has(row.publication.itemId)) {
+          return <PublicationCell publication={row.publication} />;
+        }
+        return (
+          <PromotionViewportLoader itemId={row.publication.itemId} onVisible={() => loadOptions(row.publication)}>
+            <PublicationCell publication={row.publication} />
           </PromotionViewportLoader>
-        ) : null,
+        );
+      },
     },
     {
       title: "",
@@ -268,7 +300,7 @@ export function PromotionsTable({
         <PromotionCell
           row={row}
           onRetry={() =>
-            loadOptions(row.publication)
+            reloadOptions(row.publication)
           }
         />
       ),
@@ -330,11 +362,7 @@ export function PromotionsTable({
       key: "tasks",
       width: 260,
       onCell: (row) => ({
-        style: groupCellStyle(
-          row,
-          false,
-          true,
-        ),
+        style: groupCellStyle(row, false, true),
       }),
       render: (_, row) =>
         row.state === "loading" ? (
@@ -372,14 +400,37 @@ export function PromotionsTable({
 
   return (
     <>
-      <Table<DisplayRow>
-        rowKey="key"
-        dataSource={rows}
-        columns={visibleColumns}
-        pagination={false}
-        size="small"
-        scroll={{ x: compact ? 1325 : 1367 }}
-      />
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {sections.map((section) => {
+          const collapsible = section.label !== null;
+          const expanded = collapsible && expandedGroups[section.key] === true;
+
+          return (
+            <section key={section.key}>
+              {collapsible && section.label ? (
+                <PromotionColorAccordion
+                  label={section.label}
+                  count={section.publications.length}
+                  expanded={expanded}
+                  onToggle={() => toggleGroup(section.key, section.publications)}
+                />
+              ) : null}
+
+              {(!collapsible || expanded) ? (
+                <Table<DisplayRow>
+                  rowKey="key"
+                  dataSource={displayRows(section.publications, optionsByItem)}
+                  columns={visibleColumns}
+                  pagination={false}
+                  size="small"
+                  scroll={{ x: compact ? 1325 : 1367 }}
+                  style={collapsible ? { marginTop: 4 } : undefined}
+                />
+              ) : null}
+            </section>
+          );
+        })}
+      </div>
 
       {individualSelection ? (
         <PromotionIndividualApplicationModal
