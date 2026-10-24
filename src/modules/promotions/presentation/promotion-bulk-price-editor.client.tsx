@@ -21,6 +21,9 @@ import {
   commonPromotionPriceRange,
   money,
   percentage,
+  canEditPromotionPrice,
+  isExistingPromotion,
+  promotionEditabilityReason,
   promotionDiscountPercent,
   promotionCampaignKey,
   promotionName,
@@ -68,10 +71,11 @@ export function PromotionBulkPriceEditor({
           && Number.isFinite(campaignPrice)
           && campaignPrice > 0
         );
-        const selectedItemKeys = campaignSelections
+        const editableSelections = campaignSelections.filter((selection) => canEditPromotionPrice(selection.option));
+        const selectedItemKeys = editableSelections
           .filter((selection) => excludedFromCampaign[selection.key] !== true)
           .map((selection) => selection.key);
-        const allCampaignItemsSelected = selectedItemKeys.length === campaignSelections.length;
+        const allCampaignItemsSelected = selectedItemKeys.length > 0 && selectedItemKeys.length === editableSelections.length;
         const someCampaignItemsSelected = selectedItemKeys.length > 0 && !allCampaignItemsSelected;
         const canApplyCampaignPrice = (
           hasCampaignPrice && selectedItemKeys.length > 0
@@ -94,8 +98,8 @@ export function PromotionBulkPriceEditor({
                 {campaignSelections.length} {campaignSelections.length === 1 ? "publicación" : "publicaciones"}
               </Typography.Text>
               <CommonRange range={commonPromotionPriceRange(campaignSelections)} />
-              <Typography.Text strong>Modificar precio para esta campaña</Typography.Text>
-              <Space wrap>
+              {editableSelections.length > 0 ? <Typography.Text strong>Modificar precio para esta campaña</Typography.Text> : null}
+              {editableSelections.length > 0 ? <Space wrap>
                 <PromotionCurrencyInput
                   aria-label={`Precio campaña ${promotionName(campaignSelections[0]!)}`}
                   controls={false}
@@ -110,7 +114,7 @@ export function PromotionBulkPriceEditor({
                 >
                   Aplicar
                 </Button>
-              </Space>
+              </Space> : <Alert type="info" showIcon title={promotionEditabilityReason(campaignSelections[0]!.option)} />}
               <CampaignDiscount range={discountRange} />
               <CampaignApplicationSummary
                 summary={summary}
@@ -118,18 +122,18 @@ export function PromotionBulkPriceEditor({
                 campaignPriceApplied={campaignPriceApplied[key] === true}
               />
 
-              <Checkbox
+              {editableSelections.length > 0 ? <Checkbox
                 checked={allCampaignItemsSelected}
                 indeterminate={someCampaignItemsSelected}
                 onChange={(event) => {
                   const participates = event.target.checked;
-                  for (const selection of campaignSelections) {
+                  for (const selection of editableSelections) {
                     onExcludedFromCampaignChange(selection.key, !participates);
                   }
                 }}
               >
                 Aplicar este precio a todas las publicaciones de esta promoción
-              </Checkbox>
+              </Checkbox> : null}
 
               <div>
                 {campaignSelections.map((selection) => (
@@ -178,7 +182,7 @@ function PromotionPriceRow({
   onPriceChange: (price: number | null) => void;
   onExcludedFromCampaignChange: (checked: boolean) => void;
 }>) {
-  const editable = selection.option.requiresPriceSelection === true;
+  const editable = canEditPromotionPrice(selection.option);
   const valid = validSelectionPrice(selection, price);
   const discount = promotionDiscountPercent(selection.option.originalPrice, price);
   const participatesInCampaignPrice = !excludedFromCampaign;
@@ -208,9 +212,9 @@ function PromotionPriceRow({
           Precio sugerido ML: {money(selection.option.suggestedPromotionPrice)}
         </Typography.Text>
         <Typography.Text>
-          Precio promocional actual: {money(selection.option.promotionPrice)}
+          {isExistingPromotion(selection.option) ? "Precio actual de campaña" : "Precio promocional propuesto"}: {money(selection.option.currentEditablePrice ?? selection.option.promotionPrice)}
         </Typography.Text>
-        <Checkbox
+        {editable ? <Checkbox
           aria-label={`Aplicar este precio a ${selection.itemId}`}
           checked={participatesInCampaignPrice}
           disabled={false}
@@ -219,18 +223,18 @@ function PromotionPriceRow({
           )}
         >
           Aplicar este precio a este ítem
-        </Checkbox>
+        </Checkbox> : null}
         {editable ? (
           <>
             <Typography.Text>
-              Rango permitido: {money(selection.option.minPromotionPrice)} - {money(selection.option.maxPromotionPrice)}
+              Rango permitido: {money(isExistingPromotion(selection.option) ? selection.option.minUpdatePrice ?? null : selection.option.minPromotionPrice)} - {money(isExistingPromotion(selection.option) ? selection.option.maxUpdatePrice ?? null : selection.option.maxPromotionPrice)}
             </Typography.Text>
             <Typography.Text>Precio a aplicar</Typography.Text>
             <PromotionCurrencyInput
               aria-label={`Precio a aplicar ${selection.itemId}`}
               controls={false}
-              min={selection.option.minPromotionPrice ?? undefined}
-              max={selection.option.maxPromotionPrice ?? undefined}
+              min={(isExistingPromotion(selection.option) ? selection.option.minUpdatePrice : selection.option.minPromotionPrice) ?? undefined}
+              max={(isExistingPromotion(selection.option) ? selection.option.maxUpdatePrice : selection.option.maxPromotionPrice) ?? undefined}
               status={valid ? undefined : "error"}
               value={price}
               onChange={onPriceChange}
@@ -242,7 +246,7 @@ function PromotionPriceRow({
               </Typography.Text>
             ) : null}
           </>
-        ) : null}
+        ) : <Typography.Text type="secondary">{promotionEditabilityReason(selection.option)}</Typography.Text>}
         {receivedCampaignPrice ? (
           <Typography.Text strong type="success">
             Nuevo precio promocional: {money(price)}
@@ -304,8 +308,7 @@ function CampaignApplicationSummary({
 export function PromotionCurrencyInput(props: InputNumberProps<number>) {
   return (
     <Space.Compact style={{ width: props.style?.width }}>
-      <Button disabled>$</Button>
-      <InputNumber<number> {...props} style={{ ...props.style, width: "100%" }} />
+      <InputNumber<number> {...props} prefix="$" style={{ ...props.style, width: "100%" }} />
     </Space.Compact>
   );
 }
