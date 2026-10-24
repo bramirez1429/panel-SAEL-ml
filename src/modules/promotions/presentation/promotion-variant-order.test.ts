@@ -35,6 +35,17 @@ describe("promotion variant ordering", () => {
     expect(groups.map((group) => group.label)).toEqual(["Pack 3 Blanco Negro", "Pack 3 Rojo Blanco"]);
   });
 
+  it("agrupa Pack x4 por combinación de color y ordena todos sus talles", () => {
+    const groups = groupPromotionPublications([
+      row("a", "Remera Pack x4 XL", { variantColor: "Blanco Negro" }),
+      row("b", "Remera Pack x4 S", { variantColor: "Blanco Negro" }),
+      row("c", "Remera Pack x4 M", { variantColor: "Lila Blanco" }),
+    ]);
+    expect(groups).toHaveLength(2);
+    expect(groups.map((group) => group.label)).toEqual(["Pack 4 Blanco Negro", "Pack 4 Lila Blanco"]);
+    expect(groups[0]?.publications.map((item) => item.itemId)).toEqual(["b", "a"]);
+  });
+
   it("no agrupa productos sin color ni pack conocidos", () => {
     const groups = groupPromotionPublications([
       row("a", "Remera Simple"),

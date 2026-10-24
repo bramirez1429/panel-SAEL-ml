@@ -11,7 +11,7 @@ const sizeRanks: Readonly<Record<string, number>> = {
   "6": 10, "8": 20, "10": 30, "12": 40, "14": 50,
 };
 const sizePattern = /(?:^|[^A-Z0-9])(4XL|3XL|XXXL|XXL|2XL|XL|XS|S|M|L|46|44|42|40|38|14|12|10|8|6)(?=$|[^A-Z0-9])/u;
-const packPattern = /(?:^|[^A-Z0-9])PACK\s*(?:N\s*[O°º.]?\s*)?(\d+)(?=$|[^A-Z0-9])/u;
+const packPattern = /(?:^|[^A-Z0-9])PACK\s*(?:X\s*|N\s*[O°º.]?\s*)?(\d+)(?=$|[^A-Z0-9])/u;
 const colorNames: Readonly<Record<string, string>> = {
   NEGRO: "NEGRO", NEGRA: "NEGRO", BLACK: "NEGRO", PRETO: "NEGRO",
   BLANCO: "BLANCO", BLANCA: "BLANCO", WHITE: "BLANCO",
@@ -109,7 +109,10 @@ function variantKeys(row: VariantRow): Readonly<{
 }> {
   const normalizedTitle = normalize(row.title);
   const normalizedSku = normalize(row.sku ?? "");
-  const color = colorKey(row.variantColor) ?? detectedColor(normalizedTitle) ?? detectedColor(normalizedSku);
+  // A pack can list its color combination in the title or variant attributes.
+  // Keep all colors together so identically numbered packs do not merge.
+  const titlePack = detectPack([normalizedTitle, normalize(row.variantColor ?? "")].join(" "));
+  const color = titlePack ?? colorKey(row.variantColor) ?? detectedColor(normalizedTitle) ?? detectedColor(normalizedSku);
   const size = detectedSize(normalize(row.variantSize ?? ""))
     ?? detectedSize(normalizedTitle) ?? detectedSize(normalizedSku);
   const baseTitle = productTitle(normalizedTitle);
