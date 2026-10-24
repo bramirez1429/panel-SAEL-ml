@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PromotionsPage } from "../domain/promotion.model";
 
-const repository = vi.hoisted(() => ({ getCatalog: vi.fn(), getSnapshot: vi.fn() }));
+const repository = vi.hoisted(() => ({ getCatalog: vi.fn() }));
 
 vi.mock("../promotions.composition.server", () => ({ createPromotionsRepository: () => repository }));
 vi.mock("./publication-search-bar.client", () => ({
@@ -18,15 +18,15 @@ vi.mock("./promotions-catalog.client", () => ({
 import { PromotionsCatalog } from "./promotions-catalog.server";
 
 describe("PromotionsCatalog search SSR", () => {
-  beforeEach(() => { repository.getCatalog.mockReset(); repository.getSnapshot.mockReset(); });
+  beforeEach(() => repository.getCatalog.mockReset());
   afterEach(cleanup);
 
   it("usa el listado normal cuando search está vacío", async () => {
-    repository.getSnapshot.mockResolvedValue(page([]));
+    repository.getCatalog.mockResolvedValue(page([]));
     render(await PromotionsCatalog({ searchParams: Promise.resolve({ search: "   " }) }));
 
-    expect(repository.getSnapshot).toHaveBeenCalledTimes(1);
-    expect(repository.getCatalog).not.toHaveBeenCalled();
+    expect(repository.getCatalog).toHaveBeenCalledWith(expect.objectContaining({ limit: 20, cursor: null }));
+    expect(repository.getCatalog.mock.calls[0]?.[0]).not.toHaveProperty("search");
   });
 
   it("FAMILY renderiza todos los MLA entregados por backend", async () => {

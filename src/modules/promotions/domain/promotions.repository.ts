@@ -76,8 +76,6 @@ export type PromotionsRequest = Readonly<{
   productGroup?: PromotionProductGroup;
   promotionStatus?: PromotionStatus;
   promotionType?: string;
-  /** Only product metadata; each promotion is fetched on expansion. */
-  lightweight?: boolean;
 }>;
 
 export type PromotionAnalysisRequest = Readonly<{
@@ -94,7 +92,6 @@ export type PromotionCampaignItemsRequest = Readonly<{
 }>;
 
 export interface PromotionsRepository {
-  getSnapshot(): Promise<PromotionsPage>;
   getCatalog(request: PromotionsRequest): Promise<PromotionsPage>;
   getCampaigns(audience?: PromotionAudience): Promise<PromotionCampaigns>;
   getCampaignItems(request: PromotionCampaignItemsRequest): Promise<PromotionCampaignItems>;

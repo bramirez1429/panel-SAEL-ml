@@ -10,9 +10,9 @@ import { PromotionsPagination } from "./promotions-pagination.client";
 import { PromotionSelectionSummary } from "./promotion-selection-summary.client";
 import { PromotionsTable } from "./promotions-table.client";
 
-type Props = Readonly<{ page: PromotionsPage; activeSearch?: string; groupedMode?: boolean }>;
+type Props = Readonly<{ page: PromotionsPage; activeSearch?: string }>;
 
-export function PromotionsCatalogClient({ page, activeSearch = "", groupedMode = false }: Props) {
+export function PromotionsCatalogClient({ page, activeSearch = "" }: Props) {
   const [selectedForRemoval, setSelectedForRemoval] = useState<Readonly<Record<string, PromotionDeactivationSelection>>>({});
 
   function toggleRemovalSelection(selection: PromotionDeactivationSelection): void {
@@ -42,26 +42,16 @@ export function PromotionsCatalogClient({ page, activeSearch = "", groupedMode =
       selectedForRemoval={selectedForRemoval}
       onSuccessfulRemoval={removeSuccessfulSelections}
     />
-    {groupedMode ? (
-      page.publications.length > 0 ? (
-        <PromotionsTable
+    <PromotionsPagination page={page}>
+      {page.publications.length > 0
+        ? <PromotionsTable
           page={page}
           selectedForRemoval={selectedForRemoval}
           onToggleRemoval={toggleRemovalSelection}
         />
-      ) : <p>El catálogo sincronizado está vacío. Sincronizá las publicaciones de Mercado Libre para mostrar todos los colores y talles.</p>
-    ) : (
-      <PromotionsPagination page={page}>
-        {page.publications.length > 0
-          ? <PromotionsTable
-            page={page}
-            selectedForRemoval={selectedForRemoval}
-            onToggleRemoval={toggleRemovalSelection}
-          />
-          : activeSearch
-            ? <p>No encontramos publicaciones para esta búsqueda: &quot;{activeSearch}&quot;.</p>
-            : <p>No se encontraron publicaciones.</p>}
-      </PromotionsPagination>
-    )}
+        : activeSearch
+          ? <p>No encontramos publicaciones para esta búsqueda: &quot;{activeSearch}&quot;.</p>
+          : <p>No se encontraron publicaciones.</p>}
+    </PromotionsPagination>
   </div>;
 }

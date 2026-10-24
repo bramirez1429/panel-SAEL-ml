@@ -29,16 +29,6 @@ const WRITE_TIMEOUT_MS = 120_000;
 export class PromotionsApiRepository implements PromotionsRepository {
   constructor(private readonly http: AuthenticatedHttpClient) {}
 
-  async getSnapshot() {
-    const response = await this.http.get(
-      "/mercadolibre/direct/promociones/snapshot",
-      { timeoutMs: 15_000 },
-    );
-    const parsed = catalogSchema.safeParse(response);
-    if (!parsed.success) throw invalidResponse("Catálogo sincronizado de promociones inválido.", parsed.error);
-    return parsed.data;
-  }
-
   async getCatalog(request: PromotionsRequest) {
     const params = catalogParams(request);
     const response = await this.http.get(
@@ -198,7 +188,6 @@ function catalogParams(request: PromotionsRequest): URLSearchParams {
   if (request.promotionStatus)
     params.set("promotionStatus", request.promotionStatus);
   if (request.promotionType) params.set("promotionType", request.promotionType);
-  if (request.lightweight) params.set("lightweight", "true");
   return params;
 }
 
