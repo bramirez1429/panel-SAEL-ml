@@ -84,7 +84,6 @@ type IndividualSelection = Readonly<{
 }>;
 
 type DisplayState =
-  | "group"
   | "loading"
   | "error"
   | "empty"
@@ -98,9 +97,6 @@ type DisplayRow = Readonly<{
   publicationRowSpan: number;
   firstInGroup: boolean;
   lastInGroup: boolean;
-  variantGroupKey?: string;
-  variantGroupLabel?: string;
-  variantGroupCount?: number;
 }>;
 
 const missingValue = "—";
@@ -193,9 +189,14 @@ export function PromotionsTable({
     });
   }, [failOptions, saveOptions, startOptionsLoad]);
 
+  // "Load all" applies only to publications immediately visible. Closed
+  // color/pack groups must not call /opciones until the user opens them.
   useEffect(() => {
     if (!loadAllOnMount) return;
-    page.publications.forEach(loadOptions);
+    for (const group of groupPromotionPublications(page.publications)) {
+      if (group.label && group.publications.length > 1) continue;
+      group.publications.forEach(loadOptions);
+    }
   }, [loadAllOnMount, loadOptions, page.publications]);
 
   function reloadOptions(publication: PromotionRow): void {
@@ -210,79 +211,52 @@ export function PromotionsTable({
 
   const [expandedGroups, setExpandedGroups] = useState<Readonly<Record<string, boolean>>>({});
 
-  const rows: DisplayRow[] = groupPromotionPublications(page.publications).flatMap((group) => {
-    if (!group.label || group.publications.length < 2) {
-      return displayRows(group.publications, optionsByItem);
+  // The table and its column headings only exist when a pack is expanded.
+  // Adjacent standalone publications share one table to avoid duplicate headings.
+  const sections: Array<{
+    key: string;
+    label: string | null;
+    publications: PromotionRow[];
+  }> = [];
+  for (const group of groupPromotionPublications(page.publications)) {
+    const collapsible = Boolean(group.label && group.publications.length > 1);
+    if (!collapsible) {
+      const previous = sections[sections.length - 1];
+      if (previous && previous.label === null) {
+        previous.publications.push(...group.publications);
+      } else {
+        sections.push({ key: group.key, label: null, publications: [...group.publications] });
+      }
+      continue;
     }
-    const header: DisplayRow = {
-      key: "variant-group:" + group.key,
-      publication: group.publications[0]!,
-      option: null,
-      state: "group",
-      publicationRowSpan: 1,
-      firstInGroup: true,
-      lastInGroup: false,
-      variantGroupKey: group.key,
-      variantGroupLabel: group.label,
-      variantGroupCount: group.publications.length,
-    };
-    return [
-      header,
-      ...(expandedGroups[group.key] === true ? displayRows(group.publications, optionsByItem) : []),
-    ];
-  });
+    sections.push({ key: group.key, label: group.label, publications: [...group.publications] });
+  }
+
+  function toggleGroup(key: string, publications: readonly PromotionRow[]): void {
+    if (expandedGroups[key] !== true) {
+      // Read detail only on first open; loadOptions consults the cache and
+      // caps concurrent Mercado Libre GET requests through the existing queue.
+      publications.forEach(loadOptions);
+    }
+    setExpandedGroups((current) => ({ ...current, [key]: current[key] !== true }));
+  }
 
   const columns: TableColumnsType<DisplayRow> = [
     {
       title: "PUBLICACIÓN",
       key: "publication",
       width: 310,
-      onCell: (row) => row.state === "group"
-        ? {
-            colSpan: compact ? 6 : 7,
-            style: { ...groupCellStyle(row, true), background: "#f3f7fc", paddingBlock: 8 },
-          }
-        : {
-            rowSpan: row.publicationRowSpan,
-            style: groupCellStyle(row, true),
-          },
+      onCell: (row) => ({
+        rowSpan: row.publicationRowSpan,
+        style: groupCellStyle(row, true),
+      }),
       render: (_, row) =>
-        row.state === "group" && row.variantGroupKey ? (
-          <Button
-            type="text"
-            aria-expanded={expandedGroups[row.variantGroupKey] === true}
-            aria-label={`${expandedGroups[row.variantGroupKey] === true ? "Ocultar" : "Mostrar"} talles de ${row.variantGroupLabel}`}
-            onClick={() => {
-              const key = row.variantGroupKey!;
-              setExpandedGroups((current) => ({ ...current, [key]: current[key] !== true }));
-            }}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              width: "100%",
-              height: "auto",
-              minHeight: 36,
-              textAlign: "left",
-              paddingInline: 10,
-            }}
-          >
-            <span>
-              <span aria-hidden="true">{expandedGroups[row.variantGroupKey] === true ? "▾" : "▸"}</span>{" "}
-              <strong>{row.variantGroupLabel}</strong>
-            </span>
-            <span>{row.variantGroupCount} publicaciones</span>
-          </Button>
-        ) : row.publicationRowSpan > 0 ? (
+        row.publicationRowSpan > 0 ? (
           <PromotionViewportLoader
             itemId={row.publication.itemId}
-            onVisible={() =>
-              loadOptions(row.publication)
-            }
+            onVisible={() => loadOptions(row.publication)}
           >
-            <PublicationCell
-              publication={row.publication}
-            />
+            <PublicationCell publication={row.publication} />
           </PromotionViewportLoader>
         ) : null,
     },
@@ -291,7 +265,6 @@ export function PromotionsTable({
       key: "selection",
       width: 42,
       onCell: (row) => ({
-        colSpan: row.state === "group" ? 0 : undefined,
         style: groupCellStyle(row),
       }),
       render: (_, row) =>
@@ -315,7 +288,6 @@ export function PromotionsTable({
       key: "promotion",
       width: 245,
       onCell: (row) => ({
-        colSpan: row.state === "group" ? 0 : undefined,
         style: groupCellStyle(row),
       }),
       render: (_, row) => (
@@ -332,7 +304,6 @@ export function PromotionsTable({
       key: "discount",
       width: 200,
       onCell: (row) => ({
-        colSpan: row.state === "group" ? 0 : undefined,
         style: groupCellStyle(row),
       }),
       render: (_, row) =>
@@ -351,7 +322,6 @@ export function PromotionsTable({
       key: "price",
       width: 150,
       onCell: (row) => ({
-        colSpan: row.state === "group" ? 0 : undefined,
         style: groupCellStyle(row),
       }),
       render: (_, row) =>
@@ -370,7 +340,6 @@ export function PromotionsTable({
       key: "net",
       width: 160,
       onCell: (row) => ({
-        colSpan: row.state === "group" ? 0 : undefined,
         style: groupCellStyle(row),
       }),
       render: (_, row) =>
@@ -387,7 +356,6 @@ export function PromotionsTable({
       key: "tasks",
       width: 260,
       onCell: (row) => ({
-        colSpan: row.state === "group" ? 0 : undefined,
         style: groupCellStyle(row, false, true),
       }),
       render: (_, row) =>
@@ -426,14 +394,56 @@ export function PromotionsTable({
 
   return (
     <>
-      <Table<DisplayRow>
-        rowKey="key"
-        dataSource={rows}
-        columns={visibleColumns}
-        pagination={false}
-        size="small"
-        scroll={{ x: compact ? 1325 : 1367 }}
-      />
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {sections.map((section) => {
+          const collapsible = section.label !== null;
+          const expanded = collapsible && expandedGroups[section.key] === true;
+
+          return (
+            <section key={section.key}>
+              {collapsible ? (
+                <Button
+                  type="text"
+                  aria-expanded={expanded}
+                  aria-label={`${expanded ? "Ocultar" : "Mostrar"} talles de ${section.label}`}
+                  onClick={() => toggleGroup(section.key, section.publications)}
+                  style={{
+                    background: "#f3f7fc",
+                    border: "1px solid #e5eaf1",
+                    borderRadius: 6,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    width: "100%",
+                    height: "auto",
+                    minHeight: 48,
+                    padding: "10px 16px",
+                    textAlign: "left",
+                  }}
+                >
+                  <span>
+                    <span aria-hidden="true">{expanded ? "▾" : "▸"}</span>{" "}
+                    <strong>{section.label}</strong>
+                  </span>
+                  <span>{section.publications.length} publicaciones</span>
+                </Button>
+              ) : null}
+
+              {(!collapsible || expanded) ? (
+                <Table<DisplayRow>
+                  rowKey="key"
+                  dataSource={displayRows(section.publications, optionsByItem)}
+                  columns={visibleColumns}
+                  pagination={false}
+                  size="small"
+                  scroll={{ x: compact ? 1325 : 1367 }}
+                  style={collapsible ? { marginTop: 4 } : undefined}
+                />
+              ) : null}
+            </section>
+          );
+        })}
+      </div>
 
       {individualSelection ? (
         <PromotionIndividualApplicationModal
@@ -631,7 +641,6 @@ function PromotionCell({
   row: DisplayRow;
   onRetry: () => void;
 }>) {
-  if (row.state === "group") return null;
   if (row.state === "loading") {
     return (
       <FieldSkeleton
