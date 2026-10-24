@@ -6,6 +6,7 @@ import type { PromotionRow, PromotionsPage } from "../domain/promotion.model";
 import type { PromotionOption } from "../domain/promotions.repository";
 import { resetPromotionGlobalStore } from "./promotion-global.store";
 import { PromotionsCatalogClient } from "./promotions-catalog.client";
+import { PromotionsTable } from "./promotions-table.client";
 
 const mocks = vi.hoisted(() => ({ getOptions: vi.fn(), push: vi.fn(), searchParams: new URLSearchParams() }));
 
@@ -346,6 +347,34 @@ describe("vista global de promociones", () => {
 
     expect(mocks.push).toHaveBeenCalledWith("/promociones?search=remera+mujer&page=2&cursor=next");
   });
+  it("no hace GET de promociones de los packs cerrados aunque loadAllOnMount esté activo", async () => {
+    const user = userEvent.setup();
+    mocks.getOptions.mockResolvedValue([candidate()]);
+    render(
+      <PromotionsTable
+        page={page([
+          publication({ itemId: "MLA-1", title: "Remera Pack 1 S", variantColor: "Pack 1" }),
+          publication({ itemId: "MLA-2", title: "Remera Pack 1 M", variantColor: "Pack 1" }),
+          publication({ itemId: "MLA-3", title: "Remera Pack 2 S", variantColor: "Pack 2" }),
+          publication({ itemId: "MLA-4", title: "Remera Pack 2 M", variantColor: "Pack 2" }),
+        ])}
+        selectedForRemoval={{}}
+        onToggleRemoval={() => undefined}
+        loadAllOnMount
+      />,
+    );
+    expect(screen.queryByRole("columnheader")).not.toBeInTheDocument();
+    expect(mocks.getOptions).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Mostrar talles de Pack 2" }));
+    await waitFor(() => expect(mocks.getOptions).toHaveBeenCalledTimes(2));
+    expect(mocks.getOptions).toHaveBeenCalledWith("MLA-3");
+    expect(mocks.getOptions).toHaveBeenCalledWith("MLA-4");
+    expect(mocks.getOptions).not.toHaveBeenCalledWith("MLA-1");
+    expect(mocks.getOptions).not.toHaveBeenCalledWith("MLA-2");
+    expect(screen.getAllByRole("columnheader", { name: "PUBLICACIÓN" })).toHaveLength(1);
+  });
+
   it("despliega los talles de Pack 1 y los vuelve a ocultar sin alterar la tabla", async () => {
     const user = userEvent.setup();
     mocks.getOptions.mockResolvedValue([candidate()]);
@@ -357,11 +386,16 @@ describe("vista global de promociones", () => {
     const open = screen.getByRole("button", { name: "Mostrar talles de Pack 1" });
     expect(open).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("MLA-S")).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "PUBLICACIÓN" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "PROMOCIÓN" })).not.toBeInTheDocument();
     expect(mocks.getOptions).not.toHaveBeenCalled();
 
     await user.click(open);
     expect(screen.getByRole("button", { name: "Ocultar talles de Pack 1" }))
       .toHaveAttribute("aria-expanded", "true");
+    for (const heading of ["PUBLICACIÓN", "PROMOCIÓN", "DESCUENTO", "PRECIO FINAL", "RECIBÍS", "TAREAS Y RECOMENDACIONES"]) {
+      expect(screen.getByRole("columnheader", { name: heading })).toBeInTheDocument();
+    }
 
     const first = screen.getByText("MLA-S").closest("tr");
     const last = screen.getByText("MLA-XL").closest("tr");
@@ -372,8 +406,14 @@ describe("vista global de promociones", () => {
 
     await user.click(screen.getByRole("button", { name: "Ocultar talles de Pack 1" }));
     expect(screen.queryByText("MLA-S")).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "PRECIO FINAL" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Mostrar talles de Pack 1" }))
       .toHaveAttribute("aria-expanded", "false");
+
+    // GET por MLA solo al primer despliegue; al reabrir se usa la caché.
+    await user.click(screen.getByRole("button", { name: "Mostrar talles de Pack 1" }));
+    await waitFor(() => expect(mocks.getOptions).toHaveBeenCalledTimes(2));
+    expect(screen.getByRole("columnheader", { name: "PUBLICACIÓN" })).toBeInTheDocument();
   });
 
 });
