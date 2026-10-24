@@ -27,6 +27,8 @@ export type PromotionRow = Readonly<{
   title: string;
   thumbnail: string | null;
   sku: string | null;
+  variantColor?: string | null;
+  variantSize?: string | null;
   stock: number | null;
   freeShipping: boolean | null;
   installmentLabel: string | null;

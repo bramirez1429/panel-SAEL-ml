@@ -44,6 +44,7 @@ import {
 } from "./promotion-global.store";
 import { getPromotionOptions } from "./promotion-options.action";
 import { canEditPromotionPrice } from "./promotion-bulk-price.helpers";
+import { sortPromotionPublications } from "./promotion-variant-order";
 import {
   enqueuePromotionOptionsLoad,
 } from "./promotion-options.queue.client";
@@ -204,7 +205,7 @@ export function PromotionsTable({
   }
 
   const rows = displayRows(
-    page.publications,
+    sortPromotionPublications(page.publications),
     optionsByItem,
   );
 

@@ -23,6 +23,7 @@ export function PublicationCell({
   publication: PromotionRow;
 }>) {
   const titlePresentation = publicationTitlePresentation(publication.title);
+  const displayedSize = publication.variantSize ?? titlePresentation.size;
 
   return (
     <Space align="start" size={12}>
@@ -45,9 +46,15 @@ export function PublicationCell({
           {titlePresentation.title}
         </Typography.Text>
 
-        {titlePresentation.size ? (
+        {displayedSize ? (
           <div>
-            <PublicationSizeTag size={titlePresentation.size} />
+            <PublicationSizeTag size={displayedSize} />
+          </div>
+        ) : null}
+
+        {publication.variantColor ? (
+          <div>
+            <Typography.Text type="secondary">Color / pack: {publication.variantColor}</Typography.Text>
           </div>
         ) : null}
 

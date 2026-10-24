@@ -50,6 +50,8 @@ const rowSchema = z.object({
     .string()
     .nullish()
     .transform((value) => value ?? null),
+  variantColor: z.string().nullish().transform((value) => value ?? null),
+  variantSize: z.string().nullish().transform((value) => value ?? null),
 
   stock: z
     .number()
