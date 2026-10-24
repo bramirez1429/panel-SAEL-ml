@@ -1,4 +1,4 @@
-const PUBLICATION_SIZE_PATTERN = /(^|\s)(4XL|3XL|2XL|XXXL|XXL|XL|XS|S|M|L|46|44|42|40|38|14|12|10|8|6)(?=\s|$)/iu;
+const PUBLICATION_SIZE_PATTERN = /(^|\s)(4XL|3XL|2XL|XXXL|XXL|XL|XS|S|M|L|14|12|10|8|6)(?=\s|$)/iu;
 
 const PUBLICATION_SIZE_ORDER = new Map<string, number>([
   ["XS", 0],
@@ -16,11 +16,6 @@ const PUBLICATION_SIZE_ORDER = new Map<string, number>([
   ["10", 30],
   ["12", 40],
   ["14", 50],
-  ["38", 10],
-  ["40", 20],
-  ["42", 30],
-  ["44", 40],
-  ["46", 50],
 ]);
 
 export function publicationTitlePresentation(title: string): Readonly<{

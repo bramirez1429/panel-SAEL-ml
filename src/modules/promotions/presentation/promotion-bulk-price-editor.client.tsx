@@ -16,7 +16,6 @@ import { publicationTitlePresentation } from "@/shared/lib/publication-size";
 import { PublicationSizeTag } from "@/shared/ui/publication-size-tag";
 
 import type { SelectedPromotion } from "./promotion-global.store";
-import { sortPromotionSelections } from "./promotion-variant-order";
 import {
   campaignDiscountRange,
   commonPromotionPriceRange,
@@ -61,7 +60,7 @@ export function PromotionBulkPriceEditor({
   onPriceChange,
   onExcludedFromCampaignChange,
 }: Props) {
-  const campaigns = groupByCampaign(sortPromotionSelections(selections));
+  const campaigns = groupByCampaign(selections);
 
   return (
     <Space orientation="vertical" size="middle" style={{ width: "100%" }}>

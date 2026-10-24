@@ -3,8 +3,7 @@
   "git": {
     "deploymentEnabled": {
       "promociones": false,
-      "main": false,
-      "mejora-de-promociones": false
+      "main": false
     }
   }
 }

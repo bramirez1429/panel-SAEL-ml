@@ -25,7 +25,7 @@ describe("PromotionsCatalog search SSR", () => {
     repository.getCatalog.mockResolvedValue(page([]));
     render(await PromotionsCatalog({ searchParams: Promise.resolve({ search: "   " }) }));
 
-    expect(repository.getCatalog).toHaveBeenCalledWith(expect.objectContaining({ limit: 20, cursor: null, lightweight: true }));
+    expect(repository.getCatalog).toHaveBeenCalledWith(expect.objectContaining({ limit: 20, cursor: null }));
     expect(repository.getCatalog.mock.calls[0]?.[0]).not.toHaveProperty("search");
   });
 

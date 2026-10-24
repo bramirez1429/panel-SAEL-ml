@@ -14,11 +14,6 @@ export type SelectedPromotion = Readonly<{
   key: string;
   itemId: string;
   publicationTitle: string;
-  familyId?: string | null;
-  sku?: string | null;
-  productGroup?: PromotionRow["productGroup"];
-  variantColor?: string | null;
-  variantSize?: string | null;
   option: PromotionOption;
 }>;
 
@@ -75,11 +70,6 @@ export function promotionSelection(
     key: promotionSelectionKey(row.itemId, option),
     itemId: row.itemId,
     publicationTitle: row.title,
-    familyId: row.familyId,
-    sku: row.sku,
-    productGroup: row.productGroup,
-    variantColor: row.variantColor ?? null,
-    variantSize: row.variantSize ?? null,
     option,
   };
 }

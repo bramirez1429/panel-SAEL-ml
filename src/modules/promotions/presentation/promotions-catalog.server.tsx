@@ -20,7 +20,7 @@ export async function PromotionsCatalog({ searchParams }: Props) {
   let page: PromotionsPage;
   try {
     const repository = createPromotionsRepository();
-    const request = { limit: 20, lightweight: true, cursor: first(params.cursor) ?? null, productGroup: oneOf(first(params.productGroup), productGroups), promotionStatus: oneOf(first(params.promotionStatus), statuses), promotionType: first(params.promotionType) };
+    const request = { limit: 20, cursor: first(params.cursor) ?? null, productGroup: oneOf(first(params.productGroup), productGroups), promotionStatus: oneOf(first(params.promotionStatus), statuses), promotionType: first(params.promotionType) };
     page = criteria?.type === "FAMILY"
       ? await searchPublicationsByFamily(repository, criteria.value, request)
       : await repository.getCatalog({ ...request, ...(search ? { search } : {}) });

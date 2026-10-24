@@ -44,7 +44,6 @@ import {
 } from "./promotion-global.store";
 import { getPromotionOptions } from "./promotion-options.action";
 import { canEditPromotionPrice } from "./promotion-bulk-price.helpers";
-import { groupPromotionPublications } from "./promotion-variant-order";
 import {
   enqueuePromotionOptionsLoad,
 } from "./promotion-options.queue.client";
@@ -189,14 +188,9 @@ export function PromotionsTable({
     });
   }, [failOptions, saveOptions, startOptionsLoad]);
 
-  // "Load all" applies only to publications immediately visible. Closed
-  // color/pack groups must not call /opciones until the user opens them.
   useEffect(() => {
     if (!loadAllOnMount) return;
-    for (const group of groupPromotionPublications(page.publications)) {
-      if (group.label && group.publications.length > 1) continue;
-      group.publications.forEach(loadOptions);
-    }
+    page.publications.forEach(loadOptions);
   }, [loadAllOnMount, loadOptions, page.publications]);
 
   function reloadOptions(publication: PromotionRow): void {
@@ -209,37 +203,10 @@ export function PromotionsTable({
     await onChanged?.();
   }
 
-  const [expandedGroups, setExpandedGroups] = useState<Readonly<Record<string, boolean>>>({});
-
-  // The table and its column headings only exist when a pack is expanded.
-  // Adjacent standalone publications share one table to avoid duplicate headings.
-  const sections: Array<{
-    key: string;
-    label: string | null;
-    publications: PromotionRow[];
-  }> = [];
-  for (const group of groupPromotionPublications(page.publications)) {
-    const collapsible = Boolean(group.label && group.publications.length > 1);
-    if (!collapsible) {
-      const previous = sections[sections.length - 1];
-      if (previous && previous.label === null) {
-        previous.publications.push(...group.publications);
-      } else {
-        sections.push({ key: group.key, label: null, publications: [...group.publications] });
-      }
-      continue;
-    }
-    sections.push({ key: group.key, label: group.label, publications: [...group.publications] });
-  }
-
-  function toggleGroup(key: string, publications: readonly PromotionRow[]): void {
-    if (expandedGroups[key] !== true) {
-      // Read detail only on first open; loadOptions consults the cache and
-      // caps concurrent Mercado Libre GET requests through the existing queue.
-      publications.forEach(loadOptions);
-    }
-    setExpandedGroups((current) => ({ ...current, [key]: current[key] !== true }));
-  }
+  const rows = displayRows(
+    page.publications,
+    optionsByItem,
+  );
 
   const columns: TableColumnsType<DisplayRow> = [
     {
@@ -248,15 +215,22 @@ export function PromotionsTable({
       width: 310,
       onCell: (row) => ({
         rowSpan: row.publicationRowSpan,
-        style: groupCellStyle(row, true),
+        style: groupCellStyle(
+          row,
+          true,
+        ),
       }),
       render: (_, row) =>
         row.publicationRowSpan > 0 ? (
           <PromotionViewportLoader
             itemId={row.publication.itemId}
-            onVisible={() => loadOptions(row.publication)}
+            onVisible={() =>
+              loadOptions(row.publication)
+            }
           >
-            <PublicationCell publication={row.publication} />
+            <PublicationCell
+              publication={row.publication}
+            />
           </PromotionViewportLoader>
         ) : null,
     },
@@ -356,7 +330,11 @@ export function PromotionsTable({
       key: "tasks",
       width: 260,
       onCell: (row) => ({
-        style: groupCellStyle(row, false, true),
+        style: groupCellStyle(
+          row,
+          false,
+          true,
+        ),
       }),
       render: (_, row) =>
         row.state === "loading" ? (
@@ -394,56 +372,14 @@ export function PromotionsTable({
 
   return (
     <>
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {sections.map((section) => {
-          const collapsible = section.label !== null;
-          const expanded = collapsible && expandedGroups[section.key] === true;
-
-          return (
-            <section key={section.key}>
-              {collapsible ? (
-                <Button
-                  type="text"
-                  aria-expanded={expanded}
-                  aria-label={`${expanded ? "Ocultar" : "Mostrar"} talles de ${section.label}`}
-                  onClick={() => toggleGroup(section.key, section.publications)}
-                  style={{
-                    background: "#f3f7fc",
-                    border: "1px solid #e5eaf1",
-                    borderRadius: 6,
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    width: "100%",
-                    height: "auto",
-                    minHeight: 48,
-                    padding: "10px 16px",
-                    textAlign: "left",
-                  }}
-                >
-                  <span>
-                    <span aria-hidden="true">{expanded ? "▾" : "▸"}</span>{" "}
-                    <strong>{section.label}</strong>
-                  </span>
-                  <span>{section.publications.length} publicaciones</span>
-                </Button>
-              ) : null}
-
-              {(!collapsible || expanded) ? (
-                <Table<DisplayRow>
-                  rowKey="key"
-                  dataSource={displayRows(section.publications, optionsByItem)}
-                  columns={visibleColumns}
-                  pagination={false}
-                  size="small"
-                  scroll={{ x: compact ? 1325 : 1367 }}
-                  style={collapsible ? { marginTop: 4 } : undefined}
-                />
-              ) : null}
-            </section>
-          );
-        })}
-      </div>
+      <Table<DisplayRow>
+        rowKey="key"
+        dataSource={rows}
+        columns={visibleColumns}
+        pagination={false}
+        size="small"
+        scroll={{ x: compact ? 1325 : 1367 }}
+      />
 
       {individualSelection ? (
         <PromotionIndividualApplicationModal

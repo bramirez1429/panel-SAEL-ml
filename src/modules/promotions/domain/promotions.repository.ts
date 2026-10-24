@@ -76,8 +76,6 @@ export type PromotionsRequest = Readonly<{
   productGroup?: PromotionProductGroup;
   promotionStatus?: PromotionStatus;
   promotionType?: string;
-  /** Only product metadata; each promotion is fetched on expansion. */
-  lightweight?: boolean;
 }>;
 
 export type PromotionAnalysisRequest = Readonly<{
