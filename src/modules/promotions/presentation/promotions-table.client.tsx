@@ -3,6 +3,7 @@
 import {
   Button,
   Checkbox,
+  Space,
   Table,
 } from "antd";
 import type { TableColumnsType } from "antd";
@@ -57,6 +58,7 @@ import {
   PublicationCell,
   RecommendationText,
 } from "./promotions-table-cells";
+import { canEditPromotionPrice, isExistingPromotion } from "./promotion-bulk-price.helpers";
 import {
   PromotionViewportLoader,
 } from "./promotion-viewport-loader.client";
@@ -637,38 +639,37 @@ function SelectionCell({
 
   if (!option) return null;
 
-  if (isRemovablePromotionOption(option)) {
-    const selection = { publication: row.publication, option };
-    const key = removalSelectionKey(selection);
-    return <Checkbox
-      aria-label={`Seleccionar para dejar de participar ${optionName(option)}`}
-      checked={Boolean(selectedForRemoval[key])}
-      onChange={() => onToggleRemoval(selection)}
-    />;
-  }
-
-  if (!isApplicablePromotionOption(option)) return null;
-
   const selection =
     promotionSelection(
       row.publication,
       option,
     );
+  const canChangePrice = canEditPromotionPrice(option);
+  const canParticipate = isApplicablePromotionOption(option);
+  const canRemove = isRemovablePromotionOption(option);
+  if (!canChangePrice && !canParticipate && !canRemove) return null;
+  const removalSelection = { publication: row.publication, option };
+  const removalKey = removalSelectionKey(removalSelection);
 
   return (
-    <Checkbox
-      aria-label={
-        `Seleccionar ${
-          optionName(option)
-        }`
-      }
-      checked={Boolean(
-        selections[selection.key],
-      )}
-      onChange={() =>
-        onToggle(selection)
-      }
-    />
+    <Space direction="vertical" size={4}>
+      {canRemove ? (
+        <Checkbox
+          aria-label={`Seleccionar para dejar de participar ${optionName(option)}`}
+          checked={Boolean(selectedForRemoval[removalKey])}
+          onChange={() => onToggleRemoval(removalSelection)}
+        />
+      ) : null}
+      {canChangePrice || canParticipate ? (
+        <Checkbox
+          aria-label={isExistingPromotion(option)
+            ? `Seleccionar para cambiar precio ${optionName(option)}`
+            : `Seleccionar ${optionName(option)}`}
+          checked={Boolean(selections[selection.key])}
+          onChange={() => onToggle(selection)}
+        />
+      ) : null}
+    </Space>
   );
 }
 
@@ -697,6 +698,9 @@ function TaskAction({
 }>) {
   const canDeactivate =
     isRemovablePromotionOption(option);
+  const canChangePrice = canEditPromotionPrice(option)
+    && (option.type !== "DEAL" || Boolean(option.id));
+  const canParticipate = isApplicablePromotionOption(option);
 
   return (
     <div>
@@ -717,47 +721,27 @@ function TaskAction({
         </Button>
       ) : null}
 
-      {option.status === "candidate" &&
-      option.canApply &&
-      option.type === "DEAL" &&
-      option.id ? (
+      {canChangePrice || canParticipate ? (
         <Button
           size="small"
           type="primary"
-          onClick={() =>
-            onParticipate
-              ? onParticipate(option)
-              : onDeal(
-                  dealSelection(
-                    publication,
-                    option,
-                    option.id!,
-                  ),
-                )
-          }
+          onClick={() => {
+            if (onParticipate) {
+              onParticipate(option);
+              return;
+            }
+            if (canParticipate && option.type === "DEAL" && option.id) {
+              onDeal(dealSelection(publication, option, option.id));
+              return;
+            }
+            onLegacy();
+          }}
         >
-          Participar
+          {isExistingPromotion(option) ? "Modificar precio" : "Participar"}
         </Button>
       ) : null}
 
-      {option.status === "candidate" &&
-      option.canApply &&
-      option.type !== "DEAL" &&
-      completeLegacyOption(option) ? (
-        <Button
-          size="small"
-          type="primary"
-          onClick={() => onParticipate ? onParticipate(option) : onLegacy()}
-        >
-          Participar
-        </Button>
-      ) : null}
-
-      {!canDeactivate &&
-      !(
-        option.status === "candidate" &&
-        option.canApply
-      ) ? (
+      {!canDeactivate && !canChangePrice && !canParticipate ? (
         <span>{missingValue}</span>
       ) : null}
     </div>
@@ -771,11 +755,8 @@ function hasVisibleAction(
    * Activas y programadas:
    * sólo visibles si existe una baja real.
    */
-  if (
-    option.status === "started" ||
-    option.status === "pending"
-  ) {
-    return isRemovablePromotionOption(option);
+  if (option.status === "started" || option.status === "pending") {
+    return isRemovablePromotionOption(option) || canEditPromotionPrice(option);
   }
 
   /*
@@ -789,6 +770,10 @@ function hasVisibleAction(
 export function isApplicablePromotionOption(
   option: PromotionOption,
 ): boolean {
+  if (option.status === "started" || option.status === "pending") {
+    return canEditPromotionPrice(option)
+      && (option.type !== "DEAL" || Boolean(option.id));
+  }
   if (
     option.status !== "candidate" ||
     !option.canApply

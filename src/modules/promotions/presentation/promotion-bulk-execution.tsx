@@ -1,6 +1,6 @@
 import { Alert, Progress, Space, Typography } from "antd";
 
-import { promotionName } from "./promotion-bulk-price.helpers";
+import { money, promotionName } from "./promotion-bulk-price.helpers";
 import type { SelectedPromotion } from "./promotion-global.store";
 
 export type PromotionExecutionStatus =
@@ -13,6 +13,7 @@ export type PromotionExecution = Readonly<{
   selection: SelectedPromotion;
   status: PromotionExecutionStatus;
   message: string | null;
+  confirmedPrice: number | null;
 }>;
 
 export function pendingExecutions(
@@ -22,6 +23,7 @@ export function pendingExecutions(
     selection,
     status: "pending",
     message: null,
+    confirmedPrice: null,
   }));
 }
 
@@ -111,7 +113,9 @@ function ExecutionList({
           <Typography.Text type="secondary">
             {execution.status === "error"
               ? `MLA ${execution.selection.itemId}: ${execution.message ?? statusText(execution.status)}`
-              : execution.message ?? statusText(execution.status)}
+              : execution.message ?? (execution.confirmedPrice !== null
+                ? `Precio confirmado por Mercado Libre: ${money(execution.confirmedPrice)}`
+                : statusText(execution.status))}
           </Typography.Text>
         </div>
       ))}

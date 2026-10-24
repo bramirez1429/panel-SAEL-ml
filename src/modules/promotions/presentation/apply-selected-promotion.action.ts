@@ -9,7 +9,7 @@ import type { PromotionOption } from "../domain/promotions.repository";
 import { createPromotionsRepository } from "../promotions.composition.server";
 import { promotionOptionToApplyRequest } from "./promotion-apply-request.mapper";
 import { mapPromotionError, promotionErrorMessage } from "./promotion-error.mapper";
-import { canEditPromotionPrice } from "./promotion-bulk-price.helpers";
+import { canEditPromotionPrice, isExistingPromotion } from "./promotion-bulk-price.helpers";
 
 export type ApplySelectedPromotionInput = Readonly<{
   itemId: string;
@@ -17,7 +17,7 @@ export type ApplySelectedPromotionInput = Readonly<{
   selectedPrice: number | null;
 }>;
 
-export type ApplySelectedPromotionResult = Readonly<{ ok: true }> | PromotionActionFailure;
+export type ApplySelectedPromotionResult = Readonly<{ ok: true; confirmedPrice?: number | null }> | PromotionActionFailure;
 
 export async function applySelectedPromotion(input: ApplySelectedPromotionInput): Promise<ApplySelectedPromotionResult> {
   const pricedOption = optionWithSelectedPrice(input.option, input.selectedPrice);
@@ -30,10 +30,14 @@ export async function applySelectedPromotion(input: ApplySelectedPromotionInput)
       itemId: input.itemId,
       familyId: null,
     });
-    const result = await repository.apply(sourceKey, request);
+    const result = isExistingPromotion(pricedOption)
+      ? await repository.updatePrice(sourceKey, request)
+      : await repository.apply(sourceKey, request);
     const itemResult = result.results.find(({ itemId }) => itemId === input.itemId);
-    if (!isConfirmedForItem(result, input.itemId)) {
-      const errorCode = itemResult?.errorCode ?? result.errorCode ?? "PROMOTION_VERIFICATION_FAILED";
+    if (!isConfirmedForItem(result, input.itemId, input.selectedPrice)) {
+      const errorCode = itemResult?.errorCode
+        ?? result.errorCode
+        ?? verificationErrorCode(input.selectedPrice, itemResult?.confirmedPrice);
       const friendlyMessage = promotionErrorMessage(errorCode);
       const providerMessage = itemResult?.providerMessage?.trim() ?? result.providerMessage?.trim();
       return {
@@ -44,22 +48,30 @@ export async function applySelectedPromotion(input: ApplySelectedPromotionInput)
     }
     revalidatePath("/promociones");
     revalidatePath("/publicacion-promocion");
-    return { ok: true };
+    return { ok: true, confirmedPrice: itemResult?.confirmedPrice ?? null };
   } catch (error: unknown) {
     return mapPromotionError(error);
   }
 }
 
-function isConfirmedForItem(result: PublicationPromotionResult, itemId: string): boolean {
+function isConfirmedForItem(result: PublicationPromotionResult, itemId: string, selectedPrice: number | null): boolean {
+  const item = result.results.find(({ itemId: resultItemId }) => resultItemId === itemId);
   return result.success
     && result.status === "SUCCESS"
     && result.totalItems === 1
     && result.successfulItems === 1
     && result.failedItems === 0
-    && result.results.some((item) => item.itemId === itemId && item.success);
+    && item?.success === true
+    && (selectedPrice === null || item.confirmedPrice === selectedPrice);
+}
+
+function verificationErrorCode(selectedPrice: number | null, confirmedPrice: number | null | undefined): string {
+  if (selectedPrice !== null && confirmedPrice === undefined) return "PROMOTION_VERIFICATION_PENDING";
+  return "PROMOTION_PRICE_NOT_CONFIRMED";
 }
 
 function optionWithSelectedPrice(option: PromotionOption, selectedPrice: number | null): PromotionOption | null {
+  if (isExistingPromotion(option) && (!canEditPromotionPrice(option) || selectedPrice === option.promotionPrice)) return null;
   if (!canEditPromotionPrice(option)) return option;
   if (selectedPrice === null || !Number.isFinite(selectedPrice) || selectedPrice <= 0) return null;
   if (option.minPromotionPrice !== null && selectedPrice < option.minPromotionPrice) return null;

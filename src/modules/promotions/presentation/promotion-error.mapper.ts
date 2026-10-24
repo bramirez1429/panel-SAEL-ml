@@ -22,6 +22,10 @@ const HUMAN_MESSAGES: Readonly<Record<string, string>> = {
     "Esta promoción ya no puede aplicarse a la publicación.",
   PROMOTION_REMOVAL_FAILED: "No se pudo desactivar la promoción completa.",
   PROMOTION_APPLICATION_FAILED: "No se pudo aplicar la promoción completa.",
+  PROMOTION_PRICE_NOT_CONFIRMED:
+    "Mercado Libre no confirmó el nuevo precio promocional.",
+  PROMOTION_VERIFICATION_PENDING:
+    "Mercado Libre todavía no confirmó el precio promocional. La operación queda pendiente de revisión.",
   PROMOTION_VERIFICATION_FAILED:
     "No pudimos confirmar el estado final de la promoción.",
 };

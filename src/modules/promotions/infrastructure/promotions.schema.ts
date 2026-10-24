@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+const priceModificationSchema = z.object({
+  operation: z.string(),
+  allowed: z.boolean(),
+  reason: z.string().nullable(),
+});
+
 const promotionSchema = z.object({
   id: z.string().nullable(),
   offerId: z.string().nullable(),
@@ -15,6 +21,11 @@ const promotionSchema = z.object({
 export const optionsSchema = z.array(
   promotionSchema.extend({
     status: z.string().nullable(),
+    subType: z.string().nullable().optional(),
+    canUpdatePrice: z.boolean().nullable().optional(),
+    priceModification: priceModificationSchema.nullable().optional(),
+    canEditPrice: z.boolean().nullable().optional(),
+    priceEditabilityReason: z.string().nullable().optional(),
     minPromotionPrice: z.number().nullable(),
     maxPromotionPrice: z.number().nullable(),
     suggestedPromotionPrice: z.number().nullable(),
@@ -123,6 +134,7 @@ export const publicationResultSchema = z.object({
       itemId: z.string(),
       success: z.boolean(),
       stage: z.string(),
+      confirmedPrice: z.number().nullable().optional(),
       errorCode: z.string().optional(),
       providerMessage: z.string().optional(),
     }),

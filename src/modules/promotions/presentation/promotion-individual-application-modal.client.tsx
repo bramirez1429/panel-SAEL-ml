@@ -13,9 +13,12 @@ import { PromotionCurrencyInput } from "./promotion-bulk-price-editor.client";
 import {
   initialPromotionPrices,
   canEditPromotionPrice,
+  hasPendingPromotionOperation,
+  isExistingPromotion,
   money,
   percentage,
   promotionDiscountPercent,
+  promotionPriceEditabilityReason,
   validSelectionPrice,
 } from "./promotion-bulk-price.helpers";
 import {
@@ -51,9 +54,9 @@ export function PromotionIndividualApplicationModal({
   const originalPrice = option.originalPrice ?? publication.price;
   const hasUnappliedDraft = editable && draftPrice !== selectedPrice;
   const canApplyDraft = editable && validSelectionPrice(selection, draftPrice);
-  const canParticipate = (
-    editable ? validSelectionPrice(selection, selectedPrice) : option.canApply
-  ) && !hasUnappliedDraft;
+  const canParticipate = hasPendingPromotionOperation(selection, selectedPrice)
+    && !hasUnappliedDraft;
+  const editabilityReason = promotionPriceEditabilityReason(option);
   const displayedPromotionPrice = priceApplied
     ? selectedPrice
     : option.promotionPrice;
@@ -127,7 +130,7 @@ export function PromotionIndividualApplicationModal({
           disabled={!canParticipate || running}
           onClick={() => void participate()}
         >
-          Participar
+          {isExistingPromotion(option) ? "Modificar precio" : "Participar"}
         </Button>
       )}
     >
@@ -184,7 +187,11 @@ export function PromotionIndividualApplicationModal({
               <Typography.Text type="warning">Presioná Aplicar para usar este precio.</Typography.Text>
             ) : null}
           </Space>
-        ) : null}
+        ) : (
+          <Typography.Text type="secondary">
+            {editabilityReason ?? "Mercado Libre no confirmó si esta promoción admite cambios."}
+          </Typography.Text>
+        )}
 
         {failure ? <Alert showIcon type="error" title={failure} /> : null}
       </Space>

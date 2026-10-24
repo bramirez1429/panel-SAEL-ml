@@ -31,6 +31,7 @@ export type PromotionItemResult = Readonly<{
   itemId: string;
   success: boolean;
   stage: string;
+  confirmedPrice?: number | null;
   errorCode?: string;
   providerMessage?: string;
 }>;

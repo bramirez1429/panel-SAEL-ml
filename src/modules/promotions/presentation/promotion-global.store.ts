@@ -40,6 +40,11 @@ export const usePromotionGlobalStore = create<PromotionGlobalState>((set) => ({
   })),
   saveOptions: (itemId, options) => set((state) => ({
     optionsByItem: { ...state.optionsByItem, [itemId]: { status: "success", options } },
+    selections: Object.fromEntries(Object.entries(state.selections).map(([key, selection]) => {
+      if (selection.itemId !== itemId) return [key, selection];
+      const refreshedOption = options.find((option) => promotionSelectionKey(itemId, option) === key);
+      return [key, refreshedOption ? { ...selection, option: refreshedOption } : selection];
+    })),
   })),
   failOptions: (itemId) => set((state) => ({
     optionsByItem: { ...state.optionsByItem, [itemId]: { status: "error" } },

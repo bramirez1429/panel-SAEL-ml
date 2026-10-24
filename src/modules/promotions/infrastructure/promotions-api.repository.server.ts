@@ -139,6 +139,19 @@ export class PromotionsApiRepository implements PromotionsRepository {
     }
     return parsed.data;
   }
+
+  async updatePrice(sourceKey: string, request: PromotionApplyRequest) {
+    const response = await this.http.post(
+      `${publicationPath(sourceKey)}/actualizar-precio`,
+      request,
+      { timeoutMs: WRITE_TIMEOUT_MS },
+    );
+    const parsed = publicationResultSchema.safeParse(response);
+    if (!parsed.success) {
+      throw invalidResponse("Resultado de actualización de precio promocional inválido.", parsed.error);
+    }
+    return parsed.data;
+  }
 }
 
 function publicationPath(sourceKey: string): string {

@@ -15,12 +15,23 @@ import type {
 } from "./promotion-campaign-items.model";
 import type { PromotionRemovalSelection } from "./promotion-removal.model";
 
+export type PromotionPriceModification = Readonly<{
+  operation: string;
+  allowed: boolean;
+  reason: string | null;
+}>;
+
 export type PromotionOption = Readonly<{
   id: string | null;
   offerId: string | null;
   type: string | null;
   name: string | null;
   status: string | null;
+  subType?: string | null;
+  canUpdatePrice?: boolean | null;
+  priceModification?: PromotionPriceModification | null;
+  canEditPrice?: boolean | null;
+  priceEditabilityReason?: string | null;
   originalPrice: number | null;
   promotionPrice: number | null;
   minPromotionPrice: number | null;
@@ -100,6 +111,10 @@ export interface PromotionsRepository {
     selection: PromotionRemovalSelection,
   ): Promise<PublicationPromotionResult>;
   apply(
+    sourceKey: string,
+    request: PromotionApplyRequest,
+  ): Promise<PublicationPromotionResult>;
+  updatePrice(
     sourceKey: string,
     request: PromotionApplyRequest,
   ): Promise<PublicationPromotionResult>;

@@ -18,9 +18,13 @@ import { PublicationSizeTag } from "@/shared/ui/publication-size-tag";
 import type { SelectedPromotion } from "./promotion-global.store";
 import {
   campaignDiscountRange,
+  canEditPromotionPrice,
   commonPromotionPriceRange,
+  isExistingPromotion,
   money,
   percentage,
+  promotionPriceEditabilityReason,
+  promotionLifecycle,
   promotionDiscountPercent,
   promotionCampaignKey,
   promotionName,
@@ -68,10 +72,12 @@ export function PromotionBulkPriceEditor({
           && Number.isFinite(campaignPrice)
           && campaignPrice > 0
         );
-        const selectedItemKeys = campaignSelections
+        const editableSelections = campaignSelections.filter((selection) => canEditPromotionPrice(selection.option));
+        const selectedItemKeys = editableSelections
           .filter((selection) => excludedFromCampaign[selection.key] !== true)
           .map((selection) => selection.key);
-        const allCampaignItemsSelected = selectedItemKeys.length === campaignSelections.length;
+        const allCampaignItemsSelected = editableSelections.length > 0
+          && selectedItemKeys.length === editableSelections.length;
         const someCampaignItemsSelected = selectedItemKeys.length > 0 && !allCampaignItemsSelected;
         const canApplyCampaignPrice = (
           hasCampaignPrice && selectedItemKeys.length > 0
@@ -99,6 +105,7 @@ export function PromotionBulkPriceEditor({
                 <PromotionCurrencyInput
                   aria-label={`Precio campaña ${promotionName(campaignSelections[0]!)}`}
                   controls={false}
+                  disabled={editableSelections.length === 0}
                   min={0}
                   value={campaignPrice}
                   onChange={(price) => onCampaignPriceChange(key, price)}
@@ -123,7 +130,7 @@ export function PromotionBulkPriceEditor({
                 indeterminate={someCampaignItemsSelected}
                 onChange={(event) => {
                   const participates = event.target.checked;
-                  for (const selection of campaignSelections) {
+                  for (const selection of editableSelections) {
                     onExcludedFromCampaignChange(selection.key, !participates);
                   }
                 }}
@@ -139,7 +146,6 @@ export function PromotionBulkPriceEditor({
                     price={prices[selection.key] ?? null}
                     campaignPrice={campaignPrice}
                     campaignPriceApplied={campaignPriceApplied[key] === true}
-                    hasCampaignPrice={hasCampaignPrice}
                     excludedFromCampaign={excludedFromCampaign[selection.key] === true}
                     invalidCampaignPrice={campaignWarnings[selection.key] ?? null}
                     onPriceChange={(price) => onPriceChange(selection.key, price)}
@@ -162,7 +168,6 @@ function PromotionPriceRow({
   price,
   campaignPrice,
   campaignPriceApplied,
-  hasCampaignPrice,
   excludedFromCampaign,
   invalidCampaignPrice,
   onPriceChange,
@@ -172,14 +177,16 @@ function PromotionPriceRow({
   price: number | null;
   campaignPrice: number | null;
   campaignPriceApplied: boolean;
-  hasCampaignPrice: boolean;
   excludedFromCampaign: boolean;
   invalidCampaignPrice: number | null;
   onPriceChange: (price: number | null) => void;
   onExcludedFromCampaignChange: (checked: boolean) => void;
 }>) {
-  const editable = selection.option.requiresPriceSelection === true;
-  const valid = validSelectionPrice(selection, price);
+  const editable = canEditPromotionPrice(selection.option);
+  const valid = !editable || validSelectionPrice(selection, price);
+  const existing = isExistingPromotion(selection.option);
+  const lifecycle = promotionLifecycle(selection.option);
+  const editabilityReason = promotionPriceEditabilityReason(selection.option);
   const discount = promotionDiscountPercent(selection.option.originalPrice, price);
   const participatesInCampaignPrice = !excludedFromCampaign;
   const receivedCampaignPrice = (
@@ -195,7 +202,14 @@ function PromotionPriceRow({
   return (
     <div style={{ borderBottom: "1px solid #f0f0f0", padding: "12px 0" }}>
       <Space orientation="vertical" size={4} style={{ width: "100%" }}>
-        <Typography.Text strong>{promotionName(selection)}</Typography.Text>
+        <Typography.Text strong>
+          {lifecycle === "scheduled"
+            ? (editable ? "Modificar precio · programada" : "Promoción programada")
+            : existing
+              ? (editable ? "Modificar precio" : "Promoción activa")
+              : "Participar"}
+        </Typography.Text>
+        <Typography.Text>{promotionName(selection)}</Typography.Text>
         <Typography.Text>{titlePresentation.title}</Typography.Text>
         <Space size="small" wrap>
           {titlePresentation.size ? (
@@ -210,38 +224,38 @@ function PromotionPriceRow({
         <Typography.Text>
           Precio promocional actual: {money(selection.option.promotionPrice)}
         </Typography.Text>
-        <Checkbox
-          aria-label={`Aplicar este precio a ${selection.itemId}`}
-          checked={participatesInCampaignPrice}
-          disabled={false}
-          onChange={(event) => (
-            onExcludedFromCampaignChange(!event.target.checked)
-          )}
-        >
-          Aplicar este precio a este ítem
-        </Checkbox>
         {editable ? (
-          <>
-            <Typography.Text>
-              Rango permitido: {money(selection.option.minPromotionPrice)} - {money(selection.option.maxPromotionPrice)}
-            </Typography.Text>
-            <Typography.Text>Precio a aplicar</Typography.Text>
-            <PromotionCurrencyInput
-              aria-label={`Precio a aplicar ${selection.itemId}`}
-              controls={false}
-              min={selection.option.minPromotionPrice ?? undefined}
-              max={selection.option.maxPromotionPrice ?? undefined}
-              status={valid ? undefined : "error"}
-              value={price}
-              onChange={onPriceChange}
-              style={{ width: "100%" }}
-            />
-            {!valid ? (
-              <Typography.Text type="danger">
-                El precio debe estar dentro del rango permitido.
-              </Typography.Text>
-            ) : null}
-          </>
+          <Checkbox
+            aria-label={`Aplicar este precio a ${selection.itemId}`}
+            checked={participatesInCampaignPrice}
+            onChange={(event) => (
+              onExcludedFromCampaignChange(!event.target.checked)
+            )}
+          >
+            Aplicar este precio a este ítem
+          </Checkbox>
+        ) : null}
+        <Typography.Text>
+          Rango permitido: {money(selection.option.minPromotionPrice)} - {money(selection.option.maxPromotionPrice)}
+        </Typography.Text>
+        <Typography.Text>{editable ? "Nuevo precio promocional" : "Precio promocional actual"}</Typography.Text>
+        <PromotionCurrencyInput
+          aria-label={`Precio a aplicar ${selection.itemId}`}
+          controls={false}
+          disabled={!editable}
+          status={valid ? undefined : "error"}
+          value={price}
+          onChange={onPriceChange}
+          style={{ width: "100%" }}
+        />
+        {!editable ? (
+          <Typography.Text type="secondary">
+            {editabilityReason ?? "Mercado Libre no confirmó si esta promoción admite cambios."}
+          </Typography.Text>
+        ) : !valid ? (
+          <Typography.Text type="danger">
+            El precio debe estar dentro del rango permitido.
+          </Typography.Text>
         ) : null}
         {receivedCampaignPrice ? (
           <Typography.Text strong type="success">

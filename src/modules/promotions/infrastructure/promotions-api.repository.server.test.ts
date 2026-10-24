@@ -57,6 +57,20 @@ describe("PromotionsApiRepository publication operations", () => {
     );
   });
 
+  it("actualiza el precio por el endpoint UPDATE_PRICE con el importe solicitado", async () => {
+    const http = client();
+    vi.mocked(http.post).mockResolvedValue(result(1, 1));
+    const updateRequest = { ...request, dealPrice: 68_999 };
+
+    await new PromotionsApiRepository(http).updatePrice("item:MLA2904936668", updateRequest);
+
+    expect(http.post).toHaveBeenCalledWith(
+      "/mercadolibre/direct/promociones/publicacion/item%3AMLA2904936668/actualizar-precio",
+      updateRequest,
+      { timeoutMs: 120_000 },
+    );
+  });
+
   it("acepta un failure total con el error real del MLA", async () => {
     const http = client();
     const failure = {

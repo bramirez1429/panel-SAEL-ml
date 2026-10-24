@@ -31,6 +31,27 @@ describe("optionsSchema", () => {
     expect(result[0]?.estimatedNetAmount).toBeNull();
     expect(result[0]?.suggestedEstimatedNetAmount).toBeNull();
   });
+
+  it("conserva la capacidad real de modificación informada por backend", () => {
+    const result = optionsSchema.parse([option({
+      status: "started",
+      subType: "FLEXIBLE_PERCENTAGE",
+      canUpdatePrice: true,
+      priceModification: {
+        operation: "UPDATE",
+        allowed: true,
+        reason: null,
+      },
+    })]);
+
+    expect(result[0]?.priceModification).toEqual({
+      operation: "UPDATE",
+      allowed: true,
+      reason: null,
+    });
+    expect(result[0]?.subType).toBe("FLEXIBLE_PERCENTAGE");
+    expect(result[0]?.canUpdatePrice).toBe(true);
+  });
 });
 
 function option(overrides: Record<string, unknown> = {}) {

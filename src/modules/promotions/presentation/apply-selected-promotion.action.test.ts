@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PromotionOption } from "../domain/promotions.repository";
 
-const mocks = vi.hoisted(() => ({ apply: vi.fn(), preview: vi.fn(), revalidatePath: vi.fn() }));
+const mocks = vi.hoisted(() => ({ apply: vi.fn(), updatePrice: vi.fn(), preview: vi.fn(), revalidatePath: vi.fn() }));
 
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("../promotions.composition.server", () => ({
-  createPromotionsRepository: () => ({ apply: mocks.apply, preview: mocks.preview }),
+  createPromotionsRepository: () => ({ apply: mocks.apply, updatePrice: mocks.updatePrice, preview: mocks.preview }),
 }));
 
 import { applySelectedPromotion } from "./apply-selected-promotion.action";
@@ -15,6 +15,7 @@ import { applySelectedPromotion } from "./apply-selected-promotion.action";
 describe("applySelectedPromotion", () => {
   beforeEach(() => {
     mocks.apply.mockReset();
+    mocks.updatePrice.mockReset();
     mocks.preview.mockReset();
     mocks.revalidatePath.mockReset();
   });
@@ -24,7 +25,7 @@ describe("applySelectedPromotion", () => {
 
     const result = await applySelectedPromotion({ itemId: "MLA1", option: dealOption(), selectedPrice: 14_449 });
 
-    expect(result).toEqual({ ok: true });
+    expect(result).toEqual({ ok: true, confirmedPrice: 14_449 });
     expect(mocks.preview).not.toHaveBeenCalled();
     expect(mocks.apply).toHaveBeenCalledWith("item:MLA1", expect.any(Object));
   });
@@ -32,7 +33,7 @@ describe("applySelectedPromotion", () => {
   it("usa el precio elegido, ejecuta apply una vez y revalida", async () => {
     mocks.apply.mockResolvedValue(successResult());
 
-    await expect(applySelectedPromotion({ itemId: "MLA1", option: dealOption(), selectedPrice: 14_449 })).resolves.toEqual({ ok: true });
+    await expect(applySelectedPromotion({ itemId: "MLA1", option: dealOption(), selectedPrice: 14_449 })).resolves.toEqual({ ok: true, confirmedPrice: 14_449 });
 
     const request = { type: "DEAL", promotionId: "P-1", dealPrice: 14_449 };
     expect(mocks.preview).not.toHaveBeenCalled();
@@ -50,10 +51,13 @@ describe("applySelectedPromotion", () => {
   });
 
   it("usa promotionPrice real cuando la opción no requiere elegir precio", async () => {
-    mocks.apply.mockResolvedValue(successResult());
+    mocks.apply.mockResolvedValue({
+      ...successResult(),
+      results: [{ itemId: "MLA1", success: true, stage: "APPLICATION", confirmedPrice: 12_000 }],
+    });
     const fixedPriceOption = { ...dealOption(), promotionPrice: 12_000, requiresPriceSelection: false };
 
-    await expect(applySelectedPromotion({ itemId: "MLA1", option: fixedPriceOption, selectedPrice: null })).resolves.toEqual({ ok: true });
+    await expect(applySelectedPromotion({ itemId: "MLA1", option: fixedPriceOption, selectedPrice: null })).resolves.toEqual({ ok: true, confirmedPrice: 12_000 });
 
     expect(mocks.apply).toHaveBeenCalledWith("item:MLA1", { type: "DEAL", promotionId: "P-1", dealPrice: 12_000 });
   });
@@ -110,17 +114,80 @@ describe("applySelectedPromotion", () => {
     await expect(applySelectedPromotion({ itemId: "MLA1", option: dealOption(), selectedPrice: 14_449 }))
       .resolves.toEqual({
         ok: false,
-        message: "No pudimos confirmar el estado final de la promoción.",
-        diagnosticCode: "PROMOTION_VERIFICATION_FAILED",
+        message: expect.stringContaining("todavía no confirmó el precio promocional"),
+        diagnosticCode: "PROMOTION_VERIFICATION_PENDING",
+      });
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("no vuelve a enviar el mismo precio de una promoción existente", async () => {
+    const option = {
+      ...dealOption(),
+      status: "started",
+      canRemove: true,
+      promotionPrice: 12_000,
+      canUpdatePrice: true,
+      priceModification: { operation: "UPDATE", allowed: true, reason: null },
+    } satisfies PromotionOption;
+
+    await expect(applySelectedPromotion({ itemId: "MLA1", option, selectedPrice: 12_000 }))
+      .resolves.toEqual({ ok: false, message: "El precio elegido no es válido." });
+    expect(mocks.apply).not.toHaveBeenCalled();
+    expect(mocks.updatePrice).not.toHaveBeenCalled();
+  });
+
+  it("usa UPDATE_PRICE con el valor solicitado para una promoción activa", async () => {
+    mocks.updatePrice.mockResolvedValue({
+      ...successResult(),
+      results: [{ itemId: "MLA1", success: true, stage: "UPDATE_PRICE", confirmedPrice: 68_999 }],
+    });
+    const option = dealOption({
+      status: "started",
+      canRemove: true,
+      canUpdatePrice: true,
+      promotionPrice: 71_911.2,
+      minPromotionPrice: 60_000,
+      maxPromotionPrice: 72_000,
+    });
+
+    await expect(applySelectedPromotion({ itemId: "MLA1", option, selectedPrice: 68_999 }))
+      .resolves.toEqual({ ok: true, confirmedPrice: 68_999 });
+
+    expect(mocks.updatePrice).toHaveBeenCalledWith("item:MLA1", {
+      type: "DEAL",
+      promotionId: "P-1",
+      dealPrice: 68_999,
+    });
+    expect(mocks.apply).not.toHaveBeenCalled();
+  });
+
+  it("rechaza el éxito cuando Mercado Libre confirma otro precio", async () => {
+    mocks.apply.mockResolvedValue({
+      ...successResult(),
+      results: [{ itemId: "MLA1", success: true, stage: "APPLICATION", confirmedPrice: 71_911 }],
+    });
+
+    await expect(applySelectedPromotion({
+      itemId: "MLA1",
+      option: dealOption({ minPromotionPrice: 60_000, maxPromotionPrice: 72_000 }),
+      selectedPrice: 68_000,
+    }))
+      .resolves.toEqual({
+        ok: false,
+        message: expect.stringContaining("nuevo precio promocional"),
+        diagnosticCode: "PROMOTION_PRICE_NOT_CONFIRMED",
       });
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 });
 
-function dealOption(): PromotionOption {
-  return { id: "P-1", offerId: null, type: "DEAL", name: "Cyber Fest", status: "candidate", originalPrice: 20_000, promotionPrice: null, minPromotionPrice: 100, maxPromotionPrice: 15_000, suggestedPromotionPrice: 14_449, requiresPriceSelection: true, discountPercent: null, sellerDiscountAmount: null, mercadoLibreBaseContributionAmount: 0, mercadoLibreBoostAmount: 0, mercadoLibreContributionAmount: 0, estimatedNetAmount: null, suggestedEstimatedNetAmount: null, startDate: null, finishDate: null, canApply: true, canRemove: false, saleEstimate: null };
+function dealOption(overrides: Partial<PromotionOption> = {}): PromotionOption {
+  return {
+    id: "P-1", offerId: null, type: "DEAL", name: "Cyber Fest", status: "candidate", originalPrice: 20_000, promotionPrice: null, minPromotionPrice: 100, maxPromotionPrice: 15_000, suggestedPromotionPrice: 14_449, requiresPriceSelection: true, discountPercent: null, sellerDiscountAmount: null, mercadoLibreBaseContributionAmount: 0, mercadoLibreBoostAmount: 0, mercadoLibreContributionAmount: 0, estimatedNetAmount: null, suggestedEstimatedNetAmount: null, startDate: null, finishDate: null, canApply: true, canRemove: false, saleEstimate: null,
+    ...overrides,
+  };
 }
 
 function successResult() {
-  return { success: true, status: "SUCCESS", totalItems: 1, successfulItems: 1, failedItems: 0, results: [{ itemId: "MLA1", success: true, stage: "APPLICATION" }] };
+  return { success: true, status: "SUCCESS", totalItems: 1, successfulItems: 1, failedItems: 0, results: [{ itemId: "MLA1", success: true, stage: "APPLICATION", confirmedPrice: 14_449 }] };
 }

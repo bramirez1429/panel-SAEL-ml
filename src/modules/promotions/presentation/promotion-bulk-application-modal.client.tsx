@@ -1,10 +1,11 @@
 "use client";
 
-import { Button, Modal } from "antd";
+import { Alert, Button, Modal } from "antd";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
 import { applySelectionWithRetry } from "./apply-selection-with-retry.client";
+import { getPromotionOptions } from "./promotion-options.action";
 import {
   pendingExecutions,
   PromotionExecutionProgress,
@@ -15,10 +16,12 @@ import { PromotionBulkPriceEditor } from "./promotion-bulk-price-editor.client";
 import {
   applyCampaignPrice,
   canEditPromotionPrice,
+  hasPendingPromotionOperation,
   initialCampaignPriceExclusions,
   initialPromotionPrices,
+  isExistingPromotion,
+  priceForCampaignExclusion,
   promotionCampaignKey,
-  validSelectionPrice,
   type CampaignPriceExclusions,
   type CampaignPrices,
   type CampaignPriceWarnings,
@@ -44,20 +47,27 @@ export function PromotionBulkApplicationModal({ selections, onClose, onCompleted
     () => initialCampaignPriceExclusions(selections),
   );
   const [campaignWarnings, setCampaignWarnings] = useState<CampaignPriceWarnings>({});
+  const [refreshingCapabilities, setRefreshingCapabilities] = useState(false);
+  const [capabilityRefreshError, setCapabilityRefreshError] = useState<string | null>(null);
   const [executions, setExecutions] = useState<readonly PromotionExecution[]>(
     () => pendingExecutions(selections),
   );
   const removeSelections = usePromotionGlobalStore((state) => state.removeSelections);
   const invalidateOptions = usePromotionGlobalStore((state) => state.invalidateOptions);
-  const valid = selections.every((selection) => (
-    validSelectionPrice(selection, prices[selection.key] ?? null)
+  const saveOptions = usePromotionGlobalStore((state) => state.saveOptions);
+  const failOptions = usePromotionGlobalStore((state) => state.failOptions);
+  const unknownCapabilityItemIds = [...new Set(selections
+    .filter(({ option }) => isExistingPromotion(option) && option.canUpdatePrice == null)
+    .map(({ itemId }) => itemId))];
+  const hasPendingOperations = selections.length > 0 && selections.every((selection) => (
+    hasPendingPromotionOperation(selection, prices[selection.key] ?? null)
   ));
   const hasUnappliedCampaignPrice = Object.entries(campaignPrices).some(
     ([campaignKey, price]) => (
       price !== null && campaignPriceApplied[campaignKey] !== true
     ),
   );
-  const canConfirm = valid && !hasUnappliedCampaignPrice;
+  const canConfirm = hasPendingOperations && !hasUnappliedCampaignPrice;
   const processed = executions.filter((execution) => (
     execution.status === "success" || execution.status === "error"
   )).length;
@@ -107,8 +117,44 @@ export function PromotionBulkApplicationModal({ selections, onClose, onCompleted
     const campaignKey = promotionCampaignKey(selection);
 
     setExcludedFromCampaign((current) => ({ ...current, [key]: excluded }));
-    setCampaignWarnings((current) => withoutKey(current, key));
-    setCampaignPriceApplied((current) => ({ ...current, [campaignKey]: false }));
+    setPrices((current) => {
+      const result = priceForCampaignExclusion(
+        selection,
+        excluded,
+        campaignPrices[campaignKey] ?? null,
+        current[key] ?? null,
+      );
+      return { ...current, [key]: result.price };
+    });
+    setCampaignWarnings((current) => {
+      const withoutCurrentWarning = withoutKey(current, key);
+      const campaignPrice = campaignPrices[campaignKey] ?? null;
+      const result = priceForCampaignExclusion(selection, excluded, campaignPrice, prices[key] ?? null);
+      return result.invalidCampaignPrice === null
+        ? withoutCurrentWarning
+        : { ...withoutCurrentWarning, [key]: result.invalidCampaignPrice };
+    });
+  }
+
+  async function refreshCapabilities(): Promise<void> {
+    if (refreshingCapabilities || unknownCapabilityItemIds.length === 0) return;
+    setRefreshingCapabilities(true);
+    setCapabilityRefreshError(null);
+    try {
+      const refreshed = await Promise.all(unknownCapabilityItemIds.map(async (itemId) => ({
+        itemId,
+        options: await getPromotionOptions(itemId),
+      })));
+      refreshed.forEach(({ itemId, options }) => saveOptions(itemId, options));
+      await onCompleted?.();
+      router.refresh();
+      onClose();
+    } catch {
+      unknownCapabilityItemIds.forEach(failOptions);
+      setCapabilityRefreshError("No pudimos reconsultar las capacidades de Mercado Libre.");
+    } finally {
+      setRefreshingCapabilities(false);
+    }
   }
 
   async function start(): Promise<void> {
@@ -128,6 +174,7 @@ export function PromotionBulkApplicationModal({ selections, onClose, onCompleted
           selection,
           status: "processing",
           message: null,
+          confirmedPrice: null,
         };
 
         setExecutions([...completed]);
@@ -144,12 +191,23 @@ export function PromotionBulkApplicationModal({ selections, onClose, onCompleted
           });
 
           completed[index] = result.ok
-            ? { selection, status: "success", message: null }
-            : { selection, status: "error", message: result.message };
+            ? {
+                selection,
+                status: "success",
+                message: null,
+                confirmedPrice: result.confirmedPrice ?? null,
+              }
+            : {
+                selection,
+                status: "error",
+                message: result.message,
+                confirmedPrice: null,
+              };
         } catch {
           completed[index] = {
             selection,
-            status: "error",
+          status: "error",
+          confirmedPrice: null,
             message: "No pudimos completar esta promoción. Continuamos con la siguiente.",
           };
         }
@@ -208,18 +266,37 @@ export function PromotionBulkApplicationModal({ selections, onClose, onCompleted
           total={selections.length}
         />
       ) : (
-        <PromotionBulkPriceEditor
-          selections={selections}
-          prices={prices}
-          campaignPrices={campaignPrices}
-          excludedFromCampaign={excludedFromCampaign}
-          campaignWarnings={campaignWarnings}
-          campaignPriceApplied={campaignPriceApplied}
-          onCampaignPriceChange={changeCampaignPrice}
-          onApplyCampaignPrice={applyPriceToCampaign}
-          onPriceChange={changePrice}
-          onExcludedFromCampaignChange={changeCampaignExclusion}
-        />
+        <>
+          {unknownCapabilityItemIds.length > 0 ? (
+            <Alert
+              showIcon
+              type="warning"
+              title="No pudimos verificar si se puede modificar."
+              description="Reconsultá las capacidades antes de intentar cambiar el precio."
+              action={(
+                <Button loading={refreshingCapabilities} onClick={() => void refreshCapabilities()}>
+                  Reconsultar
+                </Button>
+              )}
+              style={{ marginBottom: 16 }}
+            />
+          ) : null}
+          {capabilityRefreshError ? (
+            <Alert showIcon type="error" title={capabilityRefreshError} style={{ marginBottom: 16 }} />
+          ) : null}
+          <PromotionBulkPriceEditor
+            selections={selections}
+            prices={prices}
+            campaignPrices={campaignPrices}
+            excludedFromCampaign={excludedFromCampaign}
+            campaignWarnings={campaignWarnings}
+            campaignPriceApplied={campaignPriceApplied}
+            onCampaignPriceChange={changeCampaignPrice}
+            onApplyCampaignPrice={applyPriceToCampaign}
+            onPriceChange={changePrice}
+            onExcludedFromCampaignChange={changeCampaignExclusion}
+          />
+        </>
       )}
     </Modal>
   );

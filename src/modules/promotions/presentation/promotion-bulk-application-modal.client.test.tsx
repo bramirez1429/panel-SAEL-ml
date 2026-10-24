@@ -11,7 +11,7 @@ import {
 } from "./promotion-global.store";
 import { PromotionSelectionSummary } from "./promotion-selection-summary.client";
 
-const mocks = vi.hoisted(() => ({ apply: vi.fn(), refresh: vi.fn() }));
+const mocks = vi.hoisted(() => ({ apply: vi.fn(), getOptions: vi.fn(), refresh: vi.fn() }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: mocks.refresh }),
@@ -19,11 +19,15 @@ vi.mock("next/navigation", () => ({
 vi.mock("./apply-selected-promotion.action", () => ({
   applySelectedPromotion: mocks.apply,
 }));
+vi.mock("./promotion-options.action", () => ({
+  getPromotionOptions: mocks.getOptions,
+}));
 
 describe("aplicación masiva secuencial", () => {
   beforeEach(() => {
     resetPromotionGlobalStore();
     mocks.apply.mockReset();
+    mocks.getOptions.mockReset();
     mocks.refresh.mockReset();
   });
   afterEach(cleanup);
@@ -151,11 +155,8 @@ describe("aplicación masiva secuencial", () => {
     render(<PromotionSelectionSummary />);
     await openPricing(user);
 
-    expect(screen.getAllByRole("checkbox", { name: /Excluir del precio de esta campaña/ }))
-      .toEqual(expect.arrayContaining([
-        expect.objectContaining({ checked: false }),
-        expect.objectContaining({ checked: false }),
-      ]));
+    expect(screen.getByRole("checkbox", { name: "Aplicar este precio a MLA1" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Aplicar este precio a MLA2" })).toBeChecked();
     expect(screen.getByText(/Rango común permitido/)).toHaveTextContent("$ 28.000 - $ 31.349");
     setInput(screen.getByRole("spinbutton", { name: "Precio campaña Cyber Fest" }), 30_000);
     await user.click(screen.getByRole("button", { name: "Aplicar precio Cyber Fest" }));
@@ -179,21 +180,21 @@ describe("aplicación masiva secuencial", () => {
     const campaignInput = screen.getByRole("spinbutton", { name: "Precio campaña Cyber Fest" });
     const priceInput = screen.getByRole("spinbutton", { name: "Precio a aplicar MLA1" });
     const checkbox = screen.getByRole("checkbox", {
-      name: "Excluir del precio de esta campaña MLA1",
+      name: "Aplicar este precio a MLA1",
     });
-    expect(checkbox).not.toBeChecked();
+    expect(checkbox).toBeChecked();
 
     setInput(campaignInput, 30_000);
     await user.click(screen.getByRole("button", { name: "Aplicar precio Cyber Fest" }));
     expect(priceInput).toHaveValue("30000");
 
     await user.click(checkbox);
+    expect(checkbox).not.toBeChecked();
     expect(priceInput).toHaveValue("31100");
     expect(priceInput).toBeEnabled();
-    await user.click(screen.getByRole("button", { name: "Aplicar precio Cyber Fest" }));
-    expect(priceInput).toHaveValue("31100");
 
     await user.click(checkbox);
+    expect(checkbox).toBeChecked();
     expect(priceInput).toHaveValue("30000");
     expect(priceInput).toBeEnabled();
   });
@@ -213,7 +214,7 @@ describe("aplicación masiva secuencial", () => {
     expect(screen.getByRole("spinbutton", { name: "Precio a aplicar MLA1" })).toHaveValue("30000");
     expect(screen.getByRole("spinbutton", { name: "Precio a aplicar MLA2" })).toHaveValue("31200");
     expect(screen.getByText(/30\.000.*fuera del rango permitido/)).toBeInTheDocument();
-    expect(screen.getByText("Aplicado a 1 de 2 promociones")).toBeInTheDocument();
+    expect(screen.getByText(/aplicado a 1 de 2 promociones/i)).toBeInTheDocument();
     expect(screen.getByText(/1 promoción no acepta.*30\.000/)).toBeInTheDocument();
   });
 
@@ -223,22 +224,22 @@ describe("aplicación masiva secuencial", () => {
     render(<PromotionSelectionSummary />);
     await openPricing(user);
 
-    await user.click(screen.getByRole("checkbox", { name: "Excluir del precio de esta campaña MLA1" }));
-    await user.click(screen.getByRole("checkbox", { name: "Excluir del precio de esta campaña MLA2" }));
+    await user.click(screen.getByRole("checkbox", { name: "Aplicar este precio a MLA1" }));
+    await user.click(screen.getByRole("checkbox", { name: "Aplicar este precio a MLA2" }));
     setInput(screen.getByRole("spinbutton", { name: "Precio campaña Cyber Fest" }), 15_000);
     await user.click(screen.getByRole("button", { name: "Aplicar precio Cyber Fest" }));
 
     expect(screen.getByRole("spinbutton", { name: "Precio a aplicar MLA1" })).toHaveValue("14000");
     expect(screen.getByRole("spinbutton", { name: "Precio a aplicar MLA2" })).toHaveValue("14000");
     expect(screen.getByRole("spinbutton", { name: "Precio a aplicar MLA3" })).toHaveValue("15000");
-    expect(screen.getByText("Aplicado a 1 de 3 promociones")).toBeInTheDocument();
-    expect(screen.getByText("2 excluidas del precio de esta campaña")).toBeInTheDocument();
+    expect(screen.getByText(/aplicado a 1 de 3 promociones/i)).toBeInTheDocument();
+    expect(screen.getByText("2 promociones mantienen su precio promocional")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("checkbox", { name: "Excluir del precio de esta campaña MLA1" }));
+    await user.click(screen.getByRole("checkbox", { name: "Aplicar este precio a MLA1" }));
     expect(screen.getByRole("spinbutton", { name: "Precio a aplicar MLA1" })).toHaveValue("15000");
     expect(screen.getByRole("spinbutton", { name: "Precio a aplicar MLA2" })).toHaveValue("14000");
-    expect(screen.getByText("Aplicado a 2 de 3 promociones")).toBeInTheDocument();
-    expect(screen.getByText("1 excluida del precio de esta campaña")).toBeInTheDocument();
+    expect(screen.getByText(/aplicado a 2 de 3 promociones/i)).toBeInTheDocument();
+    expect(screen.getByText("1 promoción mantiene su precio promocional")).toBeInTheDocument();
   });
 
   it("permite editar una fila y valida mínimo y máximo antes de confirmar", async () => {
@@ -254,14 +255,13 @@ describe("aplicación masiva secuencial", () => {
     const submit = screen.getByRole("button", { name: "Confirmar 1 promociones" });
     const input = screen.getByRole("spinbutton", { name: "Precio a aplicar MLA1" });
 
-    expect(submit).toBeDisabled();
-    setInput(input, 50);
-    expect(screen.getByText("El precio debe estar dentro del rango permitido.")).toBeInTheDocument();
-    expect(submit).toBeDisabled();
-    setInput(input, 250);
-    expect(submit).toBeDisabled();
-    setInput(input, 150);
     expect(submit).toBeEnabled();
+    setInput(input, 50);
+    await waitFor(() => expect(submit).toBeDisabled());
+    setInput(input, 250);
+    await waitFor(() => expect(submit).toBeDisabled());
+    setInput(input, 150);
+    await waitFor(() => expect(submit).toBeEnabled());
   });
 
   it("conserva la edición individual de una publicación excluida", async () => {
@@ -273,36 +273,103 @@ describe("aplicación masiva secuencial", () => {
     setInput(screen.getByRole("spinbutton", { name: "Precio campaña Cyber Fest" }), 15_000);
     await user.click(screen.getByRole("button", { name: "Aplicar precio Cyber Fest" }));
     await user.click(screen.getByRole("checkbox", {
-      name: "Excluir del precio de esta campaña MLA1",
+      name: "Aplicar este precio a MLA1",
     }));
     expect(screen.getByRole("spinbutton", { name: "Precio campaña Cyber Fest" })).toHaveValue("15000");
     expect(screen.getByRole("spinbutton", { name: "Precio a aplicar MLA1" })).toHaveValue("14000");
     expect(screen.getByRole("checkbox", {
-      name: "Excluir del precio de esta campaña MLA1",
-    })).toBeChecked();
+      name: "Aplicar este precio a MLA1",
+    })).not.toBeChecked();
   });
 
-  it("conserva promotionPrice y no ofrece edición cuando ML no requiere precio", async () => {
+  it("bloquea una promoción activa de precio fijo y no confirma una operación inútil", async () => {
     const user = userEvent.setup();
     mocks.apply.mockResolvedValue({ ok: true });
     select(selection("MLA1", option({
       requiresPriceSelection: false,
       promotionPrice: 15_000,
+      status: "started",
+      canUpdatePrice: false,
+      priceModification: {
+        operation: "NONE",
+        allowed: false,
+        reason: "Mercado Libre informó un precio fijo para esta promoción.",
+      },
     })));
     render(<PromotionSelectionSummary />);
     await openPricing(user);
 
-    expect(screen.queryByRole("spinbutton", { name: "Precio a aplicar MLA1" })).not.toBeInTheDocument();
+    expect(screen.getByRole("spinbutton", { name: "Precio a aplicar MLA1" })).toBeDisabled();
+    expect(screen.getByText("Mercado Libre informó un precio fijo para esta promoción.")).toBeInTheDocument();
     expect(screen.queryByRole("checkbox", {
-      name: "Excluir del precio de esta campaña MLA1",
+      name: "Aplicar este precio a MLA1",
     })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Confirmar 1 promociones" })).toBeDisabled();
+    expect(mocks.apply).not.toHaveBeenCalled();
+  });
+
+  it("mantiene deshabilitada la confirmación si una promoción activa editable conserva el mismo precio", async () => {
+    const user = userEvent.setup();
+    select(selection("MLA1", option({
+      status: "started",
+      canRemove: true,
+      minPromotionPrice: 60_000,
+      maxPromotionPrice: 72_000,
+      promotionPrice: 71_911,
+      suggestedPromotionPrice: 68_000,
+      canUpdatePrice: true,
+      priceModification: { operation: "UPDATE", allowed: true, reason: null },
+    })));
+    render(<PromotionSelectionSummary />);
+    await openPricing(user);
+
+    expect(screen.getByText("Modificar precio")).toBeInTheDocument();
+    expect(screen.getByRole("spinbutton", { name: "Precio a aplicar MLA1" })).toHaveValue("71911");
+    expect(screen.getByRole("button", { name: "Confirmar 1 promociones" })).toBeDisabled();
+  });
+
+  it("envía el nuevo precio de una promoción activa editable y muestra el precio confirmado", async () => {
+    const user = userEvent.setup();
+    mocks.apply.mockResolvedValue({ ok: true, confirmedPrice: 68_000 });
+    select(selection("MLA2904936654", option({
+      status: "started",
+      canRemove: true,
+      minPromotionPrice: 60_000,
+      maxPromotionPrice: 72_000,
+      promotionPrice: 71_911,
+      suggestedPromotionPrice: 68_000,
+      canUpdatePrice: true,
+      priceModification: { operation: "UPDATE", allowed: true, reason: null },
+    })));
+    render(<PromotionSelectionSummary />);
+    await openPricing(user);
+
+    setInput(screen.getByRole("spinbutton", { name: "Precio a aplicar MLA2904936654" }), 68_000);
     await user.click(screen.getByRole("button", { name: "Confirmar 1 promociones" }));
 
     expect(await screen.findByText("Proceso completado")).toBeInTheDocument();
     expect(mocks.apply).toHaveBeenCalledWith(expect.objectContaining({
-      itemId: "MLA1",
-      selectedPrice: null,
+      itemId: "MLA2904936654",
+      selectedPrice: 68_000,
+      option: expect.objectContaining({ promotionPrice: 68_000 }),
     }));
+    expect(screen.getByText(/Precio confirmado por Mercado Libre: \$ 68\.000/)).toBeInTheDocument();
+  });
+
+  it("bloquea una promoción activa cuando el backend todavía no conoce su capacidad", async () => {
+    const user = userEvent.setup();
+    select(selection("MLA1", option({
+      status: "started",
+      canRemove: true,
+      promotionPrice: 64_999,
+    })));
+    render(<PromotionSelectionSummary />);
+    await openPricing(user);
+
+    expect(screen.getByRole("spinbutton", { name: "Precio a aplicar MLA1" })).toBeDisabled();
+    expect(screen.getAllByText("No pudimos verificar si se puede modificar.")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Reconsultar" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Confirmar 1 promociones" })).toBeDisabled();
   });
 
   it("ejecuta 1, 2 y 3 en orden, sin solaparlas, y refresca al finalizar", async () => {
@@ -424,6 +491,9 @@ describe("aplicación masiva secuencial", () => {
     const user = userEvent.setup();
     mocks.apply.mockResolvedValue({ ok: true });
     select(selection("MLA1", option({
+      status: "started",
+      canRemove: true,
+      canUpdatePrice: true,
       promotionPrice: 12_000,
       suggestedPromotionPrice: 12_000,
       minPromotionPrice: 10_000,
@@ -459,7 +529,7 @@ describe("aplicación masiva secuencial", () => {
 });
 
 async function openPricing(user: ReturnType<typeof userEvent.setup>): Promise<void> {
-  await user.click(screen.getByRole("button", { name: "Participar en las seleccionadas" }));
+  await user.click(screen.getByRole("button", { name: /seleccionadas/ }));
 }
 
 async function openAndStart(
