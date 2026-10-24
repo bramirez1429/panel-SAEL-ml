@@ -52,7 +52,7 @@ describe("vista global de promociones", () => {
   });
   afterEach(cleanup);
 
-  it("carga opciones al entrar en viewport, sin desplegable, y reutiliza la caché", async () => {
+  it("carga opciones individuales al entrar en viewport y reutiliza la caché", async () => {
     mocks.getOptions.mockResolvedValue([candidate()]);
     const { rerender } = render(<PromotionsCatalogClient page={page([publication()])} />);
 
@@ -346,6 +346,36 @@ describe("vista global de promociones", () => {
 
     expect(mocks.push).toHaveBeenCalledWith("/promociones?search=remera+mujer&page=2&cursor=next");
   });
+  it("despliega los talles de Pack 1 y los vuelve a ocultar sin alterar la tabla", async () => {
+    const user = userEvent.setup();
+    mocks.getOptions.mockResolvedValue([candidate()]);
+    render(<PromotionsCatalogClient page={page([
+      publication({ itemId: "MLA-S", title: "Remera Pack 1 S", variantColor: "Pack 1" }),
+      publication({ itemId: "MLA-XL", title: "Remera Pack 1 XL", variantColor: "Pack 1" }),
+    ])} />);
+
+    const open = screen.getByRole("button", { name: "Mostrar talles de Pack 1" });
+    expect(open).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("MLA-S")).not.toBeInTheDocument();
+    expect(mocks.getOptions).not.toHaveBeenCalled();
+
+    await user.click(open);
+    expect(screen.getByRole("button", { name: "Ocultar talles de Pack 1" }))
+      .toHaveAttribute("aria-expanded", "true");
+
+    const first = screen.getByText("MLA-S").closest("tr");
+    const last = screen.getByText("MLA-XL").closest("tr");
+    expect(first).not.toBeNull();
+    expect(last).not.toBeNull();
+    expect(first!.compareDocumentPosition(last!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await waitFor(() => expect(mocks.getOptions).toHaveBeenCalledTimes(2));
+
+    await user.click(screen.getByRole("button", { name: "Ocultar talles de Pack 1" }));
+    expect(screen.queryByText("MLA-S")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mostrar talles de Pack 1" }))
+      .toHaveAttribute("aria-expanded", "false");
+  });
+
 });
 
 function publication(overrides: Partial<PromotionRow> = {}): PromotionRow {

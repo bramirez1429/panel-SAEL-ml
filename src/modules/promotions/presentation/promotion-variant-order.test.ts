@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { PromotionRow } from "../domain/promotion.model";
 import type { SelectedPromotion } from "./promotion-global.store";
-import { sortPromotionPublications, sortPromotionSelections } from "./promotion-variant-order";
+import { groupPromotionPublications, sortPromotionPublications, sortPromotionSelections } from "./promotion-variant-order";
 
 function row(id: string, title: string, extra: Partial<PromotionRow> = {}): PromotionRow {
   return { itemId: id, title, familyId: "F1", sku: null, thumbnail: null, stock: 1,
@@ -10,6 +10,32 @@ function row(id: string, title: string, extra: Partial<PromotionRow> = {}): Prom
 }
 
 describe("promotion variant ordering", () => {
+  it("reúne cada color o pack y mantiene el orden de talles dentro del grupo", () => {
+    const source = [
+      row("a", "Remera Pack 2 XXL"),
+      row("b", "Remera Pack 1 L"),
+      row("c", "Remera Pack 1 S"),
+      row("d", "Remera Pack 2 M"),
+      row("e", "Remera Negro XL", { variantColor: "Negro" }),
+      row("f", "Remera Negro S", { variantColor: "Negro" }),
+    ];
+    const groups = groupPromotionPublications(source);
+    expect(groups.map((group) => group.label)).toEqual(["Negro", "Pack 1", "Pack 2"]);
+    expect(groups.map((group) => group.publications.map((item) => item.itemId))).toEqual([
+      ["f", "e"], ["c", "b"], ["d", "a"],
+    ]);
+    expect(source[0]?.itemId).toBe("a");
+  });
+
+  it("no agrupa productos sin color ni pack conocidos", () => {
+    const groups = groupPromotionPublications([
+      row("a", "Remera Simple"),
+      row("b", "Remera Simple"),
+    ]);
+    expect(groups).toHaveLength(2);
+    expect(groups.every((group) => group.label === null)).toBe(true);
+  });
+
   it("agrupa colores y después ordena S, M, L, XL, XXL", () => {
     const input = [
       row("a", "Remera Rosa XL", { variantColor: "Rosa" }),
