@@ -23,6 +23,13 @@ export type PromotionOption = Readonly<{
   status: string | null;
   originalPrice: number | null;
   promotionPrice: number | null;
+  promotionSubtype?: string | null;
+  canUpdatePrice?: boolean;
+  priceUpdateRestriction?: string | null;
+  currentEditablePrice?: number | null;
+  minUpdatePrice?: number | null;
+  maxUpdatePrice?: number | null;
+  buyerPrice?: number | null;
   minPromotionPrice: number | null;
   maxPromotionPrice: number | null;
   suggestedPromotionPrice: number | null;
@@ -103,4 +110,5 @@ export interface PromotionsRepository {
     sourceKey: string,
     request: PromotionApplyRequest,
   ): Promise<PublicationPromotionResult>;
+  updatePrice(sourceKey: string, request: PromotionApplyRequest): Promise<PublicationPromotionResult>;
 }

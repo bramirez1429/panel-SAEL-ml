@@ -127,6 +127,18 @@ export class PromotionsApiRepository implements PromotionsRepository {
     return parsed.data;
   }
 
+  async updatePrice(sourceKey: string, request: PromotionApplyRequest) {
+    if (request.type !== 'DEAL' && request.type !== 'SELLER_CAMPAIGN') {
+      throw new ApiError('Este tipo de promoción no admite modificar el precio directamente.', 'API_INVALID_RESPONSE');
+    }
+    const response = await this.http.post(
+      `${publicationPath(sourceKey)}/actualizar-precio`, request, { timeoutMs: WRITE_TIMEOUT_MS },
+    );
+    const parsed = publicationResultSchema.safeParse(response);
+    if (!parsed.success) throw invalidResponse('Resultado de actualización de precio inválido.', parsed.error);
+    return parsed.data;
+  }
+
   async apply(sourceKey: string, request: PromotionApplyRequest) {
     const response = await this.http.post(
       `${publicationPath(sourceKey)}/aplicar`,

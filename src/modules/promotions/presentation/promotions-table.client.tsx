@@ -43,6 +43,7 @@ import {
   usePromotionGlobalStore,
 } from "./promotion-global.store";
 import { getPromotionOptions } from "./promotion-options.action";
+import { canEditPromotionPrice } from "./promotion-bulk-price.helpers";
 import {
   enqueuePromotionOptionsLoad,
 } from "./promotion-options.queue.client";
@@ -637,6 +638,12 @@ function SelectionCell({
 
   if (!option) return null;
 
+  if (canEditPromotionPrice(option) && option.status !== "candidate") {
+    const selection = promotionSelection(row.publication, option);
+    return <Checkbox aria-label={`Seleccionar para modificar precio ${optionName(option)}`}
+      checked={Boolean(selections[selection.key])} onChange={() => onToggle(selection)} />;
+  }
+
   if (isRemovablePromotionOption(option)) {
     const selection = { publication: row.publication, option };
     const key = removalSelectionKey(selection);
@@ -703,6 +710,10 @@ function TaskAction({
       <RecommendationText
         option={option}
       />
+
+      {canEditPromotionPrice(option) && option.status !== "candidate" && onParticipate ? (
+        <Button size="small" type="primary" onClick={() => onParticipate(option)}>Modificar precio</Button>
+      ) : null}
 
       {canDeactivate ? (
         <Button
@@ -775,7 +786,7 @@ function hasVisibleAction(
     option.status === "started" ||
     option.status === "pending"
   ) {
-    return isRemovablePromotionOption(option);
+    return isRemovablePromotionOption(option) || canEditPromotionPrice(option);
   }
 
   /*

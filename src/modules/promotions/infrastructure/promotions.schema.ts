@@ -15,6 +15,13 @@ const promotionSchema = z.object({
 export const optionsSchema = z.array(
   promotionSchema.extend({
     status: z.string().nullable(),
+    promotionSubtype: z.string().nullable().optional(),
+    canUpdatePrice: z.boolean().optional(),
+    priceUpdateRestriction: z.string().nullable().optional(),
+    currentEditablePrice: z.number().nullable().optional(),
+    minUpdatePrice: z.number().nullable().optional(),
+    maxUpdatePrice: z.number().nullable().optional(),
+    buyerPrice: z.number().nullable().optional(),
     minPromotionPrice: z.number().nullable(),
     maxPromotionPrice: z.number().nullable(),
     suggestedPromotionPrice: z.number().nullable(),
@@ -123,6 +130,8 @@ export const publicationResultSchema = z.object({
       itemId: z.string(),
       success: z.boolean(),
       stage: z.string(),
+      confirmedPrice: z.number().nullable().optional(),
+      buyerPrice: z.number().nullable().optional(),
       errorCode: z.string().optional(),
       providerMessage: z.string().optional(),
     }),

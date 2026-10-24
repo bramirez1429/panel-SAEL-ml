@@ -17,6 +17,7 @@ import {
   canEditPromotionPrice,
   initialCampaignPriceExclusions,
   initialPromotionPrices,
+  hasPendingPromotionOperation,
   promotionCampaignKey,
   validSelectionPrice,
   type CampaignPriceExclusions,
@@ -49,15 +50,14 @@ export function PromotionBulkApplicationModal({ selections, onClose, onCompleted
   );
   const removeSelections = usePromotionGlobalStore((state) => state.removeSelections);
   const invalidateOptions = usePromotionGlobalStore((state) => state.invalidateOptions);
-  const valid = selections.every((selection) => (
-    validSelectionPrice(selection, prices[selection.key] ?? null)
-  ));
+  const pendingSelections = selections.filter((selection) =>
+    hasPendingPromotionOperation(selection, prices[selection.key] ?? null));
   const hasUnappliedCampaignPrice = Object.entries(campaignPrices).some(
     ([campaignKey, price]) => (
       price !== null && campaignPriceApplied[campaignKey] !== true
     ),
   );
-  const canConfirm = valid && !hasUnappliedCampaignPrice;
+  const canConfirm = pendingSelections.length > 0 && !hasUnappliedCampaignPrice;
   const processed = executions.filter((execution) => (
     execution.status === "success" || execution.status === "error"
   )).length;
@@ -117,11 +117,11 @@ export function PromotionBulkApplicationModal({ selections, onClose, onCompleted
     activeRef.current = true;
     setRunning(true);
 
-    const completed: PromotionExecution[] = pendingExecutions(selections);
+    const completed: PromotionExecution[] = pendingExecutions(pendingSelections);
 
     try {
-      for (let index = 0; index < selections.length; index += 1) {
-        const selection = selections[index];
+      for (let index = 0; index < pendingSelections.length; index += 1) {
+        const selection = pendingSelections[index];
         if (!selection) continue;
 
         completed[index] = {
@@ -144,7 +144,7 @@ export function PromotionBulkApplicationModal({ selections, onClose, onCompleted
           });
 
           completed[index] = result.ok
-            ? { selection, status: "success", message: null }
+            ? { selection, status: "success", message: result.confirmedPrice == null ? null : `Precio confirmado: ${result.confirmedPrice.toLocaleString("es-AR")}` }
             : { selection, status: "error", message: result.message };
         } catch {
           completed[index] = {
@@ -194,9 +194,9 @@ export function PromotionBulkApplicationModal({ selections, onClose, onCompleted
         : running
           ? null
           : (
-            <Button type="primary" disabled={!canConfirm} onClick={() => void start()}>
-              Confirmar {selections.length} promociones
-            </Button>
+            canConfirm
+              ? <Button type="primary" onClick={() => void start()}>Confirmar {pendingSelections.length} promociones</Button>
+              : <span>No hay cambios pendientes para guardar</span>
           )}
     >
       {finished ? (
@@ -205,7 +205,7 @@ export function PromotionBulkApplicationModal({ selections, onClose, onCompleted
         <PromotionExecutionProgress
           executions={executions}
           processed={processed}
-          total={selections.length}
+          total={pendingSelections.length}
         />
       ) : (
         <PromotionBulkPriceEditor
