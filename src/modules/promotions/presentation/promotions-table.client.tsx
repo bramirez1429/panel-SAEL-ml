@@ -167,7 +167,8 @@ export function PromotionsTable({
 
     if (
       cached?.status === "loading" ||
-      cached?.status === "success"
+      cached?.status === "success" ||
+      cached?.status === "error"
     ) {
       return;
     }
@@ -268,7 +269,7 @@ export function PromotionsTable({
         <PromotionCell
           row={row}
           onRetry={() =>
-            loadOptions(row.publication)
+            reloadOptions(row.publication)
           }
         />
       ),
