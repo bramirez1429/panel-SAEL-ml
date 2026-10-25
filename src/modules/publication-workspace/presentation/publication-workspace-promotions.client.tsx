@@ -291,7 +291,7 @@ function PublicationVariantPreview({
  * one unequivocal color, use it just for grouping inside this workspace;
  * preserve the original publication attributes and all editing behaviors.
  */
-function withAccurateWorkspaceColor(
+export function withAccurateWorkspaceColor(
   publication: PublicationWorkspaceItem,
 ): PublicationWorkspaceItem {
   const normalizedTitle = normalizeWorkspaceColorText(publication.title);

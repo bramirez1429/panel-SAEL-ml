@@ -42,7 +42,8 @@ import {
   type WorkspaceStatusAction,
   type WorkspaceTitleAction,
 } from "./publication-workspace-editor.client";
-import { PublicationWorkspacePromotions } from "./publication-workspace-promotions.client";
+import { PublicationWorkspacePromotions, withAccurateWorkspaceColor } from "./publication-workspace-promotions.client";
+import { PublicationWorkspaceVariantGroup } from "./publication-workspace-variant-group.client";
 import styles from "./publication-promotion-workspace.module.css";
 
 type Props = Readonly<{
@@ -654,10 +655,16 @@ function FamilyWorkspace({ family, visualOrder, onChanged, onSave, onStatusChang
   const draftGlobalPriceRef = useRef<number | null>(null);
   const [messageApi, contextHolder] = message.useMessage();
   const totalSold = family.children.reduce((total, child) => total + child.sold, 0);
+  // Keep the same color grouping as the Promoción tab without changing
+  // the original publication attributes used by the editors.
+  const originalItems = new Map(family.children.map((child) => [child.itemId, child]));
   const variantGroups = applyPublicationVisualOrder(
-    groupPublicationsByVariant(family.children),
+    groupPublicationsByVariant(family.children.map(withAccurateWorkspaceColor)),
     visualOrder,
-  );
+  ).map((group) => ({
+    ...group,
+    publications: group.publications.map((child) => originalItems.get(child.itemId) ?? child),
+  }));
   const familyPrices = family.children.map((child) => child.standardPrice ?? child.price);
   const numericPrices = familyPrices.filter((value): value is number => value !== null && Number.isFinite(value));
   const currentMinPrice = numericPrices.length > 0 ? Math.min(...numericPrices) : null;
@@ -734,24 +741,36 @@ function FamilyWorkspace({ family, visualOrder, onChanged, onSave, onStatusChang
         {globalProgress ? <><Typography.Paragraph>Actualizando precios: {globalProgress.completed} de {globalProgress.total}</Typography.Paragraph><Progress percent={Math.round(globalProgress.completed / globalProgress.total * 100)} /><Typography.Text type="danger">{globalProgress.failures.length ? `MLA con error: ${globalProgress.failures.join(", ")}` : ""}</Typography.Text></> : null}
       </Modal>
       <Typography.Title level={4}>Publicaciones de la familia</Typography.Title>
-      {variantGroups.map((group) => (
-        <section key={group.key}>
-          <Divider titlePlacement="start">{group.label}</Divider>
-          <div className={styles.familyChildren}>
-            {group.publications.map((child) => (
-              <PublicationWorkspaceEditor
-                key={child.itemId}
-                publication={child}
-                onChanged={onChanged}
-                onSave={onSave}
-                onStatusChange={onStatusChange}
-                onTitleSave={onTitleSave}
-                getTiendanubeProductByMlAction={getTiendanubeProductByMlAction}
-              />
-            ))}
-          </div>
-        </section>
-      ))}
+      {variantGroups.map((group) => {
+        const representative = group.publications.find(
+          (child) => child.imageUrl || child.thumbnailUrl,
+        );
+        const imageUrl = representative?.imageUrl ??
+          representative?.thumbnailUrl ?? family.imageUrl;
+
+        return (
+          <PublicationWorkspaceVariantGroup
+            key={group.key}
+            label={group.label}
+            imageUrl={imageUrl}
+            count={group.publications.length}
+          >
+            <div className={styles.familyChildren}>
+              {group.publications.map((child) => (
+                <PublicationWorkspaceEditor
+                  key={child.itemId}
+                  publication={child}
+                  onChanged={onChanged}
+                  onSave={onSave}
+                  onStatusChange={onStatusChange}
+                  onTitleSave={onTitleSave}
+                  getTiendanubeProductByMlAction={getTiendanubeProductByMlAction}
+                />
+              ))}
+            </div>
+          </PublicationWorkspaceVariantGroup>
+        );
+      })}
     </section>
   );
 

@@ -9,7 +9,7 @@ import { PublicationPromotionWorkspace } from "./publication-promotion-workspace
 afterEach(cleanup);
 
 const child = (itemId: string, status: string): PublicationWorkspaceItem => ({
-  imageUrl: null, thumbnailUrl: null, title: `Remera ${itemId}`, itemId,
+  imageUrl: "https://images.example.com/" + itemId + ".jpg", thumbnailUrl: null, title: `Remera ${itemId}`, itemId,
   familyId: "456", model: "VARIANT_PRICING", sku: `SKU-${itemId}`,
   status, stock: itemId === "MLA1" ? 4 : 2,
   sold: itemId === "MLA1" ? 12 : 4,
@@ -17,6 +17,10 @@ const child = (itemId: string, status: string): PublicationWorkspaceItem => ({
   hasActivePromotion: itemId === "MLA1",
   promotionDiscountPercent: itemId === "MLA1" ? 20 : null,
   installmentLabel: itemId === "MLA1" ? "6 cuotas" : null,
+  attributes: [
+    { id: "COLOR", name: "Color", value: "Negro" },
+    { id: "SIZE", name: "Talle", value: itemId === "MLA1" ? "S" : "M" },
+  ],
 });
 
 const successfulSave = vi.fn().mockResolvedValue({ ok: true, confirmed: {} });
@@ -87,6 +91,11 @@ describe("PublicationPromotionWorkspace", () => {
 
     expect(onSelect).toHaveBeenCalledWith({ familyId: "456", itemIds: ["MLA1", "MLA2"] });
     expect(await screen.findByText("Publicaciones de la familia")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Abrir Negro" }))
+      .toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("img", { name: "Imagen de Negro" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("SKU de MLA1")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Abrir Negro" }));
     expect(screen.getByText("MLA1")).toBeInTheDocument();
     expect(screen.getByText("MLA2")).toBeInTheDocument();
     expect(screen.getByLabelText("SKU de MLA1")).toHaveValue("SKU-MLA1");
@@ -99,6 +108,59 @@ describe("PublicationPromotionWorkspace", () => {
     expect(screen.getByText("20% OFF")).toBeInTheDocument();
     expect(screen.getByText("Sin promoción")).toBeInTheDocument();
     expect(screen.getByText("6 cuotas")).toBeInTheDocument();
+  });
+
+  it("separa colores, conserva editores al reabrir y no ejecuta consultas extra", async () => {
+    const user = userEvent.setup();
+    const children = [
+      { ...child("MLA1", "active"), title: "Remera Mujer Negro S" },
+      {
+        ...child("MLA2", "active"),
+        title: "Remera Mujer Blanco M",
+        attributes: [
+          { id: "COLOR", name: "Color", value: "Negro" },
+          { id: "SIZE", name: "Talle", value: "M" },
+        ],
+      },
+    ];
+    const onSearch = vi.fn().mockResolvedValue({
+      status: "success", searchType: "FAMILY", query: "456",
+      items: children.map((item) => ({
+        itemId: item.itemId, familyId: "456", userProductId: null,
+        title: item.title, imageUrl: item.imageUrl, price: item.price,
+        currency: item.currency, status: item.status, stock: item.stock,
+      })),
+    });
+    const onSelect = vi.fn().mockResolvedValue({
+      status: "success",
+      selection: {
+        type: "family", familyId: "456", familyName: "Remeras",
+        imageUrl: null, children,
+      },
+    });
+    renderWorkspace(onSearch, onSelect);
+    await search(user, "456");
+
+    expect(screen.getByRole("button", { name: "Abrir Negro" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Abrir Blanco" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("SKU de MLA1")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("SKU de MLA2")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Abrir Negro" }));
+    expect(screen.getByLabelText("SKU de MLA1")).toBeInTheDocument();
+    expect(screen.queryByLabelText("SKU de MLA2")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Cerrar Negro" }));
+    expect(screen.getByLabelText("SKU de MLA1")).not.toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Abrir Negro" }));
+    expect(screen.getByLabelText("SKU de MLA1")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Abrir Blanco" }));
+    expect(screen.getByLabelText("SKU de MLA2")).toBeVisible();
+
+    expect(onSearch).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(successfulSave).not.toHaveBeenCalled();
+    expect(successfulStatus).not.toHaveBeenCalled();
   });
 
   it("una búsqueda por MLA muestra solamente esa publicación", async () => {
