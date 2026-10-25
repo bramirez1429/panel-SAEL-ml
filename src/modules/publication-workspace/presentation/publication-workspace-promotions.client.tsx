@@ -1,9 +1,7 @@
 "use client";
 
-import { Button, Checkbox, Space, Spin, Typography } from "antd";
+import { Button, Checkbox, Image, Space, Spin, Typography } from "antd";
 import { useId, useMemo, useState } from "react";
-
-import { publicationTitlePresentation } from "@/shared/lib/publication-size";
 
 import {
   applyPublicationVisualOrder,
@@ -46,7 +44,9 @@ export function PublicationWorkspacePromotions({
   const { promotionGroups, promotionRows } = useMemo(() => {
     const publicationGroups = selection.type === "family"
       ? applyPublicationVisualOrder(
-          groupPublicationsByVariant(selection.children),
+          groupPublicationsByVariant(
+            selection.children.map(withAccurateWorkspaceColor),
+          ),
           visualOrder,
         )
       : [{
@@ -161,6 +161,11 @@ export function PublicationWorkspacePromotions({
                 key={`${selection.familyId}:${group.key}`}
                 label={group.label ?? "Otras variantes"}
                 publications={group.publications}
+                page={group.page}
+                fallbackImage={selection.imageUrl}
+                selectedForRemoval={selectedForRemoval}
+                onChanged={onChanged}
+                onToggleRemoval={toggleRemoval}
               />
             ))
           : promotionGroups.map((group) => {
@@ -197,26 +202,40 @@ export function PublicationWorkspacePromotions({
 }
 
 /**
- * Paso 1: solamente muestra la agrupación que ya llegó en selection.children.
- * No monta PromotionsTable ni ejecuta acciones para consultar promociones.
+ * Restore the original promotion table and all its actions.
+ * Each group mounts its table only when opened by the seller.
  */
 function PublicationVariantPreview({
   label,
   publications,
+  page,
+  fallbackImage,
+  selectedForRemoval,
+  onChanged,
+  onToggleRemoval,
 }: Readonly<{
   label: string;
   publications: readonly PublicationWorkspaceItem[];
+  page: PromotionsPage;
+  fallbackImage: string | null;
+  selectedForRemoval: Readonly<Record<string, PromotionDeactivationSelection>>;
+  onChanged?: () => void | Promise<void>;
+  onToggleRemoval: (selection: PromotionDeactivationSelection) => void;
 }>) {
   const [expanded, setExpanded] = useState(false);
   const contentId = useId();
+  const representativeImage =
+    publications.find((publication) => publication.imageUrl || publication.thumbnailUrl);
+  const image = representativeImage?.imageUrl ??
+    representativeImage?.thumbnailUrl ?? fallbackImage;
 
   return (
-    <section aria-label={`Variantes de ${label}`} style={{ width: "100%" }}>
+    <section aria-label={"Variantes de " + label} style={{ width: "100%" }}>
       <Button
         type="text"
         aria-expanded={expanded}
         aria-controls={contentId}
-        aria-label={`${expanded ? "Cerrar" : "Abrir"} ${label}`}
+        aria-label={(expanded ? "Cerrar " : "Abrir ") + label}
         onClick={() => setExpanded((current) => !current)}
         style={{
           display: "flex",
@@ -225,67 +244,98 @@ function PublicationVariantPreview({
           background: "#f3f7fc",
           border: "1px solid #e5eaf1",
           borderRadius: 8,
-          minHeight: 48,
+          minHeight: 64,
           height: "auto",
-          padding: "10px 16px",
+          padding: "8px 16px",
           width: "100%",
           textAlign: "left",
           whiteSpace: "normal",
         }}
       >
-        <span>
-          <span aria-hidden="true">{expanded ? "▾" : "▸"}</span>{" "}
+        <Space align="center" size="middle">
+          <span aria-hidden="true">{expanded ? "▾" : "▸"}</span>
+          {image ? (
+            <Image
+              alt={"Imagen de " + label}
+              src={image}
+              preview={false}
+              width={48}
+              height={48}
+              style={{ borderRadius: 6, objectFit: "cover" }}
+            />
+          ) : null}
           <strong>{label}</strong>
-        </span>
+        </Space>
         <Typography.Text type="secondary">
-          {publications.length} {publications.length === 1 ? "talle" : "talles"}
+          {publications.length} {publications.length === 1 ? "publicación" : "publicaciones"}
         </Typography.Text>
       </Button>
       {expanded ? (
-        <ul
-          id={contentId}
-          aria-label={`Talles de ${label}`}
-          style={{ listStyle: "none", margin: "4px 0 0", padding: 0 }}
-        >
-          {publications.map((publication) => {
-            const size = workspacePublicationSize(publication);
-            return (
-              <li
-                key={publication.itemId}
-                style={{
-                  display: "flex",
-                  gap: 12,
-                  flexWrap: "wrap",
-                  alignItems: "center",
-                  padding: "10px 16px",
-                  borderBottom: "1px solid #e5eaf1",
-                }}
-              >
-                <strong style={{ minWidth: 72 }}>
-                  {size ? `Talle ${size}` : "Sin talle"}
-                </strong>
-                <span style={{ flex: "1 1 180px" }}>{publication.title}</span>
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  {publication.itemId}
-                </Typography.Text>
-              </li>
-            );
-          })}
-        </ul>
+        <div id={contentId} style={{ marginTop: 8 }}>
+          <PromotionsTable
+            directParticipation
+            loadAllOnMount
+            page={page}
+            selectedForRemoval={selectedForRemoval}
+            onChanged={onChanged}
+            onToggleRemoval={onToggleRemoval}
+          />
+        </div>
       ) : null}
     </section>
   );
 }
 
-function workspacePublicationSize(publication: PublicationWorkspaceItem): string | null {
-  const sizeAttribute = publication.attributes?.find((attribute) => {
-    const descriptor = `${attribute.id} ${attribute.name ?? ""}`
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/gu, "")
-      .toUpperCase();
-    return /\b(SIZE|TALLE|TALLA)\b/u.test(descriptor);
-  });
-  return sizeAttribute?.value?.trim() || publicationTitlePresentation(publication.title).size;
+/**
+ * Some ML listings contain an outdated COLOR attribute. When the title has
+ * one unequivocal color, use it just for grouping inside this workspace;
+ * preserve the original publication attributes and all editing behaviors.
+ */
+function withAccurateWorkspaceColor(
+  publication: PublicationWorkspaceItem,
+): PublicationWorkspaceItem {
+  const normalizedTitle = normalizeWorkspaceColorText(publication.title);
+  if (/\bPACK\b/u.test(normalizedTitle)) return publication;
+
+  const titleColors = [...new Set(
+    [...normalizedTitle.matchAll(/\b(NEGRO|NEGRA|BLANCO|BLANCA|ROJO|ROJA|ROSA|LILA|LAVANDA|CREMA|GRIS|AZUL|MARRON|CHOCOLATE)\b/gu)]
+      .map((match) => normalizeWorkspaceColor(match[1] ?? "")),
+  )];
+  if (titleColors.length !== 1) return publication;
+
+  const attributes = publication.attributes ?? [];
+  const originalColor = attributes.find((attribute) =>
+    /\b(COLOR|COLOUR)\b/u.test(normalizeWorkspaceColorText(
+      attribute.id + " " + (attribute.name ?? ""),
+    )),
+  );
+  if (!originalColor?.value ||
+      normalizeWorkspaceColor(originalColor.value) === titleColors[0]) {
+    return publication;
+  }
+
+  return {
+    ...publication,
+    attributes: attributes.map((attribute) =>
+      attribute === originalColor
+        ? { ...attribute, value: titleColors[0] }
+        : attribute,
+    ),
+  };
+}
+
+function normalizeWorkspaceColorText(value: string): string {
+  return value.normalize("NFD")
+    .replace(/[\u0300-\u036f]/gu, "")
+    .toUpperCase();
+}
+
+function normalizeWorkspaceColor(value: string): string {
+  const normalized = normalizeWorkspaceColorText(value).trim();
+  if (normalized === "NEGRA") return "NEGRO";
+  if (normalized === "BLANCA") return "BLANCO";
+  if (normalized === "ROJA") return "ROJO";
+  return normalized;
 }
 
 function toPromotionsPage(publications: readonly PromotionRow[]): PromotionsPage {
@@ -304,7 +354,7 @@ function toPromotionRow(
     itemId: publication.itemId,
     familyId: null,
     title: publication.title,
-    thumbnail: publication.thumbnailUrl,
+    thumbnail: publication.imageUrl ?? publication.thumbnailUrl,
     sku: publication.sku,
     stock: publication.stock,
     freeShipping: null,
