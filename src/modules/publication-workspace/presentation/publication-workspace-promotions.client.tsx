@@ -301,7 +301,8 @@ export function withAccurateWorkspaceColor(
     [...normalizedTitle.matchAll(/\b(NEGRO|NEGRA|BLANCO|BLANCA|ROJO|ROJA|ROSA|LILA|LAVANDA|CREMA|GRIS|AZUL|MARRON|CHOCOLATE)\b/gu)]
       .map((match) => normalizeWorkspaceColor(match[1] ?? "")),
   )];
-  if (titleColors.length !== 1) return publication;
+  const titleColor = titleColors.length === 1 ? titleColors[0] : undefined;
+  if (!titleColor) return publication;
 
   const attributes = publication.attributes ?? [];
   const originalColor = attributes.find((attribute) =>
@@ -310,7 +311,7 @@ export function withAccurateWorkspaceColor(
     )),
   );
   if (!originalColor?.value ||
-      normalizeWorkspaceColor(originalColor.value) === titleColors[0]) {
+      normalizeWorkspaceColor(originalColor.value) === titleColor) {
     return publication;
   }
 
@@ -318,7 +319,7 @@ export function withAccurateWorkspaceColor(
     ...publication,
     attributes: attributes.map((attribute) =>
       attribute === originalColor
-        ? { ...attribute, value: titleColors[0] }
+        ? { ...attribute, value: titleColor }
         : attribute,
     ),
   };
