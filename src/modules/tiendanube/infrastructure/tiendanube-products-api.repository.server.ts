@@ -50,6 +50,7 @@ export class TiendanubeProductsApiRepository implements TiendanubeProductsReposi
           color: attributeValue(variant.attributes, ["color"]),
           sku: variant.sku,
           stock: variant.stock,
+          ...(variant.visible === false ? { visible: false } : {}),
           price: variant.price,
           promotionalPrice: variant.promotionalPrice,
         })),
