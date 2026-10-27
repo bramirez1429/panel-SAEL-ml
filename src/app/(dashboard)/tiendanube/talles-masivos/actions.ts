@@ -76,3 +76,16 @@ export async function applyStockBatchAction(
     };
   }
 }
+
+/** Read-only capability check: production can lag behind the preview frontend. */
+export async function checkSizeStockReadyAction(): Promise<boolean> {
+  try {
+    const client = createAuthenticatedHttpClient(new HttpClient(getApiConfig()));
+    const value = z.object({ ready: z.literal(true) }).safeParse(
+      await client.get("/tiendanube/size-stock/status"),
+    );
+    return value.success;
+  } catch {
+    return false;
+  }
+}

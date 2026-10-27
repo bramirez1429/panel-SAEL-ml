@@ -4,7 +4,7 @@ import {
   Alert, Button, Card, Input, InputNumber, Modal,
   Space, Spin, Statistic, Tag, Typography,
 } from "antd";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { TiendanubeProduct } from "@/modules/tiendanube/domain/tiendanube-products.model";
 import type {
@@ -21,6 +21,7 @@ import {
 type Props = Readonly<{
   loadPageAction(search: string, page: number): Promise<LoadSizeCatalogResult>;
   applyStockBatchAction(updates: readonly StockUpdate[]): Promise<ApplyStockBatchResult>;
+  checkSizeStockReadyAction(): Promise<boolean>;
 }>;
 
 const MAX_SCAN_PAGES = 200;
@@ -29,7 +30,9 @@ const BATCH_SIZE = 20;
 export function TiendanubeSizeRenameView({
   loadPageAction,
   applyStockBatchAction,
+  checkSizeStockReadyAction,
 }: Props) {
+  const [serviceReady, setServiceReady] = useState<boolean | null>(null);
   const [query, setQuery] = useState("buzo de mujer");
   const [searchedQuery, setSearchedQuery] = useState("");
   const [products, setProducts] = useState<readonly TiendanubeProduct[]>([]);
@@ -44,6 +47,20 @@ export function TiendanubeSizeRenameView({
   const [success, setSuccess] = useState<string | null>(null);
   const [needsReload, setNeedsReload] = useState(false);
   const requestVersion = useRef(0);
+
+  useEffect(() => {
+    let active = true;
+    void checkSizeStockReadyAction().then((ready) => {
+      if (active) setServiceReady(ready);
+    }, () => { if (active) setServiceReady(false); });
+    return () => { active = false; };
+  }, [checkSizeStockReadyAction]);
+
+  async function recheckService(): Promise<void> {
+    setServiceReady(null);
+    const ready = await checkSizeStockReadyAction().catch(() => false);
+    setServiceReady(ready);
+  }
 
   const sizes = useMemo(() => visibleUniqueSizes(products), [products]);
   const planned = useMemo(
@@ -119,7 +136,7 @@ export function TiendanubeSizeRenameView({
   }
 
   async function applyAll(): Promise<void> {
-    if (loading || applying || needsReload || planned.length === 0) return;
+    if (loading || applying || needsReload || serviceReady !== true || planned.length === 0) return;
     const snapshot = [...planned];
     setConfirmOpen(false);
     setApplying(true);
@@ -200,6 +217,11 @@ export function TiendanubeSizeRenameView({
         </Space>
       </Card>
 
+      {serviceReady === false ? <Alert type="warning" showIcon
+        message="El backend de stock masivo todavía no está publicado en este entorno."
+        description="Podés consultar talles y preparar stock, pero la confirmación queda bloqueada hasta que el backend compatible esté disponible."
+        action={<Button size="small" onClick={() => void recheckService()}>Volver a comprobar</Button>}
+      /> : null}
       {error ? <Alert type="error" showIcon message={error} /> : null}
       {success ? <Alert type="success" showIcon message={success} /> : null}
 
@@ -272,7 +294,7 @@ export function TiendanubeSizeRenameView({
                   {planned.length} variantes cambiarían de stock.
                 </Typography.Text>
                 <Button type="primary" size="large"
-                  disabled={planned.length === 0 || applying || needsReload}
+                  disabled={planned.length === 0 || applying || needsReload || serviceReady !== true}
                   loading={applying}
                   onClick={() => setConfirmOpen(true)}>
                   Cambiar stock masivamente
@@ -296,7 +318,7 @@ export function TiendanubeSizeRenameView({
         title="Confirmar actualización masiva de stock"
         open={confirmOpen}
         okText="Confirmar y actualizar"
-        okButtonProps={{ danger: true, disabled: planned.length === 0 || applying }}
+        okButtonProps={{ danger: true, disabled: planned.length === 0 || applying || serviceReady !== true }}
         cancelText="Cancelar"
         onCancel={() => setConfirmOpen(false)}
         onOk={() => void applyAll()}

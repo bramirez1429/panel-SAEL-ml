@@ -47,7 +47,7 @@ describe("Stock masivo por talle", () => {
     }));
     const applyStockBatchAction = vi.fn();
     render(<TiendanubeSizeRenameView loadPageAction={loadPageAction}
-      applyStockBatchAction={applyStockBatchAction} />);
+      applyStockBatchAction={applyStockBatchAction} checkSizeStockReadyAction={() => Promise.resolve(true)} />);
 
     await user.click(screen.getByRole("button", { name: "Buscar todos" }));
     expect(await screen.findByText('Talles únicos de "buzo de mujer"')).toBeInTheDocument();
@@ -78,7 +78,7 @@ describe("Stock masivo por talle", () => {
     );
     const applyStockBatchAction = vi.fn();
     render(<TiendanubeSizeRenameView loadPageAction={loadPageAction}
-      applyStockBatchAction={applyStockBatchAction} />);
+      applyStockBatchAction={applyStockBatchAction} checkSizeStockReadyAction={() => Promise.resolve(true)} />);
     await user.click(screen.getByRole("button", { name: "Buscar todos" }));
     expect(await screen.findByText("Página 2 falló")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Cambiar stock masivamente" })).not.toBeInTheDocument();
@@ -94,7 +94,7 @@ describe("Stock masivo por talle", () => {
       ok: true, updatedVariantIds: ["5001", "5004"], failedVariantIds: [],
     });
     render(<TiendanubeSizeRenameView loadPageAction={loadPageAction}
-      applyStockBatchAction={applyStockBatchAction} />);
+      applyStockBatchAction={applyStockBatchAction} checkSizeStockReadyAction={() => Promise.resolve(true)} />);
     await user.click(screen.getByRole("button", { name: "Buscar todos" }));
     await screen.findByText('Talles únicos de "buzo de mujer"');
     await user.type(screen.getByRole("spinbutton", { name: "Stock nuevo para talle S" }), "7");
