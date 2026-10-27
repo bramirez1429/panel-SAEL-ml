@@ -81,7 +81,7 @@ export async function applyStockBatchAction(
 export async function checkSizeStockReadyAction(): Promise<boolean> {
   try {
     const client = createAuthenticatedHttpClient(new HttpClient(getApiConfig()));
-    const value = z.object({ ready: z.literal(true) }).safeParse(
+    const value = z.object({ ready: z.literal(true), colorScoped: z.literal(true) }).safeParse(
       await client.get("/tiendanube/size-stock/status"),
     );
     return value.success;

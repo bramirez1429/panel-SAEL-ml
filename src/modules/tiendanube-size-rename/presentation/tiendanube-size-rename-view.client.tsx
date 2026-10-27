@@ -2,7 +2,7 @@
 
 import {
   Alert, Button, Card, Input, InputNumber, Modal,
-  Space, Spin, Statistic, Tag, Typography,
+  Space, Spin, Statistic, Typography,
 } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -12,8 +12,9 @@ import type {
   LoadSizeCatalogResult,
 } from "@/app/(dashboard)/tiendanube/talles-masivos/actions";
 import {
+  colorSizeKey,
   planStockUpdates,
-  visibleUniqueSizes,
+  visibleColorSizes,
   type StockInputs,
   type StockUpdate,
 } from "../domain/stock-by-size";
@@ -62,15 +63,18 @@ export function TiendanubeSizeRenameView({
     setServiceReady(ready);
   }
 
-  const sizes = useMemo(() => visibleUniqueSizes(products), [products]);
+  const colorGroups = useMemo(() => visibleColorSizes(products), [products]);
   const planned = useMemo(
     () => planStockUpdates(products, stockInputs),
     [products, stockInputs],
   );
   const visibleVariants = useMemo(
-    () => sizes.reduce((total, item) => total + item.variants, 0),
-    [sizes],
+    () => colorGroups.reduce(
+      (total, group) => total + group.sizes.reduce((count, size) => count + size.variants, 0), 0,
+    ),
+    [colorGroups],
   );
+  const combinations = colorGroups.reduce((count, group) => count + group.sizes.length, 0);
 
   async function searchAll(value: string): Promise<void> {
     const term = value.trim();
@@ -130,8 +134,8 @@ export function TiendanubeSizeRenameView({
     }
   }
 
-  function changeStock(sizeKey: string, next: number | null): void {
-    setStockInputs((current) => ({ ...current, [sizeKey]: next }));
+  function changeStock(colorSize: string, next: number | null): void {
+    setStockInputs((current) => ({ ...current, [colorSize]: next }));
     setError(null);
   }
 
@@ -172,21 +176,27 @@ export function TiendanubeSizeRenameView({
     }
   }
 
-  const changeSummary = useMemo(() => sizes.flatMap((item) => {
-    const next = stockInputs[item.key];
-    if (next === undefined || next === null) return [];
-    const affected = planned.filter((line) =>
-      line.size.trim().normalize("NFD").replace(/[\u0300-\u036f]/gu, "").toUpperCase() === item.key,
-    ).length;
-    return affected === 0 ? [] : [{ size: item.size, stock: next, variants: affected }];
-  }), [planned, sizes, stockInputs]);
+  const changeSummary = useMemo(() => colorGroups.flatMap((group) =>
+    group.sizes.flatMap((item) => {
+      const next = stockInputs[item.key];
+      if (next === undefined || next === null) return [];
+      const affected = planned.filter((line) => colorSizeKey(line.color, line.size) === item.key).length;
+      return affected === 0 ? [] : [{
+        key: item.key,
+        color: group.color,
+        size: item.size,
+        stock: next,
+        variants: affected,
+      }];
+    }),
+  ), [planned, colorGroups, stockInputs]);
 
   return (
     <main style={{ display: "grid", gap: 18, width: "100%" }}>
       <header>
         <Typography.Title level={2}>Tiendanube — Stock masivo por talle</Typography.Title>
         <Typography.Text type="secondary">
-          Un talle, una sola fila. Escribí el stock y aplicalo a todas las variantes visibles de ese talle.
+          Cada color tiene sus talles y stock por separado. Un cambio en Crema no afecta Negro ni Beige.
         </Typography.Text>
       </header>
 
@@ -227,65 +237,75 @@ export function TiendanubeSizeRenameView({
 
       {searchedQuery && !loading ? (
         <>
-          <Card title={'Talles únicos de "' + searchedQuery + '"'}>
+          <Card title={'Colores y talles de "' + searchedQuery + '"'}>
             <Space size="large" wrap>
               <Statistic title="Productos visibles" value={products.length} />
               <Statistic title="Variantes visibles con talle" value={visibleVariants} />
-              <Statistic title="Talles diferentes" value={sizes.length} />
+              <Statistic title="Colores visibles" value={colorGroups.length} />
+              <Statistic title="Combinaciones de color y talle" value={combinations} />
             </Space>
-            {sizes.length === 0 ? (
+            {colorGroups.length === 0 ? (
               <Alert style={{ marginTop: 16 }} type="info" showIcon
-                message="No hay talles visibles para esta búsqueda." />
+                message="No hay variantes visibles con talle para esta búsqueda." />
             ) : null}
           </Card>
 
-          {sizes.length > 0 ? (
-            <Card title="Actualizar stock por talle">
+          {colorGroups.length > 0 ? (
+            <Card title="Actualizar stock por color y talle">
               <Typography.Paragraph type="secondary">
-                Los inputs empiezan vacíos. Un valor vacío no modifica ese talle.
-                El número 0 sí establece stock cero. Los cambios se aplican globalmente,
-                incluso cuando un mismo talle aparece en varios colores.
+                Cada color es independiente. El stock nuevo empieza vacío y solo cambia
+                las variantes visibles de ese color y talle. Dejarlo vacío no modifica
+                nada; escribir 0 sí establece stock cero.
               </Typography.Paragraph>
 
-              <div style={{ display: "grid", gap: 0 }}>
-                <div style={{
-                  display: "grid", gridTemplateColumns: "minmax(76px, 110px) minmax(100px, 1fr) minmax(125px, 185px)",
-                  gap: 10, padding: "10px 0", borderBottom: "1px solid #e5eaf1",
-                }}>
-                  <Typography.Text type="secondary">Talle</Typography.Text>
-                  <Typography.Text type="secondary">Colores / variantes</Typography.Text>
-                  <Typography.Text type="secondary">Stock nuevo</Typography.Text>
-                </div>
-                {sizes.map((item) => (
-                  <div key={item.key} style={{
-                    display: "grid", gridTemplateColumns: "minmax(76px, 110px) minmax(100px, 1fr) minmax(125px, 185px)",
-                    gap: 10, alignItems: "center", padding: "12px 0",
-                    borderBottom: "1px solid #f0f1f3",
-                  }}>
-                    <Typography.Text strong>{item.size}</Typography.Text>
-                    <div>
-                      <Space wrap size={[4, 4]}>
-                        {item.colors.map((color) => <Tag key={color}>{color}</Tag>)}
-                      </Space>
-                      <div>
-                        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                          {item.variants} variantes · {item.noStock} con stock 0
-                        </Typography.Text>
-                      </div>
+              <div style={{ display: "grid", gap: 16 }}>
+                {colorGroups.map((group) => (
+                  <section
+                    key={group.key}
+                    aria-label={"Color " + group.color}
+                    style={{ border: "1px solid #e5eaf1", borderRadius: 8, padding: 14 }}
+                  >
+                    <Typography.Title level={4} style={{ marginTop: 0 }}>
+                      {group.color}
+                    </Typography.Title>
+                    <div style={{
+                      display: "grid",
+                      gridTemplateColumns: "minmax(80px, 1fr) minmax(130px, 210px)",
+                      gap: 12,
+                      padding: "8px 0",
+                      borderBottom: "1px solid #e5eaf1",
+                    }}>
+                      <Typography.Text type="secondary">Talle</Typography.Text>
+                      <Typography.Text type="secondary">Stock nuevo</Typography.Text>
                     </div>
-                    <InputNumber
-                      aria-label={"Stock nuevo para talle " + item.size}
-                      style={{ width: "100%" }}
-                      placeholder="Sin cambio"
-                      controls={false}
-                      min={0}
-                      max={1_000_000}
-                      precision={0}
-                      disabled={applying || needsReload}
-                      value={stockInputs[item.key] ?? null}
-                      onChange={(value) => changeStock(item.key, value)}
-                    />
-                  </div>
+                    {group.sizes.map((item) => (
+                      <div
+                        key={item.key}
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "minmax(80px, 1fr) minmax(130px, 210px)",
+                          gap: 12,
+                          alignItems: "center",
+                          padding: "10px 0",
+                          borderBottom: "1px solid #f0f1f3",
+                        }}
+                      >
+                        <Typography.Text strong>{item.size}</Typography.Text>
+                        <InputNumber
+                          aria-label={"Stock nuevo para " + group.color + " talle " + item.size}
+                          style={{ width: "100%" }}
+                          placeholder="Sin cambio"
+                          controls={false}
+                          min={0}
+                          max={1_000_000}
+                          precision={0}
+                          disabled={applying || needsReload}
+                          value={stockInputs[item.key] ?? null}
+                          onChange={(value) => changeStock(item.key, value)}
+                        />
+                      </div>
+                    ))}
+                  </section>
                 ))}
               </div>
 
@@ -325,13 +345,13 @@ export function TiendanubeSizeRenameView({
         closable={!applying}
       >
         <Typography.Paragraph>
-          Se cambiará el stock de <strong>{planned.length} variantes visibles</strong> de Tiendanube.
+          Se cambiará el stock de <strong>{planned.length} variantes visibles</strong> de Tiendanube, solo para los colores y talles indicados.
           Los productos ocultos y los talles sin número nuevo no serán modificados.
         </Typography.Paragraph>
         <div style={{ display: "grid", gap: 8 }}>
           {changeSummary.map((item) => (
-            <div key={item.size}>
-              <Typography.Text strong>{item.size}</Typography.Text>
+            <div key={item.key}>
+              <Typography.Text strong>{item.color} / {item.size}</Typography.Text>
               {" → " + item.stock + " unidades en " + item.variants + " variantes"}
             </div>
           ))}

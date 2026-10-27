@@ -50,20 +50,22 @@ describe("Stock masivo por talle", () => {
       applyStockBatchAction={applyStockBatchAction} checkSizeStockReadyAction={() => Promise.resolve(true)} />);
 
     await user.click(screen.getByRole("button", { name: "Buscar todos" }));
-    expect(await screen.findByText('Talles únicos de "buzo de mujer"')).toBeInTheDocument();
+    expect(await screen.findByText('Colores y talles de "buzo de mujer"')).toBeInTheDocument();
     expect(loadPageAction).toHaveBeenCalledTimes(2);
-    expect(screen.getByRole("spinbutton", { name: "Stock nuevo para talle S" })).toHaveValue(null);
-    expect(screen.queryByRole("spinbutton", { name: "Stock nuevo para talle 2XL" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("spinbutton", { name: "Stock nuevo para talle L" })).not.toBeInTheDocument();
-    expect(screen.getAllByText("S")).toHaveLength(1);
+    expect(screen.getByRole("spinbutton", { name: "Stock nuevo para Negro talle S" })).toHaveValue(null);
+    expect(screen.queryByRole("spinbutton", { name: "Stock nuevo para Gris talle 2XL" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("spinbutton", { name: "Stock nuevo para Gris talle L" })).not.toBeInTheDocument();
+    expect(screen.getAllByText("S")).toHaveLength(2);
     expect(screen.getByText("Gris")).toBeInTheDocument();
     expect(screen.getByText("Negro")).toBeInTheDocument();
+    expect(screen.getByRole("spinbutton", { name: "Stock nuevo para Gris talle S" })).toHaveValue(null);
     expect(applyStockBatchAction).not.toHaveBeenCalled();
 
-    await user.type(screen.getByRole("spinbutton", { name: "Stock nuevo para talle S" }), "7");
+    await user.type(screen.getByRole("spinbutton", { name: "Stock nuevo para Negro talle S" }), "7");
     await user.click(screen.getByRole("button", { name: "Cambiar stock masivamente" }));
     const dialog = screen.getByRole("dialog");
-    expect(within(dialog).getByText(/2 variantes visibles/u)).toBeInTheDocument();
+    expect(within(dialog).getByText(/1 variantes visibles/u)).toBeInTheDocument();
+    expect(within(dialog).getByText("Negro / S")).toBeInTheDocument();
     expect(applyStockBatchAction).not.toHaveBeenCalled();
     await user.click(within(dialog).getByRole("button", { name: "Cancelar" }));
     expect(applyStockBatchAction).not.toHaveBeenCalled();
@@ -91,21 +93,20 @@ describe("Stock masivo por talle", () => {
       ok: true as const, data: number === 1 ? page1 : page2,
     }));
     const applyStockBatchAction = vi.fn().mockResolvedValue({
-      ok: true, updatedVariantIds: ["5001", "5004"], failedVariantIds: [],
+      ok: true, updatedVariantIds: ["5001"], failedVariantIds: [],
     });
     render(<TiendanubeSizeRenameView loadPageAction={loadPageAction}
       applyStockBatchAction={applyStockBatchAction} checkSizeStockReadyAction={() => Promise.resolve(true)} />);
     await user.click(screen.getByRole("button", { name: "Buscar todos" }));
-    await screen.findByText('Talles únicos de "buzo de mujer"');
-    await user.type(screen.getByRole("spinbutton", { name: "Stock nuevo para talle S" }), "7");
+    await screen.findByText('Colores y talles de "buzo de mujer"');
+    await user.type(screen.getByRole("spinbutton", { name: "Stock nuevo para Negro talle S" }), "7");
     await user.click(screen.getByRole("button", { name: "Cambiar stock masivamente" }));
     const dialog = screen.getByRole("dialog");
     await user.click(within(dialog).getByRole("button", { name: "Confirmar y actualizar" }));
     expect(await screen.findByText(/Stock global actualizado y verificado/u)).toBeInTheDocument();
     expect(applyStockBatchAction).toHaveBeenCalledTimes(1);
     expect(applyStockBatchAction).toHaveBeenCalledWith([
-      { productId: "1001", variantId: "5001", size: "S", expectedStock: 0, stock: 7 },
-      { productId: "1004", variantId: "5004", size: "S", expectedStock: 0, stock: 7 },
+      { productId: "1001", variantId: "5001", size: "S", color: "Negro", expectedStock: 0, stock: 7 },
     ]);
     expect(loadPageAction).toHaveBeenCalledTimes(4);
   });
