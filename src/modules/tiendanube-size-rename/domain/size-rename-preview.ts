@@ -109,3 +109,62 @@ export function previewSizeChanges(
     selectedVariants,
   };
 }
+
+export type SizeColorGroup = Readonly<{
+  color: string;
+  products: number;
+  variants: number;
+  sizes: readonly Readonly<{
+    size: string;
+    variants: number;
+    products: number;
+  }>[];
+}>;
+
+/** Aggregates every loaded product across all colors without modifying data. */
+export function groupSizesByColor(
+  products: readonly TiendanubeProduct[],
+): readonly SizeColorGroup[] {
+  const colors = new Map<string, {
+    productIds: Set<string>;
+    variants: number;
+    sizes: Map<string, { variants: number; productIds: Set<string> }>;
+  }>();
+
+  for (const product of products) {
+    for (const variant of product.variants) {
+      const color = variant.color?.trim() || "Sin color";
+      const size = variant.size?.trim() || "Sin talle";
+      const colorGroup = colors.get(color) ?? {
+        productIds: new Set<string>(),
+        variants: 0,
+        sizes: new Map<string, { variants: number; productIds: Set<string> }>(),
+      };
+      colorGroup.productIds.add(product.id);
+      colorGroup.variants += 1;
+      const sizeGroup = colorGroup.sizes.get(size) ?? {
+        variants: 0,
+        productIds: new Set<string>(),
+      };
+      sizeGroup.variants += 1;
+      sizeGroup.productIds.add(product.id);
+      colorGroup.sizes.set(size, sizeGroup);
+      colors.set(color, colorGroup);
+    }
+  }
+
+  return [...colors].map(([color, data]) => ({
+    color,
+    products: data.productIds.size,
+    variants: data.variants,
+    sizes: [...data.sizes].map(([size, entry]) => ({
+      size,
+      variants: entry.variants,
+      products: entry.productIds.size,
+    })).sort((left, right) =>
+      left.size.localeCompare(right.size, "es", { numeric: true }),
+    ),
+  })).sort((left, right) =>
+    left.color.localeCompare(right.color, "es"),
+  );
+}

@@ -1,53 +1,89 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import type { TiendanubeProductsPage } from "@/modules/tiendanube/domain/tiendanube-products.model";
 import { TiendanubeSizeRenameView } from "./tiendanube-size-rename-view.client";
 
 afterEach(cleanup);
 
-const firstPage: TiendanubeProductsPage = {
-  page: 1,
-  pageSize: 100,
-  hasMore: false,
-  total: 1,
-  products: [{
-    id: "p1",
-    name: "Buzo de mujer",
-    imageUrl: "https://example.com/buzo.jpg",
-    status: "visible",
-    tags: ["buzos"],
-    variants: [
-      { id: "v1", size: "40", color: "Negro", sku: "B-40", stock: 10, price: 45000, promotionalPrice: null },
-      { id: "v2", size: "42", color: "Negro", sku: "B-42", stock: 8, price: 45000, promotionalPrice: null },
-    ],
-  }],
-};
+function page(
+  number: number,
+  hasMore: boolean,
+  products: TiendanubeProductsPage["products"],
+): TiendanubeProductsPage {
+  return { page: number, pageSize: 100, hasMore, products };
+}
+
+const page1 = page(1, true, [{
+  id: "p1", name: "Buzo de mujer algodón",
+  imageUrl: "https://example.com/buzo.jpg",
+  status: "visible", tags: ["buzos"],
+  variants: [
+    { id: "v1", size: "S", color: "Negro", sku: "B-40", stock: 10, price: 45000, promotionalPrice: null },
+    { id: "v2", size: "M", color: "Negro", sku: "B-42", stock: 8, price: 45000, promotionalPrice: null },
+  ],
+}]);
+
+const page2 = page(2, false, [{
+  id: "p2", name: "Buzo de mujer frizado",
+  imageUrl: null,
+  status: "visible", tags: ["buzos"],
+  variants: [
+    { id: "v3", size: "S", color: "Gris", sku: "B2-S", stock: 0, price: 55000, promotionalPrice: null },
+    { id: "v4", size: "2XL", color: "Marrón", sku: "B2-2XL", stock: 4, price: 55000, promotionalPrice: null },
+  ],
+}]);
 
 describe("TiendanubeSizeRenameView", () => {
-  it("busca buzos y simula cambios globales sin escribir en Tiendanube", async () => {
+  it("trae todas las páginas y talles de todos los colores sin seleccionar ni mostrar productos individuales", async () => {
     const user = userEvent.setup();
-    const loadPageAction = vi.fn().mockResolvedValue({ ok: true, data: firstPage });
+    const loadPageAction = vi.fn(async (_query: string, nextPage: number) => ({
+      ok: true as const,
+      data: nextPage === 1 ? page1 : page2,
+    }));
     render(<TiendanubeSizeRenameView loadPageAction={loadPageAction} />);
 
     expect(loadPageAction).not.toHaveBeenCalled();
-    expect(screen.getByText("Etapa 1 — Solo lectura y simulación")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Buscar todos" }));
+    expect(await screen.findByText('Resultados completos: "buzo de mujer"')).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Buscar" }));
-    expect(await screen.findByText("Buzo de mujer")).toBeInTheDocument();
-    expect(loadPageAction).toHaveBeenCalledWith("buzo", 1);
-    expect(screen.getByText("40")).toBeInTheDocument();
-    expect(screen.getByText("42")).toBeInTheDocument();
+    expect(loadPageAction).toHaveBeenCalledTimes(2);
+    expect(loadPageAction).toHaveBeenNthCalledWith(1, "buzo de mujer", 1);
+    expect(loadPageAction).toHaveBeenNthCalledWith(2, "buzo de mujer", 2);
+    expect(screen.queryByRole("button", { name: /Seleccionar todos/u })).not.toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: /Buzo/u })).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Nuevo talle para 2XL" })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Seleccionar todos los cargados" }));
-    await user.clear(screen.getByRole("textbox", { name: "Nuevo talle para 40" }));
-    await user.type(screen.getByRole("textbox", { name: "Nuevo talle para 40" }), "S/M");
-    await user.click(screen.getByRole("button", { name: "Previsualizar cambios de talles" }));
+    const negro = screen.getByRole("region", { name: "Color Negro" });
+    const gris = screen.getByRole("region", { name: "Color Gris" });
+    expect(within(negro).getByText("S (1)")).toBeInTheDocument();
+    expect(within(gris).getByText("S (1)")).toBeInTheDocument();
 
-    const preview = screen.getByText("Vista previa — Sin aplicar cambios").closest(".ant-card");
-    expect(preview).not.toBeNull();
-    expect(within(preview as HTMLElement).getByText("S/M")).toBeInTheDocument();
-    expect(screen.getByText("Simulación solamente: no se modificó ningún producto.")).toBeInTheDocument();
-    expect(loadPageAction).toHaveBeenCalledTimes(1);
+    const sizeInput = screen.getByRole("textbox", { name: "Nuevo talle para S" });
+    await user.clear(sizeInput);
+    await user.type(sizeInput, "S/M");
+    expect(within(negro).getByText("S → S/M (1)")).toBeInTheDocument();
+    expect(within(gris).getByText("S → S/M (1)")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Previsualizar cambio masivo" }));
+    expect(screen.getByText("Vista previa lista: 2 variantes cambiarían de talle.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Cambiar masivamente/u })).toBeDisabled();
+  });
+
+  it("no permite trabajar con resultados parciales si una página falla", async () => {
+    const user = userEvent.setup();
+    const loadPageAction = vi.fn(async (_query: string, nextPage: number) =>
+      nextPage === 1
+        ? { ok: true as const, data: page1 }
+        : { ok: false as const, message: "Error al consultar página 2" },
+    );
+
+    render(<TiendanubeSizeRenameView loadPageAction={loadPageAction} />);
+    await user.click(screen.getByRole("button", { name: "Buscar todos" }));
+    expect(await screen.findByText("Error al consultar página 2")).toBeInTheDocument();
+    expect(screen.queryByText(/Resultados completos/u)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Previsualizar cambio masivo" }))
+      .not.toBeInTheDocument();
   });
 });

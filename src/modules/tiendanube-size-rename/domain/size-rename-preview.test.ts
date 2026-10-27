@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TiendanubeProduct } from "@/modules/tiendanube/domain/tiendanube-products.model";
-import { availableSizes, previewSizeChanges } from "./size-rename-preview";
+import { availableSizes, groupSizesByColor, previewSizeChanges } from "./size-rename-preview";
 
 function product(
   id: string,
@@ -65,4 +65,29 @@ describe("previewSizeChanges", () => {
     expect(preview.warnings).toHaveLength(1);
     expect(preview.changes).toHaveLength(0);
   });
+});
+
+it("agrupa globalmente por color todos los talles y cuenta variantes de múltiples productos", () => {
+  const products = [
+    product("p1", [
+      { id: "v1", color: "Negro", size: "S" },
+      { id: "v2", color: "Negro", size: "M" },
+      { id: "v3", color: "Marrón", size: "L" },
+    ]),
+    product("p2", [
+      { id: "v4", color: "Negro", size: "S" },
+      { id: "v5", color: "Gris", size: "2XL" },
+    ]),
+  ];
+  expect(groupSizesByColor(products)).toEqual([
+    { color: "Gris", products: 1, variants: 1, sizes: [{ size: "2XL", products: 1, variants: 1 }] },
+    { color: "Marrón", products: 1, variants: 1, sizes: [{ size: "L", products: 1, variants: 1 }] },
+    { color: "Negro", products: 2, variants: 3, sizes: [
+      { size: "M", products: 1, variants: 1 },
+      { size: "S", products: 2, variants: 2 },
+    ] },
+  ]);
+  const preview = previewSizeChanges(products, { S: "S/M" });
+  expect(preview.changes.map((change) => change.variantId)).toEqual(["v1", "v4"]);
+  expect(preview.selectedProducts).toBe(2);
 });
