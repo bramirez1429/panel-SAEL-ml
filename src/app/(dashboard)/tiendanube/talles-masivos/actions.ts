@@ -3,14 +3,19 @@
 import { createGetTiendanubeProductsQuery } from "@/modules/tiendanube/tiendanube.composition.server";
 import type { TiendanubeProductsPage } from "@/modules/tiendanube/domain/tiendanube-products.model";
 import { AppError } from "@/shared/errors/app-error";
+import { getApiConfig } from "@/shared/api/api-config";
+import { createAuthenticatedHttpClient } from "@/shared/api/authenticated-http-client.server";
+import { HttpClient } from "@/shared/api/http-client.server";
+import type { StockUpdate } from "@/modules/tiendanube-size-rename/domain/stock-by-size";
+import { z } from "zod";
 
 export type LoadSizeCatalogResult =
   | Readonly<{ ok: true; data: TiendanubeProductsPage }>
   | Readonly<{ ok: false; message: string }>;
 
 /**
- * Etapa 1: consultas exclusivamente de lectura. No hay PUT/PATCH/POST.
- * Se pagina para evitar cargar el catálogo completo en una sola solicitud.
+ * Consulta el catálogo por páginas. La escritura utiliza una acción independiente
+ * de lotes autenticados y se valida nuevamente en el backend.
  */
 export async function loadSizeCatalogPageAction(
   search: string,
@@ -37,6 +42,37 @@ export async function loadSizeCatalogPageAction(
       message: error instanceof AppError
         ? error.message
         : "No se pudo consultar el catálogo de Tiendanube.",
+    };
+  }
+}
+
+export type ApplyStockBatchResult =
+  | Readonly<{ ok: true; updatedVariantIds: readonly string[]; failedVariantIds: readonly string[] }>
+  | Readonly<{ ok: false; message: string }>;
+
+const stockBatchResponseSchema = z.object({
+  updatedVariantIds: z.array(z.string()),
+  failedVariantIds: z.array(z.string()),
+});
+
+export async function applyStockBatchAction(
+  updates: readonly StockUpdate[],
+): Promise<ApplyStockBatchResult> {
+  if (updates.length === 0 || updates.length > 20) {
+    return { ok: false, message: "El lote debe contener entre 1 y 20 variantes." };
+  }
+  try {
+    const client = createAuthenticatedHttpClient(new HttpClient(getApiConfig()));
+    const result = stockBatchResponseSchema.parse(
+      await client.post("/tiendanube/size-stock/apply-batch", { updates }),
+    );
+    return { ok: true, ...result };
+  } catch (error: unknown) {
+    return {
+      ok: false,
+      message: error instanceof AppError
+        ? error.message
+        : "No se pudo actualizar el stock de Tiendanube. Revisá el backend y volvé a consultar el catálogo.",
     };
   }
 }

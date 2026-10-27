@@ -1,260 +1,324 @@
 "use client";
 
-import { Alert, Button, Card, Input, Space, Spin, Statistic, Tag, Typography } from "antd";
+import {
+  Alert, Button, Card, Input, InputNumber, Modal,
+  Space, Spin, Statistic, Tag, Typography,
+} from "antd";
 import { useMemo, useRef, useState } from "react";
 
 import type { TiendanubeProduct } from "@/modules/tiendanube/domain/tiendanube-products.model";
-import type { LoadSizeCatalogResult } from "@/app/(dashboard)/tiendanube/talles-masivos/actions";
+import type {
+  ApplyStockBatchResult,
+  LoadSizeCatalogResult,
+} from "@/app/(dashboard)/tiendanube/talles-masivos/actions";
 import {
-  availableSizes,
-  groupSizesByColor,
-  previewSizeChanges,
-  type SizeRenameMapping,
-} from "../domain/size-rename-preview";
+  planStockUpdates,
+  visibleUniqueSizes,
+  type StockInputs,
+  type StockUpdate,
+} from "../domain/stock-by-size";
 
 type Props = Readonly<{
   loadPageAction(search: string, page: number): Promise<LoadSizeCatalogResult>;
+  applyStockBatchAction(updates: readonly StockUpdate[]): Promise<ApplyStockBatchResult>;
 }>;
 
-// Never silently present a partial catalog as a complete global operation.
 const MAX_SCAN_PAGES = 200;
+const BATCH_SIZE = 20;
 
-export function TiendanubeSizeRenameView({ loadPageAction }: Props) {
+export function TiendanubeSizeRenameView({
+  loadPageAction,
+  applyStockBatchAction,
+}: Props) {
   const [query, setQuery] = useState("buzo de mujer");
   const [searchedQuery, setSearchedQuery] = useState("");
   const [products, setProducts] = useState<readonly TiendanubeProduct[]>([]);
-  const [mapping, setMapping] = useState<SizeRenameMapping>({});
+  const [stockInputs, setStockInputs] = useState<StockInputs>({});
   const [loading, setLoading] = useState(false);
+  const [applying, setApplying] = useState(false);
   const [scannedPages, setScannedPages] = useState(0);
   const [scannedProducts, setScannedProducts] = useState(0);
+  const [processed, setProcessed] = useState(0);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [needsReload, setNeedsReload] = useState(false);
   const requestVersion = useRef(0);
 
-  const sizes = useMemo(() => availableSizes(products), [products]);
-  const colorGroups = useMemo(() => groupSizesByColor(products), [products]);
-  const preview = useMemo(() => previewSizeChanges(products, mapping), [products, mapping]);
-  const variantCount = useMemo(() => products.reduce((total, product) =>
-    total + product.variants.length, 0), [products]);
+  const sizes = useMemo(() => visibleUniqueSizes(products), [products]);
+  const planned = useMemo(
+    () => planStockUpdates(products, stockInputs),
+    [products, stockInputs],
+  );
+  const visibleVariants = useMemo(
+    () => sizes.reduce((total, item) => total + item.variants, 0),
+    [sizes],
+  );
 
-  async function searchAll(input: string): Promise<void> {
-    const search = input.trim();
-    if (search.length < 2 || search.length > 80) {
+  async function searchAll(value: string): Promise<void> {
+    const term = value.trim();
+    if (term.length < 2 || term.length > 80) {
       setError("Ingresá una búsqueda de 2 a 80 caracteres.");
       return;
     }
-
     const version = ++requestVersion.current;
     setLoading(true);
     setError(null);
+    setSuccess(null);
+    setNeedsReload(false);
     setProducts([]);
-    setMapping({});
+    setStockInputs({});
     setScannedPages(0);
     setScannedProducts(0);
     setSearchedQuery("");
-    setShowPreview(false);
-
+    setProcessed(0);
+    setConfirmOpen(false);
     try {
-      const allProducts = new Map<string, TiendanubeProduct>();
-      let completed = false;
-
+      const found = new Map<string, TiendanubeProduct>();
+      let complete = false;
       for (let page = 1; page <= MAX_SCAN_PAGES; page++) {
-        const response = await loadPageAction(search, page);
+        const response = await loadPageAction(term, page);
         if (version !== requestVersion.current) return;
         if (!response.ok) throw new Error(response.message);
         if (response.data.page !== page) {
-          throw new Error("Tiendanube devolvió una página diferente de la solicitada.");
+          throw new Error("Tiendanube devolvió una página distinta de la solicitada.");
         }
 
         for (const product of response.data.products) {
-          allProducts.set(product.id, product);
+          if (product.status === "visible") found.set(product.id, product);
         }
         setScannedPages(page);
-        setScannedProducts(allProducts.size);
+        setScannedProducts(found.size);
 
         if (!response.data.hasMore) {
-          completed = true;
+          complete = true;
           break;
         }
         if (response.data.products.length === 0) {
-          throw new Error("Tiendanube indicó más páginas, pero no devolvió productos. No se puede garantizar el catálogo completo.");
+          throw new Error("Tiendanube devolvió una página vacía indicando más páginas. La búsqueda no está completa.");
         }
       }
-
-      if (!completed) {
-        throw new Error("La búsqueda supera el límite de seguridad de 200 páginas. No se realizará ningún cambio con resultados incompletos.");
+      if (!complete) {
+        throw new Error("La búsqueda supera las 200 páginas. No se puede actualizar stock con un catálogo incompleto.");
       }
       if (version !== requestVersion.current) return;
-      setProducts([...allProducts.values()]);
-      setSearchedQuery(search);
+      setProducts([...found.values()]);
+      setSearchedQuery(term);
     } catch (caught: unknown) {
       if (version !== requestVersion.current) return;
       setProducts([]);
-      setSearchedQuery("");
-      setError(caught instanceof Error ? caught.message : "No se pudo completar la búsqueda de todos los productos.");
+      setError(caught instanceof Error ? caught.message : "No se pudieron cargar todos los productos.");
     } finally {
       if (version === requestVersion.current) setLoading(false);
     }
   }
 
-  function changeSize(size: string, nextSize: string): void {
-    // One input per original size updates the mapping for every color/product.
-    setMapping((current) => ({ ...current, [size]: nextSize }));
-    setShowPreview(false);
+  function changeStock(sizeKey: string, next: number | null): void {
+    setStockInputs((current) => ({ ...current, [sizeKey]: next }));
+    setError(null);
   }
 
-  const hasChanges = preview.changes.length > 0;
+  async function applyAll(): Promise<void> {
+    if (loading || applying || needsReload || planned.length === 0) return;
+    const snapshot = [...planned];
+    setConfirmOpen(false);
+    setApplying(true);
+    setError(null);
+    setSuccess(null);
+    setProcessed(0);
+    let updated = 0;
+    try {
+      for (let index = 0; index < snapshot.length; index += BATCH_SIZE) {
+        const chunk = snapshot.slice(index, index + BATCH_SIZE);
+        const result = await applyStockBatchAction(chunk);
+        if (!result.ok) throw new Error(result.message);
+        updated += result.updatedVariantIds.length;
+        setProcessed(updated);
+        if (result.failedVariantIds.length > 0 ||
+            result.updatedVariantIds.length !== chunk.length) {
+          throw new Error("Tiendanube no confirmó todas las variantes del último lote.");
+        }
+      }
+
+      // Re-query Tiendanube to show the real latest values, not optimistic stock.
+      await searchAll(searchedQuery);
+      setSuccess("Stock global actualizado y verificado: " + updated + " variantes.");
+    } catch (caught: unknown) {
+      setNeedsReload(true);
+      setError(
+        "Se confirmaron " + updated + " de " + snapshot.length +
+        " variantes. " + (caught instanceof Error ? caught.message : "No se pudo completar la actualización.") +
+        " Volvé a buscar antes de reintentar: no se envían automáticamente los lotes pendientes.",
+      );
+    } finally {
+      setApplying(false);
+    }
+  }
+
+  const changeSummary = useMemo(() => sizes.flatMap((item) => {
+    const next = stockInputs[item.key];
+    if (next === undefined || next === null) return [];
+    const affected = planned.filter((line) =>
+      line.size.trim().normalize("NFD").replace(/[\u0300-\u036f]/gu, "").toUpperCase() === item.key,
+    ).length;
+    return affected === 0 ? [] : [{ size: item.size, stock: next, variants: affected }];
+  }), [planned, sizes, stockInputs]);
 
   return (
     <main style={{ display: "grid", gap: 18, width: "100%" }}>
       <header>
-        <Typography.Title level={2}>Tiendanube — Talles masivos</Typography.Title>
+        <Typography.Title level={2}>Tiendanube — Stock masivo por talle</Typography.Title>
         <Typography.Text type="secondary">
-          Cambiá los nombres de talles de todos los productos que coincidan con una búsqueda, sin seleccionarlos uno por uno.
+          Un talle, una sola fila. Escribí el stock y aplicalo a todas las variantes visibles de ese talle.
         </Typography.Text>
       </header>
 
-      <Alert
-        showIcon
-        type="info"
-        message="Versión de prueba — Solo lectura y previsualización"
-        description="La actualización real de Tiendanube aún no está habilitada. Esta pantalla no modifica productos, stock, precios ni SKU."
-      />
-
-      <Card title="Buscar en todo el catálogo">
-        <Space orientation="vertical" size="small" style={{ width: "100%" }}>
+      <Card title="Buscar todos los productos visibles">
+        <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
           <Input.Search
             aria-label="Buscar productos de Tiendanube"
-            placeholder="Ej.: buzo de mujer, remera, campera..."
             enterButton="Buscar todos"
             size="large"
-            loading={loading}
-            disabled={loading}
+            placeholder="Ejemplo: buzo de mujer, remera..."
             value={query}
+            disabled={loading || applying}
+            loading={loading}
             onChange={(event) => setQuery(event.target.value)}
-            onSearch={(value) => void searchAll(value)}
+            onSearch={(next) => void searchAll(next)}
           />
           <Typography.Text type="secondary">
-            El panel consulta automáticamente todas las páginas de Tiendanube. No es necesario elegir productos.
+            Recorre todas las páginas; excluye productos ocultos y no listados. No hace falta seleccionar productos.
           </Typography.Text>
           {loading ? (
-            <div aria-live="polite">
-              <Typography.Text>
-                Buscando todas las variantes… Página {scannedPages}; {scannedProducts} productos encontrados.
-              </Typography.Text>
+            <Space aria-live="polite">
               <Spin size="small" />
-            </div>
+              <Typography.Text>
+                Buscando página {scannedPages + 1}… {scannedProducts} productos visibles detectados.
+              </Typography.Text>
+            </Space>
           ) : null}
-          {error ? <Alert type="error" showIcon message={error} /> : null}
         </Space>
       </Card>
 
+      {error ? <Alert type="error" showIcon message={error} /> : null}
+      {success ? <Alert type="success" showIcon message={success} /> : null}
+
       {searchedQuery && !loading ? (
         <>
-          <Card title={'Resultados completos: "' + searchedQuery + '"'}>
+          <Card title={'Talles únicos de "' + searchedQuery + '"'}>
             <Space size="large" wrap>
-              <Statistic title="Productos encontrados" value={products.length} />
-              <Statistic title="Variantes encontradas" value={variantCount} />
-              <Statistic title="Colores encontrados" value={colorGroups.length} />
+              <Statistic title="Productos visibles" value={products.length} />
+              <Statistic title="Variantes visibles con talle" value={visibleVariants} />
               <Statistic title="Talles diferentes" value={sizes.length} />
             </Space>
-            {products.length === 0 ? <Alert type="info" style={{ marginTop: 12 }}
-              message="La búsqueda no encontró productos. Probá con un término más general." /> : null}
-            {products.length > 0 && sizes.length === 0 ? (
-              <Alert type="warning" style={{ marginTop: 12 }}
-                message="Se encontraron productos, pero no tienen un atributo de talle reconocido." />
+            {sizes.length === 0 ? (
+              <Alert style={{ marginTop: 16 }} type="info" showIcon
+                message="No hay talles visibles para esta búsqueda." />
             ) : null}
           </Card>
 
-          {colorGroups.length > 0 ? (
-            <Card title="Variantes agrupadas por color">
+          {sizes.length > 0 ? (
+            <Card title="Actualizar stock por talle">
               <Typography.Paragraph type="secondary">
-                Todos los talles de cada color, incluso sin stock. Los inputs son globales: al cambiar un talle en un color, ese valor se replica automáticamente en los demás colores y productos encontrados.
+                Los inputs empiezan vacíos. Un valor vacío no modifica ese talle.
+                El número 0 sí establece stock cero. Los cambios se aplican globalmente,
+                incluso cuando un mismo talle aparece en varios colores.
               </Typography.Paragraph>
-              <div style={{ display: "grid", gap: 12 }}>
-                {colorGroups.map((group) => (
-                  <section key={group.color} aria-label={"Color " + group.color}
-                    style={{ padding: 14, border: "1px solid #e5eaf1", borderRadius: 8 }}>
-                    <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap", marginBottom: 10 }}>
-                      <Typography.Text strong style={{ fontSize: 16 }}>{group.color}</Typography.Text>
-                      <Typography.Text type="secondary">
-                        {group.products} productos · {group.variants} variantes
-                      </Typography.Text>
-                    </div>
-                    <div style={{ display: "grid", gap: 8 }}>
-                      <div style={{
-                        display: "grid",
-                        gridTemplateColumns: "minmax(80px, 130px) minmax(140px, 260px) minmax(60px, 90px)",
-                        gap: 8,
-                      }}>
-                        <Typography.Text type="secondary">Talle actual</Typography.Text>
-                        <Typography.Text type="secondary">Nuevo talle global</Typography.Text>
-                        <Typography.Text type="secondary">Variantes</Typography.Text>
+
+              <div style={{ display: "grid", gap: 0 }}>
+                <div style={{
+                  display: "grid", gridTemplateColumns: "minmax(76px, 110px) minmax(100px, 1fr) minmax(125px, 185px)",
+                  gap: 10, padding: "10px 0", borderBottom: "1px solid #e5eaf1",
+                }}>
+                  <Typography.Text type="secondary">Talle</Typography.Text>
+                  <Typography.Text type="secondary">Colores / variantes</Typography.Text>
+                  <Typography.Text type="secondary">Stock nuevo</Typography.Text>
+                </div>
+                {sizes.map((item) => (
+                  <div key={item.key} style={{
+                    display: "grid", gridTemplateColumns: "minmax(76px, 110px) minmax(100px, 1fr) minmax(125px, 185px)",
+                    gap: 10, alignItems: "center", padding: "12px 0",
+                    borderBottom: "1px solid #f0f1f3",
+                  }}>
+                    <Typography.Text strong>{item.size}</Typography.Text>
+                    <div>
+                      <Space wrap size={[4, 4]}>
+                        {item.colors.map((color) => <Tag key={color}>{color}</Tag>)}
+                      </Space>
+                      <div>
+                        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                          {item.variants} variantes · {item.noStock} con stock 0
+                        </Typography.Text>
                       </div>
-                      {group.sizes.map((item) => (
-                        <div key={item.size} style={{
-                          display: "grid",
-                          gridTemplateColumns: "minmax(80px, 130px) minmax(140px, 260px) minmax(60px, 90px)",
-                          gap: 8,
-                          alignItems: "center",
-                        }}>
-                          <Typography.Text strong>{item.size}</Typography.Text>
-                          <Input
-                            aria-label={"Nuevo talle para " + item.size + " en " + group.color}
-                            value={item.size === "Sin talle" ? "" : (mapping[item.size] ?? item.size)}
-                            placeholder={item.size === "Sin talle" ? "Sin talle" : undefined}
-                            disabled={item.size === "Sin talle"}
-                            maxLength={40}
-                            onChange={(event) => changeSize(item.size, event.target.value)}
-                          />
-                          <Tag>{item.variants}</Tag>
-                        </div>
-                      ))}
                     </div>
-                  </section>
+                    <InputNumber
+                      aria-label={"Stock nuevo para talle " + item.size}
+                      style={{ width: "100%" }}
+                      placeholder="Sin cambio"
+                      controls={false}
+                      min={0}
+                      max={1_000_000}
+                      precision={0}
+                      disabled={applying || needsReload}
+                      value={stockInputs[item.key] ?? null}
+                      onChange={(value) => changeStock(item.key, value)}
+                    />
+                  </div>
                 ))}
               </div>
-            </Card>
-          ) : null}
 
-          {sizes.length > 0 ? (
-            <Card title="Revisión del cambio masivo">
-              <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
-                <Space size="large" wrap>
-                  <Statistic title="Productos incluidos" value={preview.selectedProducts} />
-                  <Statistic title="Variantes revisadas" value={preview.selectedVariants} />
-                  <Statistic title="Variantes a renombrar" value={preview.changes.length} />
-                </Space>
-                {preview.warnings.length > 0 ? (
-                  <Alert type="error" showIcon
-                    message={"Hay " + preview.warnings.length + " conflictos de talle"}
-                    description={
-                      <ul style={{ margin: 0, paddingLeft: 20 }}>
-                        {preview.warnings.map((warning) => <li key={warning}>{warning}</li>)}
-                      </ul>
-                    }
-                  />
-                ) : null}
-                <Button type="primary" disabled={!hasChanges || preview.warnings.length > 0}
-                  onClick={() => setShowPreview(true)}>
-                  Previsualizar cambio masivo
+              <Space orientation="vertical" style={{ width: "100%", marginTop: 18 }} size="small">
+                <Typography.Text>
+                  {planned.length} variantes cambiarían de stock.
+                </Typography.Text>
+                <Button type="primary" size="large"
+                  disabled={planned.length === 0 || applying || needsReload}
+                  loading={applying}
+                  onClick={() => setConfirmOpen(true)}>
+                  Cambiar stock masivamente
                 </Button>
-                {showPreview ? (
-                  <>
-                    <Alert showIcon type="success"
-                      message={"Vista previa lista: " + preview.changes.length + " variantes cambiarían de talle."}
-                      description="La selección corresponde a todos los productos encontrados, sin necesidad de editar cada uno."
-                    />
-                    <Button type="primary" disabled>
-                      Cambiar masivamente (se habilitará en la etapa de guardado)
-                    </Button>
-                  </>
+                {needsReload ? (
+                  <Alert type="warning" showIcon message="Recargá los productos antes de iniciar otra actualización." />
+                ) : null}
+                {applying ? (
+                  <Space>
+                    <Spin size="small" />
+                    <Typography.Text>Confirmadas {processed} de {planned.length} variantes…</Typography.Text>
+                  </Space>
                 ) : null}
               </Space>
             </Card>
           ) : null}
         </>
       ) : null}
+
+      <Modal
+        title="Confirmar actualización masiva de stock"
+        open={confirmOpen}
+        okText="Confirmar y actualizar"
+        okButtonProps={{ danger: true, disabled: planned.length === 0 || applying }}
+        cancelText="Cancelar"
+        onCancel={() => setConfirmOpen(false)}
+        onOk={() => void applyAll()}
+        closable={!applying}
+      >
+        <Typography.Paragraph>
+          Se cambiará el stock de <strong>{planned.length} variantes visibles</strong> de Tiendanube.
+          Los productos ocultos y los talles sin número nuevo no serán modificados.
+        </Typography.Paragraph>
+        <div style={{ display: "grid", gap: 8 }}>
+          {changeSummary.map((item) => (
+            <div key={item.size}>
+              <Typography.Text strong>{item.size}</Typography.Text>
+              {" → " + item.stock + " unidades en " + item.variants + " variantes"}
+            </div>
+          ))}
+        </div>
+        <Alert style={{ marginTop: 16 }} type="warning" showIcon
+          message="Esta operación modifica stock real."
+          description="No se modificarán precios, SKU, colores ni nombres de talles. Se comprobará nuevamente cada variante antes de aplicarla."
+        />
+      </Modal>
     </main>
   );
 }
