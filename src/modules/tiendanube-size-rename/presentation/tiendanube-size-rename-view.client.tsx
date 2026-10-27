@@ -166,36 +166,10 @@ export function TiendanubeSizeRenameView({ loadPageAction }: Props) {
             ) : null}
           </Card>
 
-          {sizes.length > 0 ? (
-            <Card title="Cambiar talles globalmente">
-              <Typography.Paragraph type="secondary">
-                Cambiá un talle una sola vez: se usará la misma equivalencia en todos los colores y productos encontrados. Dejá el valor igual si no querés modificarlo.
-              </Typography.Paragraph>
-              <div style={{ display: "grid", gap: 10 }}>
-                {sizes.map((size) => (
-                  <div key={size} style={{
-                    display: "grid",
-                    gridTemplateColumns: "minmax(80px, 160px) minmax(160px, 340px)",
-                    gap: 12,
-                    alignItems: "center",
-                  }}>
-                    <Typography.Text strong>{"Talle " + size}</Typography.Text>
-                    <Input
-                      aria-label={"Nuevo talle para " + size}
-                      value={mapping[size] ?? size}
-                      maxLength={40}
-                      onChange={(event) => changeSize(size, event.target.value)}
-                    />
-                  </div>
-                ))}
-              </div>
-            </Card>
-          ) : null}
-
           {colorGroups.length > 0 ? (
             <Card title="Variantes agrupadas por color">
               <Typography.Paragraph type="secondary">
-                Todos los talles presentes en cada color, sumados entre los productos encontrados. No se omiten talles sin stock.
+                Todos los talles de cada color, incluso sin stock. Los inputs son globales: al cambiar un talle en un color, ese valor se replica automáticamente en los demás colores y productos encontrados.
               </Typography.Paragraph>
               <div style={{ display: "grid", gap: 12 }}>
                 {colorGroups.map((group) => (
@@ -207,17 +181,36 @@ export function TiendanubeSizeRenameView({ loadPageAction }: Props) {
                         {group.products} productos · {group.variants} variantes
                       </Typography.Text>
                     </div>
-                    <Space size={[8, 8]} wrap>
-                      {group.sizes.map((item) => {
-                        const proposed = mapping[item.size]?.trim() || item.size;
-                        const changed = proposed !== item.size;
-                        return (
-                          <Tag key={item.size} color={changed ? "blue" : undefined}>
-                            {item.size}{changed ? " → " + proposed : ""} ({item.variants})
-                          </Tag>
-                        );
-                      })}
-                    </Space>
+                    <div style={{ display: "grid", gap: 8 }}>
+                      <div style={{
+                        display: "grid",
+                        gridTemplateColumns: "minmax(80px, 130px) minmax(140px, 260px) minmax(60px, 90px)",
+                        gap: 8,
+                      }}>
+                        <Typography.Text type="secondary">Talle actual</Typography.Text>
+                        <Typography.Text type="secondary">Nuevo talle global</Typography.Text>
+                        <Typography.Text type="secondary">Variantes</Typography.Text>
+                      </div>
+                      {group.sizes.map((item) => (
+                        <div key={item.size} style={{
+                          display: "grid",
+                          gridTemplateColumns: "minmax(80px, 130px) minmax(140px, 260px) minmax(60px, 90px)",
+                          gap: 8,
+                          alignItems: "center",
+                        }}>
+                          <Typography.Text strong>{item.size}</Typography.Text>
+                          <Input
+                            aria-label={"Nuevo talle para " + item.size + " en " + group.color}
+                            value={item.size === "Sin talle" ? "" : (mapping[item.size] ?? item.size)}
+                            placeholder={item.size === "Sin talle" ? "Sin talle" : undefined}
+                            disabled={item.size === "Sin talle"}
+                            maxLength={40}
+                            onChange={(event) => changeSize(item.size, event.target.value)}
+                          />
+                          <Tag>{item.variants}</Tag>
+                        </div>
+                      ))}
+                    </div>
                   </section>
                 ))}
               </div>

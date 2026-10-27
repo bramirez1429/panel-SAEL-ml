@@ -90,4 +90,39 @@ describe("TiendanubeProductsApiRepository", () => {
       }],
     });
   });
+
+  it("reconoce talles etiquetados Tamaño y Talla con acentos en Tiendanube", async () => {
+    const http = client();
+    vi.mocked(http.get).mockResolvedValue({
+      products: [{
+        id: 1122,
+        name: { es: "Buzo mujer" },
+        mainImage: null,
+        tags: [],
+        published: true,
+        visibility: "visible",
+        variants: [{
+          id: 1222,
+          attributes: [
+            { name: { es: "Tamaño" }, value: { es: "2XL" } },
+            { name: { es: "Color" }, value: { es: "Negro" } },
+          ],
+          sku: "B-2XL",
+          stock: 0,
+          stockManagement: true,
+          price: 40000,
+          promotionalPrice: null,
+        }],
+      }],
+      page: 1,
+      hasMore: false,
+    });
+
+    const result = await new TiendanubeProductsApiRepository(http).getProducts({
+      q: "buzo", page: 1, pageSize: 100,
+    });
+    expect(result.products[0]?.variants[0]).toMatchObject({
+      size: "2XL", color: "Negro", stock: 0,
+    });
+  });
 });

@@ -53,18 +53,18 @@ describe("TiendanubeSizeRenameView", () => {
     expect(loadPageAction).toHaveBeenNthCalledWith(2, "buzo de mujer", 2);
     expect(screen.queryByRole("button", { name: /Seleccionar todos/u })).not.toBeInTheDocument();
     expect(screen.queryByRole("img", { name: /Buzo/u })).not.toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "Nuevo talle para 2XL" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Nuevo talle para 2XL en Marrón" })).toBeInTheDocument();
 
     const negro = screen.getByRole("region", { name: "Color Negro" });
     const gris = screen.getByRole("region", { name: "Color Gris" });
-    expect(within(negro).getByText("S (1)")).toBeInTheDocument();
-    expect(within(gris).getByText("S (1)")).toBeInTheDocument();
+    expect(within(negro).getByText("S")).toBeInTheDocument();
+    expect(within(gris).getByText("S")).toBeInTheDocument();
 
-    const sizeInput = screen.getByRole("textbox", { name: "Nuevo talle para S" });
+    const sizeInput = screen.getByRole("textbox", { name: "Nuevo talle para S en Negro" });
     await user.clear(sizeInput);
     await user.type(sizeInput, "S/M");
-    expect(within(negro).getByText("S → S/M (1)")).toBeInTheDocument();
-    expect(within(gris).getByText("S → S/M (1)")).toBeInTheDocument();
+    expect(within(negro).getByRole("textbox", { name: "Nuevo talle para S en Negro" })).toHaveValue("S/M");
+    expect(within(gris).getByRole("textbox", { name: "Nuevo talle para S en Gris" })).toHaveValue("S/M");
 
     await user.click(screen.getByRole("button", { name: "Previsualizar cambio masivo" }));
     expect(screen.getByText("Vista previa lista: 2 variantes cambiarían de talle.")).toBeInTheDocument();

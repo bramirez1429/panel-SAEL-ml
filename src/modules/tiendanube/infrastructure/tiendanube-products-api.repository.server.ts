@@ -46,7 +46,7 @@ export class TiendanubeProductsApiRepository implements TiendanubeProductsReposi
         tags: item.tags,
         variants: item.variants.map((variant) => ({
           id: String(variant.id),
-          size: attributeValue(variant.attributes, ["talle", "tamano", "size"]),
+          size: attributeValue(variant.attributes, ["talle", "talles", "talla", "tamano", "size", "sizes"]),
           color: attributeValue(variant.attributes, ["color"]),
           sku: variant.sku,
           stock: variant.stock,
@@ -63,7 +63,7 @@ function attributeValue(
   names: readonly string[],
 ): string | null {
   const attribute = attributes.find((candidate) =>
-    candidate.name !== null && names.includes(candidate.name.es.toLocaleLowerCase("es")),
+    candidate.name !== null && names.includes(candidate.name.es.normalize("NFD").replace(/[\u0300-\u036f]/gu, "").trim().toLocaleLowerCase("es")),
   );
 
   return attribute?.value.es ?? null;
