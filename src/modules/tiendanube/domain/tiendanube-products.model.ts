@@ -4,6 +4,7 @@ export type TiendanubeProductVariant = Readonly<{
   color: string | null;
   sku: string | null;
   stock: number | null;
+  visible?: boolean;
   price: number | null;
   promotionalPrice: number | null;
 }>;

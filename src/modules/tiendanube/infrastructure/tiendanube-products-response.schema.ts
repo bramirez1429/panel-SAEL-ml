@@ -15,6 +15,7 @@ const variantSchema = z.object({
   sku: z.string().nullable(),
   stock: z.number().nullable(),
   stockManagement: z.boolean(),
+  visible: z.boolean().optional(),
   price: z.number().nullable(),
   promotionalPrice: z.number().nullable(),
 });

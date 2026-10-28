@@ -28,6 +28,7 @@ export const dashboardSections = [
   { href: "/tiendanube/productos", title: "Tiendanube", icon: createElement(ShopOutlined) },
   { href: "/tienda-negocio/sincronizacion", title: "Sincronización Tienda Negocio", icon: createElement(SyncOutlined) },
   { href: "/tiendanube/edicion-masiva", title: "Tiendanube — Edición masiva", icon: createElement(TagsOutlined) },
+  { href: "/tiendanube/talles-masivos", title: "Tiendanube — Talles masivos", icon: createElement(TagsOutlined) },
   { href: "/sincronizacion", title: "Sincronización", icon: createElement(SyncOutlined) },
   { href: "/publicaciones", title: "Publicaciones", icon: createElement(FileTextOutlined) },
   { href: "/replicar", title: "Replicar", icon: createElement(CloudUploadOutlined) },
