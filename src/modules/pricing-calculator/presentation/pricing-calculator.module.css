@@ -1,0 +1,47 @@
+.root { display: grid; gap: 20px; width: 100%; }
+.heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.heading h2 { margin: 10px 0 4px !important; font-weight: 800; letter-spacing: -0.035em; }
+.heading p { margin: 0; max-width: 750px; }
+.controls { border-radius: 16px; border: 1px solid #e9eaf0; background: linear-gradient(110deg, #fff, #faf6fd); }
+.control { margin-top: 8px; }
+.tips { margin-top: 18px; }
+.productGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.productCard { min-width: 0; border-radius: 16px; border: 1px solid #e9eaf0; box-shadow: 0 6px 26px rgb(35 20 65 / 4%); }
+.cardTitle { display: flex; align-items: center; gap: 12px; }
+.cardTitle input { font-size: 17px; font-weight: 750; max-width: 270px; }
+.cardTitle :global(.ant-tag) { margin: 0; white-space: normal; }
+.field { display: flex; flex-direction: column; gap: 5px; width: 100%; color: #434456; font-size: 12px; font-weight: 650; }
+.input { width: 100%; }
+.recommendations { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+.recommendations > div { display: flex; flex-direction: column; gap: 4px; padding: 14px; border-radius: 12px; background: #f7f3fc; border: 1px solid #e7ddf4; }
+.recommendations > div:nth-child(2) { background: #f4f7fc; border-color: #e0e8f6; }
+.recommendations strong { font-size: clamp(18px, 2vw, 24px); line-height: 1.2; font-weight: 800; color: #3b2157; }
+.recommendations small { color: #646475; line-height: 1.5; }
+.priceRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.priceRow h4 { margin: 2px 0 0 !important; font-weight: 750; }
+.paymentBox { padding: 13px; min-width: 0; border: 1px solid #e7e8f0; border-radius: 12px; background: #fff; height: 100%; }
+.transferBox { background: #f3fbf6; border-color: #caedd8; }
+.quote { display: grid; gap: 10px; margin-top: 8px; }
+.quoteTop { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.quoteTop > span { display: flex; flex-direction: column; gap: 2px; }
+.quoteTop strong { display: block; font-size: 17px; line-height: 1.25; }
+.gain { color: #067647; }
+.low { color: #ba3a35; }
+.gain small, .low small { display: block; font-size: 11px; font-weight: 500; line-height: 1.4; }
+.meta { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: #696a78; }
+.collapse { margin-top: 12px; }
+.paymentGrid { display: grid; gap: 10px; }
+.productFooter { margin-top: 16px; }
+.note { display: block; font-size: 12px; margin-top: 10px; }
+.settingsGrid { display: grid; gap: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.cartStats { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 16px 0; }
+.cartTable { margin-top: 4px; }
+@media (max-width: 1200px) { .productGrid { grid-template-columns: 1fr; } .settingsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) {
+ .heading { flex-direction: column; align-items: stretch; }
+ .productGrid, .cartStats, .recommendations { grid-template-columns: 1fr; }
+ .settingsGrid { grid-template-columns: 1fr; }
+ .cardTitle { flex-wrap: wrap; }
+ .priceRow { align-items: flex-start; flex-direction: column; }
+ .quoteTop strong { font-size: 15px; }
+}
