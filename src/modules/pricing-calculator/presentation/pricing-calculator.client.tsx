@@ -3,9 +3,8 @@
 import { useMemo, useState } from "react";
 import {
   Alert, Button, Card, Checkbox, Col, Collapse, Divider, InputNumber,
-  Radio, Row, Select, Space, Statistic, Table, Tag, Typography,
+  Radio, Row, Select, Space, Tag, Typography,
 } from "antd";
-import type { ColumnsType } from "antd/es/table";
 import { MONEY, PRODUCTS } from "../domain/pricing-calculator";
 import styles from "./pricing-calculator.module.css";
 
@@ -90,12 +89,12 @@ const FIRST_FINANCING: Rates = {
   mercadoLibre: {2: null, 3: null, 6: null},
 };
 const PAYOUT_OPTIONS = {
-  pagoNube: [{value:"7",label:"7 días · 4,39% + IVA"},{value:"14",label:"14 días · 3,49% + IVA"},{value:"30",label:"30 días · 2,97% + IVA"}],
+  pagoNube: [{value:"1",label:"1 día · 6,09% + IVA"},{value:"7",label:"7 días · 4,39% + IVA"},{value:"14",label:"14 días · 3,49% + IVA"},{value:"30",label:"30 días · 2,97% + IVA"}],
   mercadoPago: [{value:"now",label:"Inmediato · 6,29% + IVA"},{value:"10",label:"10 días · 4,39% + IVA"},{value:"18",label:"18 días · 3,39% + IVA"},{value:"35",label:"35 días · 1,49% + IVA"}],
   nave: [{value:"now",label:"Inmediato · 5,80% + IVA"},{value:"other",label:"Otros plazos · 1,80% + IVA"}],
 };
 const BASE_RATES: Record<"pagoNube" | "mercadoPago" | "nave", Rates1> = {
-  pagoNube: {"7":4.39,"14":3.49,"30":2.97},
+  pagoNube: {"1":6.09,"7":4.39,"14":3.49,"30":2.97},
   mercadoPago: {"now":6.29,"10":4.39,"18":3.39,"35":1.49},
   nave: {"now":5.8,"other":1.8},
 };
@@ -203,463 +202,338 @@ function TrafficLight({q,target}:{q:Quote,target:number}) {
   return <Tag color="success">Cumple tu objetivo</Tag>;
 }
 
+
+function AmountRow({label,value,strong = false}: Readonly<{label:string;value:string;strong?:boolean}>) {
+  return <div className={styles.amountRow}>
+    <span className={strong ? styles.rowEmphasis : ""}>{label}</span>
+    <strong className={strong ? styles.rowEmphasis : ""}>{value}</strong>
+  </div>;
+}
+
+function ProfitAmount({q,target,compact=false}:Readonly<{q:Quote;target:number;compact?:boolean}>) {
+  return <div className={styles.profitBlock}>
+    <strong className={q.profit===null?styles.pending:q.profit>=target?styles.positive:styles.negative}
+      style={{fontSize:compact?20:24}}>
+      {q.profit===null?"Pendiente":money(q.profit)}
+    </strong>
+    <TrafficLight q={q} target={target}/>
+  </div>;
+}
+
+function Breakdown({q,channel}:Readonly<{q:Quote;channel:"tn"|"ml"}>) {
+  return <div className={styles.detailsList}>
+    <AmountRow label="Costo de la prenda (incluye packaging, luz e IIBB)" value={money(q.cost)}/>
+    <AmountRow label={channel==="ml"?"Comisión de Mercado Libre":"Comisión del medio de cobro"}
+      value={money(q.fee)+" · "+percent(q.rateWithIva)}/>
+    {channel==="tn" && q.platformRate>0 ? <AmountRow label="Comisión extra Tiendanube" value={money(q.platformFee)+" · "+percent(q.platformRate)}/> : null}
+    {q.financeWithIva!==null?
+      <AmountRow label="Financiación adicional" value={money(q.financeFee)+" · "+percent(q.financeWithIva)}/> :
+      <div className={styles.warningSmall}>Falta confirmar el costo de financiar estas cuotas.</div>}
+    {channel==="ml"?<>
+      <AmountRow label="Cargo fijo estimado" value={money(q.fixedFee)}/>
+      <AmountRow label="Costo de logística" value={money(q.logistics)}/>
+    </>:<>
+      <AmountRow label="Envío cobrado al cliente" value={money(q.shipCharged)}/>
+      <AmountRow label="Costo del envío para SAEL" value={money(q.logistics)}/>
+      <AmountRow label="Friselina extra" value={money(q.bag)}/>
+    </>}
+    <Divider style={{margin:"5px 0"}}/>
+    <AmountRow label="Total pagado por el cliente" value={money(q.totalCustomer)} strong/>
+    <AmountRow label="Ganancia estimada SAEL" value={q.profit===null?"Pendiente":money(q.profit)} strong/>
+    {q.reason?<Text type="warning" style={{fontSize:12}}>{q.reason}</Text>:null}
+  </div>;
+}
+
+const METHOD_NAMES: Record<"pagoNube"|"mercadoPago"|"nave",string> = {
+  pagoNube:"Pago Nube", mercadoPago:"Mercado Pago", nave:"NAVE",
+};
+
 export function PricingCalculator() {
-  const [products,setProducts] = useState<Product[]>(() => DEFAULT_PRODUCTS.map(x=>({...x})));
+  const [products,setProducts] = useState<Product[]>(()=>DEFAULT_PRODUCTS.map(item=>({...item})));
   const [active,setActive] = useState(DEFAULT_PRODUCTS[0]!.id);
   const [s,setS] = useState<State>({...FIRST});
   const [payouts,setPayouts] = useState<Payouts>({...FIRST_PAYOUTS});
-  const [financing,setFinancing] = useState<Rates>(() => ({
-    pagoNube:{...FIRST_FINANCING.pagoNube},mercadoPago:{...FIRST_FINANCING.mercadoPago},
-    nave:{...FIRST_FINANCING.nave},mercadoLibre:{...FIRST_FINANCING.mercadoLibre},
+  const [financing,setFinancing] = useState<Rates>(()=>({
+    pagoNube:{...FIRST_FINANCING.pagoNube},
+    mercadoPago:{...FIRST_FINANCING.mercadoPago},
+    nave:{...FIRST_FINANCING.nave},
+    mercadoLibre:{...FIRST_FINANCING.mercadoLibre},
   }));
-  const p = products.find(x=>x.id===active) ?? products[0]!;
-  const updateProduct = (patch:Partial<Product>)=>setProducts(old=>old.map(x=>x.id===p.id?{...x,...patch}:x));
-  const updateState = (patch:Partial<State>)=>setS(old=>({...old,...patch}));
-  const payoutsUpdate = (provider:keyof Payouts,value:string)=>setPayouts(old=>({...old,[provider]:value}));
-  const ratesUpdate = (provider:Exclude<Channel,"transferencia">,n:TermRate,v:number|null)=>
-    setFinancing(old=>({...old,[provider]:{...old[provider],[n]:v}}));
 
-  const tnProviders: Channel[] = ["pagoNube","mercadoPago","nave","transferencia"];
-  const activeQuotes = useMemo(()=>({
+  const p = products.find(item=>item.id===active) ?? products[0]!;
+  const updateProduct = (changes:Partial<Product>)=>
+    setProducts(current=>current.map(item=>item.id===active?{...item,...changes}:item));
+  const updateState = (changes:Partial<State>)=>setS(current=>({...current,...changes}));
+  const updateRate = (provider:Exclude<Channel,"transferencia">,count:TermRate,value:number|null)=>
+    setFinancing(current=>({...current,[provider]:{...current[provider],[count]:value}}));
+
+  const quotes = useMemo(()=>({
     pagoNube:quote(p,"pagoNube",p.tiendaNubeList,s,payouts,financing),
     mercadoPago:quote(p,"mercadoPago",p.tiendaNubeList,s,payouts,financing),
     nave:quote(p,"nave",p.tiendaNubeList,s,payouts,financing),
     transferencia:quote(p,"transferencia",p.tiendaNubeList,s,payouts,financing),
     mercadoLibre:quote(p,"mercadoLibre",p.mercadoLibreList,s,payouts,financing),
   }),[p,s,payouts,financing]);
-  const tnSuggested = useMemo(()=>solve(p,tnProviders,s,payouts,financing,"tn"),[p,s,payouts,financing]);
-  const mlSuggested = useMemo(()=>solve(p,["mercadoLibre"],s,payouts,financing,"ml"),[p,s,payouts,financing]);
-  const afterTN = Math.round(p.tiendaNubeList*(1-s.discount/100));
-  const afterML = Math.round(p.mercadoLibreList*(1-s.discount/100));
-  const incomplete = s.installments>1 && PROVIDERS.some(x=>financing[x.key][s.installments as TermRate]===null);
-  const allValid = [activeQuotes.pagoNube,activeQuotes.mercadoPago,activeQuotes.nave,activeQuotes.transferencia].every(x=>x.profit!==null && x.profit>=p.targetProfit);
-  const tnStatus = incomplete ? "pending" : allValid ? "good" : "bad";
-  const mlQ = activeQuotes.mercadoLibre;
-  const min = threshold(s);
-  const productNames = PRODUCTS.map(x=>({label:x.name,id:x.id}));
-  const tnMain = activeQuotes.pagoNube;
-  const tnTransfer = activeQuotes.transferencia;
-  const tnChannelCosts = (q: Quote) => q.fee + q.platformFee + q.financeFee;
-  const formatProfit = (q: Quote) => q.profit === null ? "Pendiente" : money(q.profit);
-  const tnQuoteList = PROVIDERS.map(item=>({name:item.name, q:activeQuotes[item.key]}));
-  const reset = ()=> {
-    setProducts(DEFAULT_PRODUCTS.map(x=>({...x})));setActive(DEFAULT_PRODUCTS[0]!.id);setS({...FIRST});
+
+  const channels:Channel[]=["pagoNube","mercadoPago","nave","transferencia"];
+  const suggestedTN = useMemo(()=>solve(p,channels,s,payouts,financing,"tn"),[p,s,payouts,financing]);
+  const suggestedML = useMemo(()=>solve(p,["mercadoLibre"],s,payouts,financing,"ml"),[p,s,payouts,financing]);
+  const tnPrice = Math.round(p.tiendaNubeList*(1-s.discount/100));
+  const mlPrice = Math.round(p.mercadoLibreList*(1-s.discount/100));
+  const chosenMin=threshold(s);
+  const missingTN = s.installments>1 && PROVIDERS.some(({key})=>financing[key][s.installments as TermRate]===null);
+  const mlIncomplete = quotes.mercadoLibre.profit===null;
+
+  const applySuggested=(channel:"tn"|"ml")=>{
+    const recommendation=channel==="tn"?suggestedTN:suggestedML;
+    if(recommendation===null)return;
+    updateProduct(channel==="tn"?{tiendaNubeList:recommendation}:{mercadoLibreList:recommendation});
+  };
+  const reset=()=>{
+    setProducts(DEFAULT_PRODUCTS.map(item=>({...item})));
+    setActive(DEFAULT_PRODUCTS[0]!.id);
+    setS({...FIRST});
     setPayouts({...FIRST_PAYOUTS});
     setFinancing({
-      pagoNube:{...FIRST_FINANCING.pagoNube},mercadoPago:{...FIRST_FINANCING.mercadoPago},
-      nave:{...FIRST_FINANCING.nave},mercadoLibre:{...FIRST_FINANCING.mercadoLibre},
+      pagoNube:{...FIRST_FINANCING.pagoNube},
+      mercadoPago:{...FIRST_FINANCING.mercadoPago},
+      nave:{...FIRST_FINANCING.nave},
+      mercadoLibre:{...FIRST_FINANCING.mercadoLibre},
     });
   };
-
-  const rows = PROVIDERS.map(({key,name})=>{
-    const q=activeQuotes[key];
-    const rec = solve(p,[key],s,payouts,financing,"tn");
-    return {key,name,q,rec};
-  });
-  type TnRow = (typeof rows)[number];
-  const columns:ColumnsType<TnRow> = [
-    {title:"Medio de cobro",dataIndex:"name",key:"name",render:(name:string,record)=><div style={{display:"grid",gap:3}}>
-      <strong>{name}</strong>
-      <Text type="secondary" style={{fontSize:11}}>{record.q.platformRate>0?"+ 2% Tiendanube":"0% adicional Tiendanube"}</Text>
-    </div>},
-    {title:"Tasa con IVA",key:"fee",render:(_,row)=><div style={{display:"grid",gap:3}}>
-      <strong>{percent(row.q.rateWithIva+row.q.platformRate+(row.q.financeWithIva ?? 0))}</strong>
-      <Text type="secondary" style={{fontSize:11}}>
-        Cobro {percent(row.q.rateBase)} + IVA {row.q.ivaOnBase>0?percent(row.q.ivaOnBase):"incl."}
-        {row.q.platformRate?" · plataforma "+percent(row.q.platformRate):""}
-      </Text>
-      {s.installments>1?<Text type="secondary" style={{fontSize:11}}>
-        Cuotas {row.q.financeBeforeIva===null?"sin tasa":percent(row.q.financeBeforeIva)+" + IVA = "+percent(row.q.financeWithIva ?? 0)}
-      </Text>:null}
-    </div>},
-    {title:"Cargos",key:"costs",render:(_,row)=>row.q.profit===null?"—":money(row.q.fee+row.q.platformFee+row.q.financeFee)},
-    {title:"Ganancia SAEL",key:"profit",render:(_,row)=><div style={{display:"grid",gap:3}}>
-      <strong style={{color:row.q.profit===null?"#6b7280":row.q.profit>=p.targetProfit?"#07824c":"#c14646"}}>{row.q.profit===null?"Pendiente":money(row.q.profit)}</strong>
-      <TrafficLight q={row.q} target={p.targetProfit}/>
-    </div>},
-    {title:"Lista sugerida",key:"suggest",render:(_,row)=><div style={{display:"grid",gap:6}}>
-      <strong>{row.rec===null?"Falta tasa":money(row.rec)}</strong>
-      <Button size="small" disabled={row.rec===null||row.rec===p.tiendaNubeList} onClick={()=>row.rec!==null&&updateProduct({tiendaNubeList:row.rec})}>Modificar</Button>
-    </div>},
-  ];
-
-  return <div className={styles.root} data-dashboard-full-width="true">
-    <div className={styles.heading}>
+  return <div className={styles.simpleRoot} data-dashboard-full-width="true">
+    <div className={styles.simpleHeader}>
       <div>
-        <Tag color="purple">SAEL · Calculadora comercial</Tag>
-        <Title level={2} style={{margin:"8px 0 3px"}}>Precios y ganancias</Title>
-        <Paragraph type="secondary" style={{margin:0}}>Simulá un solo producto por vez. Ajustá costo, objetivo, descuentos, cuotas y acreditación para elegir el mejor precio de Tiendanube y Mercado Libre.</Paragraph>
+        <Title level={2} style={{margin:"0 0 4px"}}>SAEL | Calculadora de precios</Title>
+        <Text type="secondary">Calculá fácil cuánto vender, qué gastos tenés y cuánto ganás.</Text>
       </div>
-      <Button onClick={reset}>Restablecer datos SAEL</Button>
+      <Button onClick={reset}>Restablecer</Button>
     </div>
 
-    <Row gutter={[20,20]} align="top">
-      <Col xs={24} xl={16}>
-        <div style={{display:"grid",gap:20,minWidth:0}}>
-    <Card title="1 · Elegí el producto" className={styles.controls}>
-      <Radio.Group value={active} onChange={(e)=>setActive(String(e.target.value))} buttonStyle="solid" optionType="button"
-        style={{display:"flex",flexWrap:"wrap",gap:8}}>
-        {productNames.map(x=><Radio.Button key={x.id} value={x.id} style={{borderRadius:9,fontWeight:700}}>{x.label}</Radio.Button>)}
-      </Radio.Group>
-      <Text type="secondary" style={{display:"block",marginTop:12,fontSize:12}}>Solo se muestran los cálculos del producto seleccionado. Los valores que edites de cada prenda quedan conservados mientras uses esta pantalla.</Text>
-    </Card>
+    <div className={styles.simpleLayout}>
+      <main className={styles.simpleForm} aria-label="Configurar simulación de venta">
+        <Card className={styles.stepCard} title="1 · ¿Qué producto querés vender?">
+          <Radio.Group value={active} onChange={e=>setActive(String(e.target.value))}
+            className={styles.productChoices}>
+            {PRODUCTS.map(item=><Radio key={item.id} value={item.id}>{item.name}</Radio>)}
+          </Radio.Group>
+          <Text type="secondary" className={styles.hint}>Se muestra un producto por vez. Cada uno conserva sus propios precios y costos durante esta sesión.</Text>
+        </Card>
 
-    <Card title="2 · Promoción, cuotas y envío" className={styles.controls}>
-      <Row gutter={[18,18]}>
-        <Col xs={24} md={12}>
-          <Text strong>Descuento promocional</Text>
-          <div style={{marginTop:8}}>
-            <Radio.Group value={s.discount} optionType="button" buttonStyle="solid" onChange={(e)=>updateState({discount:e.target.value as State["discount"]})}
-              options={[{label:"10% OFF",value:10},{label:"15% OFF",value:15},{label:"20% OFF",value:20}]} />
-          </div>
-          <Text type="secondary" style={{fontSize:11,display:"block",marginTop:7}}>10% habitual; 15% y 20% para ocasiones especiales. El 20% por transferencia se acumula.</Text>
-        </Col>
-        <Col xs={24} md={12}>
-          <Text strong>Cuotas sin interés (solo una opción)</Text>
-          <div style={{marginTop:8}}>
-            <Radio.Group value={s.installments} optionType="button" buttonStyle="solid" onChange={(e)=>updateState({installments:e.target.value as Term})}
-              options={[{label:"1 pago",value:1},{label:"2 cuotas",value:2},{label:"3 cuotas",value:3},{label:"6 cuotas",value:6}]} />
-          </div>
-          {s.installments>1?<Text type="secondary" style={{display:"block",fontSize:11,marginTop:7}}>
-            Mínimo configurado SAEL: {money(min)} en productos con descuento. Cuotas a cargo de SAEL; si faltan tasas, la ganancia queda sin confirmar.
-          </Text>:<Text type="secondary" style={{display:"block",fontSize:11,marginTop:7}}>En un pago no se cobra financiación adicional.</Text>}
-        </Col>
-        <Col xs={24}>
-          <Divider style={{margin:"4px 0"}}/>
-          <Space wrap size="large">
-            <Checkbox checked={s.forceFreeShipping} onChange={(e)=>updateState({forceFreeShipping:e.target.checked})}>
-              Envío gratis adicional en Tiendanube (incluso debajo de {money(s.freeThreshold)})
+        <Card className={styles.stepCard} title="2 · ¿Cuánto querés ganar?">
+          <Row gutter={[12,14]}>
+            <Col xs={24} sm={12}><MoneyInput label="Costo completo de la prenda" value={p.cost} onChange={cost=>updateProduct({cost})}/></Col>
+            <Col xs={24} sm={12}><MoneyInput label="Quiero ganar por unidad" value={p.targetProfit} onChange={targetProfit=>updateProduct({targetProfit})}/></Col>
+            <Col xs={24} sm={12}><MoneyInput label="Precio de lista Tiendanube" value={p.tiendaNubeList} onChange={tiendaNubeList=>updateProduct({tiendaNubeList})} description="Antes del descuento promocional."/></Col>
+            <Col xs={24} sm={12}><MoneyInput label="Precio de lista Mercado Libre" value={p.mercadoLibreList} onChange={mercadoLibreList=>updateProduct({mercadoLibreList})} description="Precio de referencia antes de promoción."/></Col>
+          </Row>
+          <Text type="secondary" className={styles.hint}>Los costos unitarios de SAEL incluyen el estampado, el packaging habitual, luz e IIBB estimado. No se descuentan dos veces.</Text>
+        </Card>
+
+        <Card className={styles.stepCard} title="3 · ¿Qué promoción vas a ofrecer?">
+          <div className={styles.formStack}>
+            <label className={styles.label}>Descuento promocional</label>
+            <Radio.Group value={s.discount} optionType="button" buttonStyle="solid"
+              onChange={e=>updateState({discount:e.target.value as State["discount"]})}
+              options={[{label:"10% OFF",value:10},{label:"15% OFF",value:15},{label:"20% OFF",value:20}]}
+              className={styles.segmented}/>
+            <Text type="secondary" className={styles.hint}>10% habitual; 15% y 20% en campañas especiales. Transferencia suma otro 20% OFF.</Text>
+            <label className={styles.label}>¿En cuántas cuotas sin interés?</label>
+            <Radio.Group value={s.installments} optionType="button" buttonStyle="solid"
+              onChange={e=>updateState({installments:e.target.value as Term})}
+              options={[{label:"1 pago",value:1},{label:"2 cuotas",value:2},{label:"3 cuotas",value:3},{label:"6 cuotas",value:6}]}
+              className={styles.segmented}/>
+            {s.installments>1?
+              <Text className={styles.hint}>Monto mínimo definido por SAEL: {money(chosenMin)} de productos después de descuentos.</Text>:
+              <Text type="secondary" className={styles.hint}>Un pago: sin financiación adicional.</Text>}
+            <Checkbox checked={s.forceFreeShipping} onChange={e=>updateState({forceFreeShipping:e.target.checked})}>
+              Ofrecer envío gratis adicional en Tiendanube
             </Checkbox>
-            <Tag color="green">Automático desde {money(s.freeThreshold)} de productos</Tag>
-            <Tag color="purple">Friselina: {money(s.bag)} por pedido gratis</Tag>
-          </Space>
-        </Col>
-      </Row>
-    </Card>
-
-    <Card title={"3 · Datos y precios · "+p.name} style={{borderRadius:16}}>
-      <Row gutter={[16,16]}>
-        <Col xs={24} sm={12} lg={6}><MoneyInput label="Costo completo de la prenda" value={p.cost} onChange={(cost)=>updateProduct({cost})} description="Incluye estampado, luz, packaging e IIBB estimado."/></Col>
-        <Col xs={24} sm={12} lg={6}><MoneyInput label="Quiero ganar por unidad" value={p.targetProfit} onChange={(targetProfit)=>updateProduct({targetProfit})}/></Col>
-        <Col xs={24} sm={12} lg={6}><MoneyInput label="Mi precio de lista · Tiendanube" value={p.tiendaNubeList} onChange={(tiendaNubeList)=>updateProduct({tiendaNubeList})} description="Precio original antes de aplicar el OFF."/></Col>
-        <Col xs={24} sm={12} lg={6}><MoneyInput label="Mi precio de lista · Mercado Libre" value={p.mercadoLibreList} onChange={(mercadoLibreList)=>updateProduct({mercadoLibreList})} description="Precio antes de la promoción simulada."/></Col>
-      </Row>
-      <Row gutter={[14,14]} style={{marginTop:16}}>
-        <Col xs={24} md={12}>
-          <div style={{background:"#f6f0fa",borderRadius:13,padding:16,border:"1px solid #eadff3"}}>
-            <Text type="secondary">TIENDANUBE · PRECIO VISIBLE</Text>
-            <div style={{display:"flex",gap:12,alignItems:"baseline",flexWrap:"wrap"}}>
-              <Title level={3} style={{margin:0,color:"#642e83"}}>{money(afterTN)}</Title>
-              <Text delete type="secondary">{money(p.tiendaNubeList)}</Text>
-              <Tag color="magenta">{s.discount}% OFF</Tag>
-            </div>
-            <Text type="secondary" style={{fontSize:12}}>Transferencia (20% extra): <strong>{money(activeQuotes.transferencia.productPrice)}</strong></Text>
+            <Text type="secondary" className={styles.hint}>Aunque no lo marques, el envío es gratis automáticamente desde {money(s.freeThreshold)} de productos después de descuentos, con friselina de {money(s.bag)}.</Text>
           </div>
-        </Col>
-        <Col xs={24} md={12}>
-          <div style={{background:"#f0f5fc",borderRadius:13,padding:16,border:"1px solid #dee8f6"}}>
-            <Text type="secondary">MERCADO LIBRE · PRECIO VISIBLE SIMULADO</Text>
-            <div style={{display:"flex",gap:12,alignItems:"baseline",flexWrap:"wrap"}}>
-              <Title level={3} style={{margin:0,color:"#28549b"}}>{money(afterML)}</Title>
-              <Text delete type="secondary">{money(p.mercadoLibreList)}</Text>
-              <Tag color="blue">{s.discount}% OFF</Tag>
-            </div>
-            <Text type="secondary" style={{fontSize:12}}>Cargo ML del artículo: referencia manual, no liquidación confirmada.</Text>
-          </div>
-        </Col>
-      </Row>
-    </Card>
+        </Card>
 
-    <Card title="4 · ¿Cuándo querés recibir tu dinero?" style={{borderRadius:16}}>
-      <Row gutter={[12,12]}>
-        {PROVIDERS.map(({key,name})=><Col key={key} xs={24} md={8}>
-          <div style={{background:"#fafafd",padding:12,border:"1px solid #e7e9f2",borderRadius:12}}>
-            <Text strong style={{display:"block",marginBottom:8}}>{name}</Text>
-            <Select style={{width:"100%"}} value={payouts[key]} options={PAYOUT_OPTIONS[key]} onChange={(v)=>payoutsUpdate(key,v)} />
-            <Text type="secondary" style={{display:"block",marginTop:8,fontSize:11}}>{key==="pagoNube"?"0% extra de Tiendanube":"2% extra de Tiendanube (plan Esencial)"}</Text>
-            {key==="nave"?<div style={{marginTop:12,padding:10,borderRadius:10,background:"#f4effe",border:"1px solid #e4d9fb"}}>
-              <Text strong style={{display:"block",fontSize:12}}>CFT publicado por NAVE / Banco Galicia</Text>
-              <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
-                {NAVE_CFT.map(item=><Tag key={item.cuotas} color={item.cuotas===s.installments?"purple":"default"} style={{margin:0,fontSize:11}}>
-                  {item.cuotas} {item.cuotas===1?"cuota":"cuotas"}: {percent(item.cft)}
-                </Tag>)}
+        <Card className={styles.stepCard} title="4 · ¿Cuándo querés recibir tu dinero?">
+          <Text type="secondary" className={styles.intro}>Cuanto antes recibís el dinero, más puede costar el cobro. Seleccioná un plazo para cada medio.</Text>
+          <div className={styles.payouts}>
+            {PROVIDERS.map(({key,name})=><div key={key} className={styles.payoutRow}>
+              <div className={styles.payoutName}>
+                <Text strong>{name}</Text>
+                <Text type="secondary" className={styles.hint}>{key==="pagoNube"?"0% extra de Tiendanube":"2% extra de Tiendanube"}</Text>
               </div>
-              <Text type="secondary" style={{display:"block",fontSize:11,marginTop:8}}>
-                El CFT es informativo. No se suma nuevamente al cargo de venta; para calcular la ganancia usamos la comisión de cobro y la financiación directa configurada.
-              </Text>
-              <a href="https://www.galicia.ar/empresas/tarjetas-y-cuentas/cuenta-comercio/nave" target="_blank" rel="noopener noreferrer" style={{fontSize:11}}>
-                Ver tasas CFT oficiales de NAVE
-              </a>
-            </div>:null}
+              <Select
+                aria-label={"Acreditación "+name}
+                className={styles.payoutSelect}
+                value={payouts[key]}
+                options={PAYOUT_OPTIONS[key]}
+                onChange={value=>setPayouts(old=>({...old,[key]:value}))}
+              />
+            </div>)}
           </div>
-        </Col>)}
-      </Row>
-      <Text type="secondary" style={{display:"block",marginTop:12,fontSize:11}}>
-        NAVE “otros plazos” corresponde a la modalidad publicada (hasta 18 días hábiles según operación); no es una garantía de acreditación exacta a 8 días.
-      </Text>
-    </Card>
+          <Text type="secondary" className={styles.hint}>Las tarifas provienen de tu configuración de SAEL. El plazo de NAVE “otros plazos” y la disponibilidad de cada alternativa se confirman con el proveedor.</Text>
+        </Card>
 
-    <Card title="5 · ¿Cuánto ganás realmente en Tiendanube?" style={{borderRadius:16}}>
-      {s.installments>1 ? <Alert type="info" showIcon style={{marginBottom:15}}
-        message={"Financiación en "+s.installments+" cuotas"}
-        description={"Pago Nube usa tarifas de tu propia cuenta. Mercado Pago 2/3 usa tasas de la simulación compartida (confirmar Checkout); NAVE 3 usa tu simulación. Las tasas sin verificar no se sustituyen por estimaciones."}/>
-        :null}
-      <Text type="secondary" style={{display:"block",fontSize:12,marginBottom:10}}>
-        NAVE · {s.installments} {s.installments===1?"cuota":"cuotas"}: {NAVE_CFT_CURRENT[s.installments]===undefined
-          ? "CFT no publicado para este plazo"
-          : "CFT oficial " + percent(NAVE_CFT_CURRENT[s.installments] ?? 0)}. Es una referencia separada de la tasa directa de financiación.
-      </Text>
-      <Table<TnRow> size="middle" scroll={{x:860}} pagination={false} columns={columns} dataSource={rows} />
-      <Divider/>
-      <Row gutter={[12,12]} align="middle">
-        <Col xs={24} md={15}>
-          <div style={{border:"1px solid #bdebd2",background:"#f2fbf7",borderRadius:12,padding:14}}>
-            <Text strong style={{color:"#00784b"}}>20% extra · transferencia Pago Nube</Text>
-            <Row gutter={[10,10]} style={{marginTop:8}}>
-              <Col xs={12}><Statistic title="Producto" value={activeQuotes.transferencia.productPrice} precision={0} prefix="$" groupSeparator="."/></Col>
-              <Col xs={12}><Statistic title="Ganancia SAEL" value={activeQuotes.transferencia.profit??0} precision={0} prefix="$" groupSeparator="." valueStyle={{color:(activeQuotes.transferencia.profit??0)>=p.targetProfit?"#00804c":"#b85133"}}/></Col>
+        <Card className={styles.stepCard} title="5 · ¿Cuánto ganás realmente en Tiendanube?">
+          <Text type="secondary" className={styles.intro}>Comparamos los tres medios de cobro con el mismo precio de venta y las cuotas elegidas.</Text>
+          <div className={styles.methodGrid}>
+            {PROVIDERS.map(({key,name})=>{
+              const q=quotes[key];
+              return <div className={styles.methodCard} key={key}>
+                <Text strong>{name}</Text>
+                <Text type="secondary" className={styles.hint}>
+                  Cargos {q.financeWithIva===null?"pendientes":percent(q.rateWithIva+q.platformRate+q.financeWithIva)}
+                </Text>
+                <ProfitAmount q={q} target={p.targetProfit} compact/>
+              </div>;
+            })}
+          </div>
+          <div className={styles.transferHighlight}>
+            <div className={styles.transferHeading}>
+              <Text strong style={{color:"#087c50"}}>Transferencia bancaria</Text>
+              <Tag color="green">20% EXTRA OFF</Tag>
+            </div>
+            <AmountRow label="Precio del producto" value={money(quotes.transferencia.productPrice)}/>
+            <AmountRow label="Ganancia estimada SAEL" value={money(quotes.transferencia.profit??0)} strong/>
+            <Text type="secondary" className={styles.hint}>Comisión 1,50% + IVA = 1,815%. El envío se calcula después del descuento adicional.</Text>
+          </div>
+          <Collapse className={styles.cleanCollapse} size="small" items={[{
+            key:"tnDetails",label:"Ver desglose de comisiones y gastos",
+            children:<div className={styles.breakdownCards}>
+              {PROVIDERS.map(({key,name})=><div key={key}>
+                <Text strong>{name}</Text>
+                <Breakdown q={quotes[key]} channel="tn"/>
+              </div>)}
+              <div>
+                <Text strong style={{color:"#087c50"}}>Transferencia</Text>
+                <Breakdown q={quotes.transferencia} channel="tn"/>
+              </div>
+            </div>,
+          }]}/>
+        </Card>
+
+        <Card className={styles.stepCard} title="6 · ¿Cuánto ganás realmente en Mercado Libre?">
+          <div className={styles.mlOverview}>
+            <div>
+              <Text type="secondary" className={styles.hint}>Precio final del producto</Text>
+              <Title level={3} style={{margin:"5px 0 0"}}>{money(mlPrice)}</Title>
+              <Text delete type="secondary">{money(p.mercadoLibreList)}</Text>
+            </div>
+            <div>
+              <Text type="secondary" className={styles.hint}>Ganancia estimada SAEL</Text>
+              <ProfitAmount q={quotes.mercadoLibre} target={p.targetProfit}/>
+            </div>
+          </div>
+          <Collapse className={styles.cleanCollapse} size="small" items={[{
+            key:"mlDetails",label:"Ver desglose y ajustar cargos de Mercado Libre",
+            children:<div className={styles.formStack}>
+              <Breakdown q={quotes.mercadoLibre} channel="ml"/>
+              <Divider style={{margin:"5px 0"}}/>
+              <Text strong>Costos de tu publicación</Text>
+              <Row gutter={[12,12]}>
+                <Col xs={24} sm={8}><RateInput label="Comisión ML (%)" value={s.mlCommission} ml onChange={v=>updateState({mlCommission:clean(v)})}/></Col>
+                <Col xs={24} sm={8}><MoneyInput label="Cargo fijo estimado" value={p.mlFixedFee} onChange={mlFixedFee=>updateProduct({mlFixedFee})}/></Col>
+                <Col xs={24} sm={8}><MoneyInput label="Envío pagado por SAEL" value={p.mlShipping} onChange={mlShipping=>updateProduct({mlShipping})}/></Col>
+              </Row>
+              <Checkbox checked={s.forceFreeML} onChange={e=>updateState({forceFreeML:e.target.checked})}>
+                Simular envío gratis ML adicional
+              </Checkbox>
+              <Text type="secondary" className={styles.hint}>Mercado Libre calcula la comisión, los cargos fijos, el envío y la financiación según la publicación. Estos valores son configurables y no son una cotización en tiempo real.</Text>
+            </div>,
+          }]}/>
+        </Card>
+
+        <Collapse className={styles.cleanCollapse} size="small" items={[{
+          key:"advanced",
+          label:"Configuración avanzada · financiación, envíos y mínimos",
+          children:<div className={styles.formStack}>
+            <Text type="secondary" className={styles.hint}>Si no hay una tasa confirmada de cuotas, se muestra “Pendiente” y no se inventa una ganancia. El porcentaje se suma a la comisión de cobro.</Text>
+            <Row gutter={[12,12]}>
+              <Col xs={24} sm={12}><MoneyInput label="Envío Tiendanube ($)" value={s.shipping} onChange={shipping=>updateState({shipping})}/></Col>
+              <Col xs={24} sm={12}><MoneyInput label="Envío gratis desde ($)" value={s.freeThreshold} onChange={freeThreshold=>updateState({freeThreshold})}/></Col>
+              <Col xs={24} sm={12}><MoneyInput label="Friselina extra ($)" value={s.bag} onChange={bag=>updateState({bag})}/></Col>
+              <Col xs={24} sm={12}><MoneyInput label="Umbral logístico ML ($)" value={s.mlFreeFrom} onChange={mlFreeFrom=>updateState({mlFreeFrom})}/></Col>
+              <Col xs={24} sm={8}><MoneyInput label="Mínimo 2 cuotas ($)" value={s.min2} onChange={min2=>updateState({min2})}/></Col>
+              <Col xs={24} sm={8}><MoneyInput label="Mínimo 3 cuotas ($)" value={s.min3} onChange={min3=>updateState({min3})}/></Col>
+              <Col xs={24} sm={8}><MoneyInput label="Mínimo 6 cuotas ($)" value={s.min6} onChange={min6=>updateState({min6})}/></Col>
             </Row>
-            <Text type="secondary" style={{fontSize:11}}>Comisión transferencia: 1,50% + IVA = 1,815%. {activeQuotes.transferencia.freeShipping?"Envío gratis y friselina SAEL.":"Envío a cargo del comprador."} Total cliente {money(activeQuotes.transferencia.totalCustomer)}.</Text>
-          </div>
-        </Col>
-        <Col xs={24} md={9}>
-          <div style={{display:"grid",gap:6}}>
-            <Text strong>Precio mínimo de lista recomendado</Text>
-            <Title level={3} style={{margin:0,color:"#642e83"}}>{tnSuggested===null?"Pendiente":money(tnSuggested)}</Title>
-            <TrafficLight q={activeQuotes.pagoNube} target={p.targetProfit}/>
-            <Tag color={tnStatus==="good"?"success":tnStatus==="bad"?"warning":"processing"}>
-              {tnStatus==="good"?"Todos los medios cumplen":tnStatus==="bad"?"Revisar ganancia":"Alguna tasa sin confirmar"}
-            </Tag>
-            <Button type="primary" disabled={tnSuggested===null||tnSuggested===p.tiendaNubeList}
-              onClick={()=>tnSuggested!==null&&updateProduct({tiendaNubeList:tnSuggested})}>Aplicar precio sugerido TN</Button>
-            <Text type="secondary" style={{fontSize:11}}>Busca cubrir tu objetivo también en transferencia; solo considera los medios con tasas cargadas.</Text>
-          </div>
-        </Col>
-      </Row>
-    </Card>
-
-    <Card title="6 · Mercado Libre" style={{borderRadius:16}}>
-      <Alert type="warning" showIcon style={{marginBottom:16}}
-        message="Estimación, no comisión oficial en tiempo real"
-        description="El 15,5% viene de tu publicación anterior. Desde marzo de 2026 los cargos fijos dependen de categoría y logística. Para una cifra exacta, copiá comisión, cargo fijo, cuotas y envío desde el simulador de esa publicación (o integrá listing_prices mediante backend seguro)." />
-      <Row gutter={[14,14]}>
-        <Col xs={24} lg={8}>
-          <div style={{display:"grid",gap:12}}>
-            <RateInput label="Comisión base ML (%)" value={s.mlCommission} ml onChange={(v)=>updateState({mlCommission:clean(v)})}/>
-            <MoneyInput label="Cargo fijo ML (debajo del umbral)" value={p.mlFixedFee} onChange={(mlFixedFee)=>updateProduct({mlFixedFee})}/>
-            <MoneyInput label="Costo de envío ML para SAEL" value={p.mlShipping} onChange={(mlShipping)=>updateProduct({mlShipping})}/>
-            <Checkbox checked={s.forceFreeML} onChange={(e)=>updateState({forceFreeML:e.target.checked})}>Simular envío gratis ML incluso debajo de {money(s.mlFreeFrom)}</Checkbox>
-          </div>
-        </Col>
-        <Col xs={24} lg={16}>
-          <Row gutter={[14,14]}>
-            <Col xs={12}><Statistic title="Cliente paga por el producto" value={mlQ.productPrice} prefix="$" groupSeparator="."/></Col>
-            <Col xs={12}><Statistic title="Ganancia SAEL" value={mlQ.profit??0} prefix="$" groupSeparator="." valueStyle={{color:mlQ.profit===null?"#6b7280":mlQ.profit>=p.targetProfit?"#07824c":"#c14646"}}/></Col>
-            <Col xs={12}><Statistic title="Comisión y financiación" value={mlQ.fee+mlQ.financeFee} prefix="$" groupSeparator="."/></Col>
-            <Col xs={12}><Statistic title="Cargo fijo + envío" value={mlQ.fixedFee+mlQ.logistics} prefix="$" groupSeparator="."/></Col>
-          </Row>
-          <Divider/>
-          <Row align="middle" justify="space-between" gutter={[12,12]}>
-            <Col xs={24} md={14}>
-              <TrafficLight q={mlQ} target={p.targetProfit}/>
-              <Text type="secondary" style={{display:"block",marginTop:7,fontSize:12}}>
-                {mlQ.reason??("Costo total efectivo de vender: "+percent((mlQ.fee+mlQ.financeFee+mlQ.fixedFee+mlQ.logistics)/Math.max(1,mlQ.productPrice)*100))}
-              </Text>
-              <Text type="secondary" style={{display:"block",fontSize:12}}>
-                {s.installments>1?"La tasa adicional de cuotas de ML debe cargarse en Ajustes (no es la de Mercado Pago).":"Sin financiación de cuotas por cuenta de SAEL."}
-              </Text>
-            </Col>
-            <Col xs={24} md={10}>
-              <Text type="secondary">Precio mínimo de lista sugerido</Text>
-              <Title level={3} style={{margin:"3px 0"}}>{mlSuggested===null?"Falta tasa ML":money(mlSuggested)}</Title>
-              <Button block type="primary" disabled={mlSuggested===null||mlSuggested===p.mercadoLibreList} onClick={()=>mlSuggested!==null&&updateProduct({mercadoLibreList:mlSuggested})}>Aplicar precio sugerido ML</Button>
-            </Col>
-          </Row>
-        </Col>
-      </Row>
-    </Card>
-
-    <Collapse items={[{key:"adjust",label:"7 · Ajustes avanzados: tasas de cuotas, envío y umbrales",children:<>
-      <Text type="secondary">Los porcentajes de cuotas de esta sección son costos adicionales ANTES de IVA (excepto ML, que requiere el valor final de tu liquidación). Los vacíos no se calculan.</Text>
-      <Row gutter={[15,15]} style={{marginTop:14}}>
-        <Col xs={24} sm={12} lg={6}><MoneyInput label="Envío Tiendanube" value={s.shipping} onChange={(shipping)=>updateState({shipping})}/></Col>
-        <Col xs={24} sm={12} lg={6}><MoneyInput label="Gratis desde" value={s.freeThreshold} onChange={(freeThreshold)=>updateState({freeThreshold})}/></Col>
-        <Col xs={24} sm={12} lg={6}><MoneyInput label="Friselina extra por envío gratis" value={s.bag} onChange={(bag)=>updateState({bag})}/></Col>
-        <Col xs={24} sm={12} lg={6}><MoneyInput label="Umbral envío ML (editable)" value={s.mlFreeFrom} onChange={(mlFreeFrom)=>updateState({mlFreeFrom})}/></Col>
-        <Col xs={24} sm={8}><MoneyInput label="Mínimo SAEL: 2 cuotas" value={s.min2} onChange={(min2)=>updateState({min2})}/></Col>
-        <Col xs={24} sm={8}><MoneyInput label="Mínimo SAEL: 3 cuotas" value={s.min3} onChange={(min3)=>updateState({min3})}/></Col>
-        <Col xs={24} sm={8}><MoneyInput label="Mínimo SAEL: 6 cuotas" value={s.min6} onChange={(min6)=>updateState({min6})}/></Col>
-      </Row>
-      <Divider>Tasas adicionales de financiación</Divider>
-      <Row gutter={[16,16]}>
-        {(["pagoNube","mercadoPago","nave","mercadoLibre"] as const).map(provider=><Col key={provider} xs={24} lg={12}>
-          <div style={{border:"1px solid #e5e7ed",borderRadius:12,padding:13}}>
-            <Text strong>{NAMES[provider]}</Text>
-            <Row gutter={[10,10]} style={{marginTop:11}}>
-              {([2,3,6] as TermRate[]).map(n=><Col xs={8} key={n}>
-                <RateInput ml={provider==="mercadoLibre"} label={n+" cuotas"} value={financing[provider][n]} onChange={(v)=>ratesUpdate(provider,n,v)}/>
-              </Col>)}
-            </Row>
-            {provider==="mercadoPago"?<Text type="secondary" style={{fontSize:11}}>2 y 3 de tu captura de Mercado Pago. Para 6 cuotas no precargamos la tasa pública de Link de Pago como si fuera Checkout.</Text>:null}
-            {provider==="nave"?<Text type="secondary" style={{display:"block",fontSize:11,marginTop:8}}>
-              CFT oficial: 1 cuota 0%, 3 cuotas 7,64%, 6 cuotas 13,89%, 9 cuotas 29,76%, 12 cuotas 40,24%.
-              No reemplaza el porcentaje de financiación adicional que tenés que cargar acá.
-            </Text>:null}
-            {provider==="mercadoLibre"?<Text type="secondary" style={{fontSize:11}}>Usá financiación adicional final del simulador ML, sin sumar IVA dos veces.</Text>:null}
-          </div>
-        </Col>)}
-      </Row>
-    </>}]} />
-
-    <Card style={{borderRadius:16,background:"#f9fafc"}}>
-      <Title level={4} style={{marginTop:0}}>Recomendación final para {p.name}</Title>
-      {tnSuggested!==null&&mlSuggested!==null? <Paragraph>
-        Para alcanzar al menos <strong>{money(p.targetProfit)} de contribución por prenda</strong> con los costos configurados, el simulador recomienda una lista de <strong>{money(tnSuggested)} en Tiendanube</strong> y <strong>{money(mlSuggested)} en Mercado Libre</strong>.
-        Con descuentos, cuotas y envío los márgenes cambian automáticamente.
-      </Paragraph> : <Paragraph>
-        La sugerencia es parcial porque faltan comisiones de financiación del canal seleccionado.
-        Cargá esas tasas para obtener una comparación completa y evitar publicar con una ganancia ficticia.
-      </Paragraph>}
-      <Alert type="info" showIcon message="Simulación de contribución, no ganancia final del mes"
-        description="No se duplican IIBB, DTF, luz ni packaging incluidos en el costo unitario. Restan gastos fijos, publicidad, devoluciones y retenciones reales que correspondan. Modificar precio solo cambia esta pantalla, nunca las publicaciones sincronizadas."/>
-      <Space wrap style={{marginTop:14}}>
-        <Link href="https://ayuda.tiendanube.com/pago-nube/cuales-son-las-comisiones-de-pago-nube" target="_blank">Tarifas oficiales de Pago Nube</Link>
-        <Link href="https://www.mercadopago.com.ar/herramientas-para-vender/link-de-pago" target="_blank">Cuotas Mercado Pago (referenciales)</Link>
-        <Link href="https://developers.mercadolibre.com.ar/comision-por-vender" target="_blank">Comisiones API Mercado Libre</Link>
-      </Space>
-    </Card>
-        </div>
-      </Col>
-      <Col xs={24} xl={8} style={{alignSelf:"stretch",minWidth:0}}>
-        <aside aria-label="Resumen en vivo de precios y ganancias" style={{
-          position:"sticky", top:20, display:"grid", gap:14,
-          maxHeight:"calc(100vh - 36px)", overflowY:"auto",
-          overscrollBehavior:"contain", paddingRight:3,
-        }}>
-          <div style={{display:"grid",gap:3,padding:"3px 2px"}}>
-            <Text strong style={{fontSize:15}}>Resumen en vivo</Text>
-            <Text type="secondary" style={{fontSize:12}}>
-              Se actualiza con cada selección de los pasos 1 al 6.
+            <Divider style={{margin:"4px 0"}}/>
+            <Text strong>Tasas de financiación adicionales</Text>
+            <Text type="secondary" className={styles.hint}>Tiendanube: porcentajes ANTES de IVA. Mercado Libre: porcentaje final de tu liquidación, sin sumar IVA dos veces.</Text>
+            <div className={styles.rateGrid}>
+              {(["pagoNube","mercadoPago","nave","mercadoLibre"] as const).map(provider=>
+                <div className={styles.rateCard} key={provider}>
+                  <Text strong>{NAMES[provider]}</Text>
+                  <Row gutter={[8,8]} style={{marginTop:8}}>
+                    {([2,3,6] as TermRate[]).map(n=><Col xs={8} key={n}>
+                      <RateInput label={n+" cuotas"} value={financing[provider][n]} ml={provider==="mercadoLibre"}
+                        onChange={value=>updateRate(provider,n,value)}/>
+                    </Col>)}
+                  </Row>
+                </div>)}
+            </div>
+            <Text type="secondary" className={styles.hint}>
+              CFT informativo NAVE (no se suma a la comisión): {NAVE_CFT.map(item=>item.cuotas+" cuotas "+percent(item.cft)).join(" · ")}.
             </Text>
           </div>
-          <Card size="small" style={{borderRadius:15,borderColor:"#d9c1e9",boxShadow:"0 5px 20px rgba(89,45,118,.07)"}}
-            title={<Space size={8}><span style={{color:"#702e8b"}}>Tiendanube</span><Tag color="purple">{s.discount}% OFF</Tag></Space>}>
-            <div style={{display:"grid",gap:11}}>
-              <div style={{display:"grid",gap:3}}>
-                <Text strong>{p.name}</Text>
-                <Text type="secondary" style={{fontSize:11}}>Precio de lista <Text delete>{money(p.tiendaNubeList)}</Text></Text>
-                <Title level={3} style={{margin:0,color:"#67298d"}}>{money(afterTN)}</Title>
-                <Text type="secondary" style={{fontSize:11}}>
-                  {s.installments===1?"Tarjeta en 1 pago":s.installments+" cuotas sin interés"} · Pago Nube {payouts.pagoNube} días
-                </Text>
-              </div>
-              <div style={{background:"#f8f5fc",borderRadius:10,padding:11,display:"grid",gap:5,fontSize:12}}>
-                <div style={{display:"flex",justifyContent:"space-between",gap:8}}>
-                  <span>Costo de la prenda</span><strong>{money(p.cost)}</strong>
-                </div>
-                <div style={{display:"flex",justifyContent:"space-between",gap:8}}>
-                  <span>Comisión y financiación Pago Nube</span>
-                  <strong>{tnMain.profit===null?"Tasa pendiente":money(tnChannelCosts(tnMain))}</strong>
-                </div>
-                <div style={{display:"flex",justifyContent:"space-between",gap:8}}>
-                  <span>Porcentaje de cobro + cuotas</span>
-                  <strong>{tnMain.financeWithIva===null?"Pendiente":percent(tnMain.rateWithIva+(tnMain.financeWithIva??0))}</strong>
-                </div>
-                <div style={{display:"flex",justifyContent:"space-between",gap:8}}>
-                  <span>Envío</span>
-                  <strong>{tnMain.freeShipping?"Gratis · SAEL":money(tnMain.shipCharged)+" cliente"}</strong>
-                </div>
-                {tnMain.freeShipping?<Text type="secondary" style={{fontSize:11}}>SAEL absorbe el envío de {money(tnMain.logistics)} y la friselina de {money(tnMain.bag)}.</Text>:null}
-                <div style={{display:"flex",justifyContent:"space-between",gap:8}}>
-                  <span>Total que paga el comprador</span><strong>{money(tnMain.totalCustomer)}</strong>
-                </div>
-              </div>
-              <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"center"}}>
-                <div style={{display:"grid",gap:1}}>
-                  <Text type="secondary" style={{fontSize:11}}>Ganancia estimada · Pago Nube</Text>
-                  <strong style={{fontSize:20,color:tnMain.profit===null?"#64748b":tnMain.profit>=p.targetProfit?"#067647":"#bd3d37"}}>
-                    {formatProfit(tnMain)}
-                  </strong>
-                </div>
-                <TrafficLight q={tnMain} target={p.targetProfit}/>
-              </div>
+        }]}/>
+
+        <Alert type="info" showIcon
+          message="Estos resultados son estimaciones, no modificaciones de publicaciones"
+          description="La simulación no cambia precios ni stock en Mercado Libre o Tiendanube. Los gastos fijos mensuales, publicidad y cargos no configurados se calculan aparte."/>
+      </main>
+
+      <aside className={styles.simpleSummary} aria-label="Resultados actualizados">
+        <Text type="secondary" className={styles.summaryTitle}>TU RESULTADO EN VIVO · {p.name}</Text>
+
+        <Card className={styles.summaryCard} title={<Space><span>Tiendanube</span><Tag color="purple">{s.discount}% OFF</Tag></Space>}>
+          <Text type="secondary" className={styles.hint}>Precio de lista recomendado</Text>
+          <Title level={2} style={{margin:"3px 0 0"}}>{suggestedTN===null?"Pendiente":money(suggestedTN)}</Title>
+          {missingTN?<Text type="warning" className={styles.hint}>Sugerencia parcial: falta confirmar financiación en algún medio.</Text>:null}
+          <div className={styles.summaryRows}>
+            <AmountRow label="Precio promocional actual" value={money(tnPrice)}/>
+            <AmountRow label="Por transferencia · 20% extra" value={money(quotes.transferencia.productPrice)}/>
+          </div>
+          <Divider style={{margin:"4px 0"}}/>
+          <Text type="secondary" className={styles.hint}>Ganancia Pago Nube</Text>
+          <ProfitAmount q={quotes.pagoNube} target={p.targetProfit} compact/>
+          <div className={styles.transferMini}>
+            <Text strong style={{color:"#087c50"}}>Transferencia · 20% OFF extra</Text>
+            <AmountRow label="Ganancia SAEL" value={money(quotes.transferencia.profit??0)}/>
+          </div>
+          <Button type="primary" block disabled={suggestedTN===null||suggestedTN===p.tiendaNubeList}
+            onClick={()=>applySuggested("tn")}>Probar precio sugerido</Button>
+          <Collapse className={styles.cleanCollapse} size="small" items={[{
+            key:"summaryTN",label:"Ver desglose de gastos",
+            children:<div className={styles.formStack}>
+              <Breakdown q={quotes.pagoNube} channel="tn"/>
               <Divider style={{margin:"2px 0"}}/>
-              <Text strong style={{fontSize:12}}>Otros medios en Tiendanube</Text>
-              {tnQuoteList.filter(item=>item.name!=="Pago Nube").map(item=>
-                <div key={item.name} style={{display:"flex",justifyContent:"space-between",gap:9,fontSize:12}}>
-                  <span>{item.name}</span>
-                  <strong style={{color:item.q.profit===null?"#64748b":item.q.profit>=p.targetProfit?"#067647":"#bd3d37"}}>{formatProfit(item.q)}</strong>
-                </div>
-              )}
-              <div style={{background:"#effaf5",padding:10,borderRadius:10,display:"grid",gap:4}}>
-                <Text strong style={{fontSize:12}}>Transferencia · 20% extra OFF</Text>
-                <div style={{display:"flex",justifyContent:"space-between",gap:6}}>
-                  <span>{money(tnTransfer.productPrice)} de productos</span>
-                  <strong>{formatProfit(tnTransfer)} SAEL</strong>
-                </div>
-                <Text type="secondary" style={{fontSize:11}}>
-                  Comprador paga {money(tnTransfer.totalCustomer)} · {tnTransfer.freeShipping?"envío gratis + friselina":"envío a cargo del comprador"}.
-                </Text>
-              </div>
-              <div style={{display:"grid",gap:7}}>
-                <Text type="secondary" style={{fontSize:11}}>Lista mínima recomendada {incomplete?"(parcial: faltan tasas)":""}</Text>
-                <Title level={4} style={{margin:0}}>{tnSuggested===null?"Pendiente":money(tnSuggested)}</Title>
-                <Button type="primary" block disabled={tnSuggested===null||tnSuggested===p.tiendaNubeList}
-                  onClick={()=>tnSuggested!==null&&updateProduct({tiendaNubeList:tnSuggested})}>Aplicar precio sugerido TN</Button>
-                {incomplete?<Text type="warning" style={{fontSize:11}}>Faltan tasas de cuotas: no se garantiza tu margen en todos los medios.</Text>:null}
-              </div>
-            </div>
-          </Card>
-          <Card size="small" style={{borderRadius:15,borderColor:"#c5d7f1",boxShadow:"0 5px 20px rgba(34,85,150,.06)"}}
-            title={<Space size={8}><span style={{color:"#245a9d"}}>Mercado Libre</span><Tag color="blue">{s.discount}% OFF</Tag></Space>}>
-            <div style={{display:"grid",gap:11}}>
-              <div style={{display:"grid",gap:3}}>
-                <Text strong>{p.name}</Text>
-                <Text type="secondary" style={{fontSize:11}}>Precio de lista <Text delete>{money(p.mercadoLibreList)}</Text></Text>
-                <Title level={3} style={{margin:0,color:"#245a9d"}}>{money(afterML)}</Title>
-                <Text type="secondary" style={{fontSize:11}}>
-                  {s.installments===1?"1 pago":s.installments+" cuotas"} · comisión base configurada {percent(s.mlCommission)}
-                </Text>
-              </div>
-              <div style={{background:"#f3f7fd",borderRadius:10,padding:11,display:"grid",gap:5,fontSize:12}}>
-                <div style={{display:"flex",justifyContent:"space-between",gap:8}}>
-                  <span>Costo de la prenda</span><strong>{money(p.cost)}</strong>
-                </div>
-                <div style={{display:"flex",justifyContent:"space-between",gap:8}}>
-                  <span>Comisión de venta</span><strong>{money(mlQ.fee)} ({percent(s.mlCommission)})</strong>
-                </div>
-                <div style={{display:"flex",justifyContent:"space-between",gap:8}}>
-                  <span>Financiación</span><strong>{mlQ.financeWithIva===null?"Pendiente":money(mlQ.financeFee)}</strong>
-                </div>
-                <div style={{display:"flex",justifyContent:"space-between",gap:8}}>
-                  <span>Cargo fijo + logística</span><strong>{money(mlQ.fixedFee+mlQ.logistics)}</strong>
-                </div>
-                <div style={{display:"flex",justifyContent:"space-between",gap:8}}>
-                  <span>Total que paga el comprador</span><strong>{money(mlQ.totalCustomer)}</strong>
-                </div>
-              </div>
-              <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"center"}}>
-                <div style={{display:"grid",gap:1}}>
-                  <Text type="secondary" style={{fontSize:11}}>Ganancia estimada</Text>
-                  <strong style={{fontSize:20,color:mlQ.profit===null?"#64748b":mlQ.profit>=p.targetProfit?"#067647":"#bd3d37"}}>
-                    {formatProfit(mlQ)}
-                  </strong>
-                </div>
-                <TrafficLight q={mlQ} target={p.targetProfit}/>
-              </div>
-              <div style={{display:"grid",gap:7}}>
-                <Text type="secondary" style={{fontSize:11}}>Lista mínima recomendada</Text>
-                <Title level={4} style={{margin:0}}>{mlSuggested===null?"Pendiente de tarifa":money(mlSuggested)}</Title>
-                <Button type="primary" block disabled={mlSuggested===null||mlSuggested===p.mercadoLibreList}
-                  onClick={()=>mlSuggested!==null&&updateProduct({mercadoLibreList:mlSuggested})}>Aplicar precio sugerido ML</Button>
-                <Text type="secondary" style={{fontSize:11}}>
-                  Valores estimados según tu publicación. Verificá envío, comisión y cuotas en el simulador oficial de Mercado Libre.
-                </Text>
-              </div>
-            </div>
-          </Card>
-        </aside>
-      </Col>
-    </Row>
+              <Text strong>Otros cobros en Tiendanube</Text>
+              <AmountRow label="Mercado Pago · ganancia" value={quotes.mercadoPago.profit===null?"Pendiente":money(quotes.mercadoPago.profit)}/>
+              <AmountRow label="NAVE · ganancia" value={quotes.nave.profit===null?"Pendiente":money(quotes.nave.profit)}/>
+              <AmountRow label="Transferencia · total cliente" value={money(quotes.transferencia.totalCustomer)}/>
+            </div>,
+          }]}/>
+        </Card>
+
+        <Card className={styles.summaryCard} title={<Space><span>Mercado Libre</span><Tag color="blue">{s.discount}% OFF</Tag></Space>}>
+          <Text type="secondary" className={styles.hint}>Precio de lista recomendado</Text>
+          <Title level={2} style={{margin:"3px 0 0"}}>{suggestedML===null?"Pendiente":money(suggestedML)}</Title>
+          {mlIncomplete?<Text type="warning" className={styles.hint}>Falta una tasa de financiación o no se cumplen los requisitos.</Text>:null}
+          <div className={styles.summaryRows}>
+            <AmountRow label="Precio promocional actual" value={money(mlPrice)}/>
+          </div>
+          <Divider style={{margin:"4px 0"}}/>
+          <Text type="secondary" className={styles.hint}>Ganancia estimada SAEL</Text>
+          <ProfitAmount q={quotes.mercadoLibre} target={p.targetProfit} compact/>
+          <Button block disabled={suggestedML===null||suggestedML===p.mercadoLibreList}
+            onClick={()=>applySuggested("ml")}>Probar precio sugerido</Button>
+          <Collapse className={styles.cleanCollapse} size="small" items={[{
+            key:"summaryML",label:"Ver desglose de gastos",
+            children:<Breakdown q={quotes.mercadoLibre} channel="ml"/>,
+          }]}/>
+          <Text type="secondary" className={styles.hint}>Los cargos de Mercado Libre se estiman con los valores de tu publicación; no se consultan en vivo.</Text>
+        </Card>
+      </aside>
+    </div>
   </div>;
 }
