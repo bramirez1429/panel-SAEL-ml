@@ -65,20 +65,70 @@ function Gain({ value, target, n = 1 }: Readonly<{ value: number; target: number
   </span>;
 }
 
-function QuoteDetails({ quote, target, n = 1, showShipping = true }: Readonly<{
-  quote: Quote | null; target: number; n?: number; showShipping?: boolean;
+type SalesChannel = "tiendanube" | "mercadoLibre";
+
+function QuoteDetails({ quote, target, n = 1, showShipping = true, channel = "tiendanube" }: Readonly<{
+  quote: Quote | null;
+  target: number;
+  n?: number;
+  showShipping?: boolean;
+  channel?: SalesChannel;
 }>) {
   if (!quote) return <Text type="secondary">No disponible: monto mínimo o tasa de financiación sin configurar.</Text>;
+
+  // Tiendanube cobra sobre productos + envío; Mercado Libre cobra su comisión sobre el producto.
+  // La logística y el cargo fijo de ML se muestran también como porcentaje equivalente del precio de venta.
+  const mercadoLibre = channel === "mercadoLibre";
+  const base = mercadoLibre ? quote.productPrice : quote.totalCustomer;
+  const share = (amount: number): string =>
+    base > 0 ? (amount / base * 100).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "%" : "—";
+  const fees = quote.processingFee + quote.platformFee + quote.financeFee;
+  const allChannelCosts = fees + (mercadoLibre ? quote.fixedFee + quote.shippingExpense : 0);
+
   return <div className={styles.quote}>
     <div className={styles.quoteTop}>
       <span><Text type="secondary">Cliente paga</Text><strong>{MONEY.format(quote.totalCustomer)}</strong></span>
       <span><Text type="secondary">Ganancia SAEL</Text><Gain value={quote.profit} target={target} n={n} /></span>
     </div>
+    <div style={{ display: "grid", gap: 7, background: "#f7f7fb", border: "1px solid #e9e8f1", padding: 12, borderRadius: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        <Text strong style={{ fontSize: 12 }}>{mercadoLibre ? "Total ML: comisión + cargos + logística" : "Total comisiones del cobro"}</Text>
+        <Tag color="purple" style={{ margin: 0, fontWeight: 700 }}>{share(allChannelCosts)}</Tag>
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12 }}>
+        <span>{mercadoLibre ? "Comisión Mercado Libre" : "Comisión de la pasarela"}</span>
+        <strong>{share(quote.processingFee)} · {MONEY.format(quote.processingFee)}</strong>
+      </div>
+      {!mercadoLibre ? <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12 }}>
+        <span>Comisión adicional Tiendanube</span>
+        <strong>{share(quote.platformFee)} · {MONEY.format(quote.platformFee)}</strong>
+      </div> : null}
+      {(quote.financeFee > 0 || quote.installments > 1) ? <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12 }}>
+        <span>Financiación de cuotas</span>
+        <strong>{share(quote.financeFee)} · {MONEY.format(quote.financeFee)}</strong>
+      </div> : null}
+      {mercadoLibre ? <>
+        {quote.fixedFee > 0 ? <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12 }}>
+          <span>Cargo fijo equivalente</span>
+          <strong>{share(quote.fixedFee)} · {MONEY.format(quote.fixedFee)}</strong>
+        </div> : null}
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12 }}>
+          <span>Envío ML equivalente</span>
+          <strong>{share(quote.shippingExpense)} · {MONEY.format(quote.shippingExpense)}</strong>
+        </div>
+      </> : null}
+      <div style={{ borderTop: "1px solid #e6e4ed", paddingTop: 7, display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12 }}>
+        <strong>{mercadoLibre ? "Total descontado a SAEL" : "Total comisión y financiación"}</strong>
+        <strong>{MONEY.format(allChannelCosts)}</strong>
+      </div>
+      <Text type="secondary" style={{ fontSize: 11 }}>
+        {mercadoLibre
+          ? "Porcentajes efectivos sobre el precio de venta. Envío y cargo fijo se expresan como equivalentes, no como comisiones porcentuales."
+          : "Porcentajes sobre el pago total, incluido el envío cuando lo abona el comprador. Pago Nube bonifica el adicional de Tiendanube."}
+      </Text>
+    </div>
     <div className={styles.meta}>
       <span>Producto(s): {MONEY.format(quote.productPrice)}</span>
-      <span>Descuento total de comisión: {quote.rate.toFixed(2).replace(".", ",")}%</span>
-      <span>Comisión + financiación: {MONEY.format(quote.processingFee + quote.financeFee + quote.platformFee)}</span>
-      {quote.fixedFee > 0 ? <span>Cargo fijo: {MONEY.format(quote.fixedFee)}</span> : null}
       {showShipping ? <span>{quote.freeShipping ? "Envío gratis para el comprador" : "Envío cobrado al comprador: " + MONEY.format(quote.shippingCharged)}</span> : null}
       {quote.bagExpense > 0 ? <span>Friselina extra: {MONEY.format(quote.bagExpense)}</span> : null}
     </div>
@@ -166,14 +216,14 @@ function PriceProduct({ p, s, onChange }: Readonly<{
       <Col xs={24} md={12}>
         <div className={styles.paymentBox}>
           <Text strong>Venta en 1 pago</Text>
-          <QuoteDetails quote={ml1} target={p.targetProfit} showShipping={false} />
+          <QuoteDetails quote={ml1} target={p.targetProfit} showShipping={false} channel="mercadoLibre" />
           <Text type="secondary">Logística SAEL: {MONEY.format(ml1?.shippingExpense ?? 0)}</Text>
         </div>
       </Col>
       <Col xs={24} md={12}>
         <div className={styles.paymentBox}>
           <Text strong>Venta en {s.installments} {s.installments === 1 ? "pago" : "cuotas"}</Text>
-          <QuoteDetails quote={ml} target={p.targetProfit} showShipping={false} />
+          <QuoteDetails quote={ml} target={p.targetProfit} showShipping={false} channel="mercadoLibre" />
           <Text type="secondary">Logística SAEL: {MONEY.format(ml?.shippingExpense ?? 0)}</Text>
         </div>
       </Col>
