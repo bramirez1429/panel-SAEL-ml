@@ -264,7 +264,7 @@ export function PricingCalculator() {
   const [products, setProducts] = useState<Product[]>(() => PRODUCTS.map((p) => ({ ...p })));
   const [settings, setSettings] = useState<Settings>({ ...SETTINGS });
   const changeProduct = (id: string, patch: Partial<Product>) =>
-    setProducts((previous) => previous.map((p) => p.id === id ? { ...p, ...patch } : p);
+    setProducts((previous) => previous.map((p) => p.id === id ? { ...p, ...patch } : p));
   const changeSettings = (patch: Partial<Settings>) => setSettings((previous) => ({ ...previous, ...patch }));
   const selectedProduct = useMemo(() => products.reduce((count, p) => count + p.quantity, 0), [products]);
 
