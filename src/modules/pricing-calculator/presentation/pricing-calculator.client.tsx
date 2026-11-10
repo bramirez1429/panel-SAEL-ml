@@ -320,42 +320,61 @@ export function PricingCalculator() {
           <Text type="secondary" className={styles.hint}>Se muestra un producto por vez. Cada uno conserva sus propios precios y costos durante esta sesión.</Text>
         </Card>
 
-        <Card className={styles.stepCard} title="2 · ¿Cuánto querés ganar?">
-          <Row gutter={[12,14]}>
-            <Col xs={24} sm={12}><MoneyInput label="Costo completo de la prenda" value={p.cost} onChange={cost=>updateProduct({cost})}/></Col>
-            <Col xs={24} sm={12}><MoneyInput label="Quiero ganar por unidad" value={p.targetProfit} onChange={targetProfit=>updateProduct({targetProfit})}/></Col>
-            <Col xs={24} sm={12}><MoneyInput label="Precio de lista Tiendanube" value={p.tiendaNubeList} onChange={tiendaNubeList=>updateProduct({tiendaNubeList})} description="Antes del descuento promocional."/></Col>
-            <Col xs={24} sm={12}><MoneyInput label="Precio de lista Mercado Libre" value={p.mercadoLibreList} onChange={mercadoLibreList=>updateProduct({mercadoLibreList})} description="Precio de referencia antes de promoción."/></Col>
-          </Row>
-          <Text type="secondary" className={styles.hint}>Los costos unitarios de SAEL incluyen el estampado, el packaging habitual, luz e IIBB estimado. No se descuentan dos veces.</Text>
-        </Card>
-
-        <Card className={styles.stepCard} title="3 · ¿Qué promoción vas a ofrecer?">
-          <div className={styles.formStack}>
-            <label className={styles.label}>Descuento promocional</label>
-            <Radio.Group value={s.discount} optionType="button" buttonStyle="solid"
-              onChange={e=>updateState({discount:e.target.value as State["discount"]})}
-              options={[{label:"10% OFF",value:10},{label:"15% OFF",value:15},{label:"20% OFF",value:20}]}
-              className={styles.segmented}
-              style={{display:"flex",flexWrap:"wrap",gap:10}}/>
-            <Text type="secondary" className={styles.hint}>10% habitual; 15% y 20% en campañas especiales. Transferencia suma otro 20% OFF.</Text>
-            <label className={styles.label}>¿En cuántas cuotas sin interés?</label>
-            <Radio.Group value={s.installments} optionType="button" buttonStyle="solid"
-              onChange={e=>updateState({installments:e.target.value as Term})}
-              options={[{label:"1 pago",value:1},{label:"2 cuotas",value:2},{label:"3 cuotas",value:3},{label:"6 cuotas",value:6}]}
-              className={styles.segmented}
-              style={{display:"flex",flexWrap:"wrap",gap:10}}/>
-            {s.installments>1?
-              <Text className={styles.hint}>Monto mínimo definido por SAEL: {money(chosenMin)} de productos después de descuentos.</Text>:
-              <Text type="secondary" className={styles.hint}>Un pago: sin financiación adicional.</Text>}
-            <Checkbox checked={s.forceFreeShipping} onChange={e=>updateState({forceFreeShipping:e.target.checked})}>
-              Ofrecer envío gratis adicional en Tiendanube
-            </Checkbox>
-            <Text type="secondary" className={styles.hint}>Aunque no lo marques, el envío es gratis automáticamente desde {money(s.freeThreshold)} de productos después de descuentos, con friselina de {money(s.bag)}.</Text>
+        <Card className={styles.stepCard} title="2 · Costos, precios y promociones">
+          <Text type="secondary" className={styles.intro}>
+            Completá tus números y elegí cómo vender. Los resultados a la derecha se actualizan automáticamente.
+          </Text>
+          <div className={styles.setupSquares}>
+            <section className={styles.setupSquare} aria-label="Costos y ganancias">
+              <div className={styles.setupSquareHeading}>
+                <Text strong>Costos y ganancias</Text>
+                <Text type="secondary" className={styles.hint}>¿Cuánto te cuesta y cuánto querés ganar?</Text>
+              </div>
+              <Row gutter={[10,12]}>
+                <Col xs={12}><MoneyInput label="Costo de la prenda" value={p.cost} onChange={cost=>updateProduct({cost})}/></Col>
+                <Col xs={12}><MoneyInput label="Ganancia deseada" value={p.targetProfit} onChange={targetProfit=>updateProduct({targetProfit})}/></Col>
+                <Col xs={24}><MoneyInput label="Precio de lista Tiendanube" value={p.tiendaNubeList} onChange={tiendaNubeList=>updateProduct({tiendaNubeList})} description="Antes del descuento promocional."/></Col>
+                <Col xs={24}><MoneyInput label="Precio de lista Mercado Libre" value={p.mercadoLibreList} onChange={mercadoLibreList=>updateProduct({mercadoLibreList})} description="Antes del descuento promocional."/></Col>
+              </Row>
+              <Text type="secondary" className={styles.hint}>
+                Incluye estampado, packaging habitual, luz e IIBB estimado. No se duplican esos costos.
+              </Text>
+            </section>
+            <section className={styles.setupSquare} aria-label="Promociones y cuotas">
+              <div className={styles.setupSquareHeading}>
+                <Text strong>Promociones y cuotas</Text>
+                <Text type="secondary" className={styles.hint}>Elegí una promoción y un plazo de pago.</Text>
+              </div>
+              <div className={styles.formStack}>
+                <label className={styles.label}>Descuento promocional</label>
+                <Radio.Group value={s.discount} optionType="button" buttonStyle="solid"
+                  onChange={e=>updateState({discount:e.target.value as State["discount"]})}
+                  options={[{label:"10% OFF",value:10},{label:"15% OFF",value:15},{label:"20% OFF",value:20}]}
+                  className={styles.segmented}
+                  style={{display:"flex",flexWrap:"wrap",gap:10}}/>
+                <Text type="secondary" className={styles.hint}>10% habitual; 15% y 20% para ocasiones especiales. Transferencia suma otro 20% OFF.</Text>
+                <label className={styles.label}>¿En cuántas cuotas sin interés?</label>
+                <Radio.Group value={s.installments} optionType="button" buttonStyle="solid"
+                  onChange={e=>updateState({installments:e.target.value as Term})}
+                  options={[{label:"1 pago",value:1},{label:"2 cuotas",value:2},{label:"3 cuotas",value:3},{label:"6 cuotas",value:6}]}
+                  className={styles.segmented}
+                  style={{display:"flex",flexWrap:"wrap",gap:10}}/>
+                {s.installments>1?
+                  <Text className={styles.hint}>Compra mínima para las cuotas elegidas: {money(chosenMin)} de productos después de descuentos.</Text>:
+                  <Text type="secondary" className={styles.hint}>1 pago, sin costo adicional de financiación.</Text>}
+                <Checkbox checked={s.forceFreeShipping} onChange={e=>updateState({forceFreeShipping:e.target.checked})}>
+                  Ofrecer envío gratis adicional en Tiendanube
+                </Checkbox>
+                <Text type="secondary" className={styles.hint}>
+                  Envío gratis automático desde {money(s.freeThreshold)} de productos después de descuentos.
+                  Bolsa de friselina {money(s.bag)} por pedido con envío gratis.
+                </Text>
+              </div>
+            </section>
           </div>
         </Card>
 
-        <Card className={styles.stepCard} title="4 · ¿Cuándo recibís el dinero y cuánto ganás en Tiendanube?">
+        <Card className={styles.stepCard} title="3 · ¿Cuándo recibís el dinero y cuánto ganás en Tiendanube?">
           <Text type="secondary" className={styles.intro}>
             Elegí el plazo de acreditación de cada medio: el precio de venta, los cargos y tu ganancia se actualizan automáticamente.
           </Text>
@@ -413,9 +432,9 @@ export function PricingCalculator() {
               Comisión 1,50% + IVA = 1,815%. El envío gratis se determina después del descuento por transferencia.
             </Text>
           </div>
-          <Collapse className={styles.greenDisclosure} size="small" items={[{
+          <Collapse className={styles.softDisclosure} size="small" items={[{
             key:"tnDetails",
-            label:<span className={styles.greenDisclosureLabel}>Ver desglose de comisiones y gastos</span>,
+            label:<span className={styles.softDisclosureLabel}>Ver desglose de comisiones y gastos</span>,
             children:<div className={styles.breakdownCards}>
               {PROVIDERS.map(({key,name})=><div key={key}>
                 <Text strong>{name}</Text>
@@ -433,7 +452,7 @@ export function PricingCalculator() {
           </Text>
         </Card>
 
-        <Card className={styles.stepCard} title="5 · ¿Cuánto ganás realmente en Mercado Libre?">
+        <Card className={styles.stepCard} title="4 · ¿Cuánto ganás realmente en Mercado Libre?">
           <div className={styles.mlOverview}>
             <div>
               <Text type="secondary" className={styles.hint}>Precio final del producto</Text>

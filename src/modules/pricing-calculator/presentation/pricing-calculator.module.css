@@ -137,21 +137,22 @@
   justify-content: space-between;
   gap: 10px;
 }
-.greenDisclosure {
-  border: 1px solid #a6e3c5 !important;
+.softDisclosure {
+  border: 1px solid #e3e6ec !important;
   border-radius: 10px !important;
-  background: #f1fbf5 !important;
+  background: #f4f5f7 !important;
 }
-.greenDisclosure :global(.ant-collapse-header) {
-  color: #087c50 !important;
+.softDisclosure :global(.ant-collapse-header) {
+  background: #f4f5f7 !important;
+  color: #475467 !important;
   font-size: 12px;
   font-weight: 700;
 }
-.greenDisclosure :global(.ant-collapse-content) {
+.softDisclosure :global(.ant-collapse-content) {
   background: #fff;
 }
-.greenDisclosureLabel {
-  color: #087c50;
+.softDisclosureLabel {
+  color: #475467;
 }
 @media (max-width: 1450px) {
   .combinedProviderRow {
@@ -180,5 +181,49 @@
   }
   .transferProfitLine {
     flex-wrap: wrap;
+  }
+}
+
+
+/* Punto 2: dos recuadros equilibrados para costos y promociones. */
+.setupSquares {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: stretch;
+}
+.setupSquare {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  min-width: 0;
+  border: 1px solid #e5e8ef;
+  border-radius: 13px;
+  background: #fbfcfe;
+  padding: 17px;
+}
+.setupSquareHeading {
+  display: grid;
+  gap: 5px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e9ebf1;
+}
+.setupSquareHeading :global(.ant-typography) {
+  line-height: 1.3;
+}
+.setupSquare .formStack {
+  gap: 10px;
+}
+@media (max-width: 900px) {
+  .setupSquares {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 470px) {
+  .setupSquare {
+    padding: 13px;
+  }
+  .setupSquare :global(.ant-input-number-group-addon) {
+    padding-inline: 8px;
   }
 }
