@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { CalculatorOutlined, ArrowRightOutlined } from "@ant-design/icons";
 import { createGetBackendStatusQuery } from "@/modules/backend-status/backend-status.composition.server";
 import type { BackendStatus } from "@/modules/backend-status/domain/backend-status.model";
 import { BackendStatusView } from "@/modules/backend-status/presentation/backend-status-view";
@@ -40,14 +39,14 @@ export default async function DashboardPage() {
         >
           <span style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <span aria-hidden="true" style={{ display: "grid", placeItems: "center", width: 52, height: 52, borderRadius: 12, background: "#f0e5fc", color: "#7136ab", fontSize: 25 }}>
-              <CalculatorOutlined />
+              ▦
             </span>
             <span style={{ display: "grid", gap: 4 }}>
               <strong id="pricing-calculator-title" style={{ fontSize: 18 }}>Calculadora de Mercado Libre y Tiendanube</strong>
               <span style={{ fontSize: 13, color: "#656577" }}>Calculá precios sugeridos, comisiones, descuentos, cuotas, envíos y ganancias de SAEL.</span>
             </span>
           </span>
-          <ArrowRightOutlined aria-hidden="true" style={{ fontSize: 20, color: "#7136ab", flexShrink: 0 }} />
+          <span aria-hidden="true" style={{ fontSize: 20, color: "#7136ab", flexShrink: 0 }}>→</span>
         </Link>
       </section>
       <BackendStatusView status={backendStatus} />
