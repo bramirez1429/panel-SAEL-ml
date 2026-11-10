@@ -86,3 +86,99 @@
  .payoutSelect {width:100%;flex:auto;}
  .mlOverview {grid-template-columns:minmax(0,1fr);}
 }
+
+
+/* Paso 4 unificado: acreditación + ganancia, una fila por medio */
+.combinedProviderList {
+  display: grid;
+  gap: 10px;
+}
+.combinedProviderRow {
+  display: grid;
+  grid-template-columns: minmax(92px,1fr) minmax(160px,1.5fr) minmax(82px,.85fr) minmax(92px,.95fr) minmax(108px,1fr);
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 13px;
+  border: 1px solid #e5e8f0;
+  border-radius: 12px;
+  background: #fff;
+}
+.combinedProviderName,.combinedProviderPayout,.combinedMetric,.combinedProviderProfit {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.combinedProviderName strong,.combinedMetric strong {
+  font-size: 13px;
+}
+.combinedCaption {
+  color: #697181;
+  font-size: 11px;
+  font-weight: 500;
+}
+.combinedProviderPayout :global(.ant-select-selector) {
+  border-radius: 8px;
+}
+.combinedProviderProfit .profitBlock {
+  gap: 3px;
+}
+.combinedProviderProfit .profitBlock strong {
+  font-size: 19px !important;
+}
+.combinedProviderProfit :global(.ant-tag) {
+  margin-inline-end: 0;
+  font-size: 10px;
+  width: fit-content;
+}
+.transferProfitLine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.greenDisclosure {
+  border: 1px solid #a6e3c5 !important;
+  border-radius: 10px !important;
+  background: #f1fbf5 !important;
+}
+.greenDisclosure :global(.ant-collapse-header) {
+  color: #087c50 !important;
+  font-size: 12px;
+  font-weight: 700;
+}
+.greenDisclosure :global(.ant-collapse-content) {
+  background: #fff;
+}
+.greenDisclosureLabel {
+  color: #087c50;
+}
+@media (max-width: 1450px) {
+  .combinedProviderRow {
+    grid-template-columns: minmax(100px,1fr) minmax(150px,1.25fr) minmax(85px,.85fr);
+    gap: 10px;
+  }
+  .combinedMetric:nth-child(4) {
+    grid-column: 2;
+  }
+  .combinedProviderProfit {
+    grid-column: 3;
+  }
+}
+@media (max-width: 760px) {
+  .combinedProviderRow {
+    grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+  }
+  .combinedProviderName {
+    grid-column: 1 / -1;
+  }
+  .combinedMetric:nth-child(4),.combinedProviderProfit {
+    grid-column: auto;
+  }
+  .combinedProviderProfit {
+    grid-column: 1 / -1;
+  }
+  .transferProfitLine {
+    flex-wrap: wrap;
+  }
+}

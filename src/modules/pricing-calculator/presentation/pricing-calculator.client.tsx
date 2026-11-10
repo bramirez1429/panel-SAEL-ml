@@ -355,37 +355,47 @@ export function PricingCalculator() {
           </div>
         </Card>
 
-        <Card className={styles.stepCard} title="4 · ¿Cuándo querés recibir tu dinero?">
-          <Text type="secondary" className={styles.intro}>Cuanto antes recibís el dinero, más puede costar el cobro. Seleccioná un plazo para cada medio.</Text>
-          <div className={styles.payouts}>
-            {PROVIDERS.map(({key,name})=><div key={key} className={styles.payoutRow}>
-              <div className={styles.payoutName}>
-                <Text strong>{name}</Text>
-                <Text type="secondary" className={styles.hint}>{key==="pagoNube"?"0% extra de Tiendanube":"2% extra de Tiendanube"}</Text>
-              </div>
-              <Select
-                aria-label={"Acreditación "+name}
-                className={styles.payoutSelect}
-                value={payouts[key]}
-                options={PAYOUT_OPTIONS[key]}
-                onChange={value=>setPayouts(old=>({...old,[key]:value}))}
-              />
-            </div>)}
-          </div>
-          <Text type="secondary" className={styles.hint}>Las tarifas provienen de tu configuración de SAEL. El plazo de NAVE “otros plazos” y la disponibilidad de cada alternativa se confirman con el proveedor.</Text>
-        </Card>
-
-        <Card className={styles.stepCard} title="5 · ¿Cuánto ganás realmente en Tiendanube?">
-          <Text type="secondary" className={styles.intro}>Comparamos los tres medios de cobro con el mismo precio de venta y las cuotas elegidas.</Text>
-          <div className={styles.methodGrid}>
+        <Card className={styles.stepCard} title="4 · ¿Cuándo recibís el dinero y cuánto ganás en Tiendanube?">
+          <Text type="secondary" className={styles.intro}>
+            Elegí el plazo de acreditación de cada medio: el precio de venta, los cargos y tu ganancia se actualizan automáticamente.
+          </Text>
+          <div className={styles.combinedProviderList}>
             {PROVIDERS.map(({key,name})=>{
               const q=quotes[key];
-              return <div className={styles.methodCard} key={key}>
-                <Text strong>{name}</Text>
-                <Text type="secondary" className={styles.hint}>
-                  Cargos {q.financeWithIva===null?"pendientes":percent(q.rateWithIva+q.platformRate+q.financeWithIva)}
-                </Text>
-                <ProfitAmount q={q} target={p.targetProfit} compact/>
+              const totalRate=q.financeWithIva===null?null:q.rateWithIva+q.platformRate+q.financeWithIva;
+              return <div key={key} className={styles.combinedProviderRow}>
+                <div className={styles.combinedProviderName}>
+                  <Text strong>{name}</Text>
+                  <Text type="secondary" className={styles.hint}>
+                    {key==="pagoNube"?"Sin comisión extra TN":"+ 2% Tiendanube"}
+                  </Text>
+                </div>
+                <div className={styles.combinedProviderPayout}>
+                  <label className={styles.combinedCaption} htmlFor={"plazo-"+key}>Recibís en</label>
+                  <Select
+                    id={"plazo-"+key}
+                    aria-label={"Acreditación "+name}
+                    value={payouts[key]}
+                    options={PAYOUT_OPTIONS[key]}
+                    onChange={value=>setPayouts(old=>({...old,[key]:value}))}
+                    style={{width:"100%"}}
+                  />
+                </div>
+                <div className={styles.combinedMetric}>
+                  <Text className={styles.combinedCaption}>Precio</Text>
+                  <strong>{money(q.productPrice)}</strong>
+                </div>
+                <div className={styles.combinedMetric}>
+                  <Text className={styles.combinedCaption}>Cargos totales</Text>
+                  <strong>{totalRate===null?"Pendiente":percent(totalRate)}</strong>
+                  <Text type="secondary" className={styles.hint}>
+                    {q.profit===null?"Sin cálculo":money(q.fee+q.platformFee+q.financeFee)}
+                  </Text>
+                </div>
+                <div className={styles.combinedProviderProfit}>
+                  <Text className={styles.combinedCaption}>Ganancia SAEL</Text>
+                  <ProfitAmount q={q} target={p.targetProfit} compact/>
+                </div>
               </div>;
             })}
           </div>
@@ -395,11 +405,17 @@ export function PricingCalculator() {
               <Tag color="green">20% EXTRA OFF</Tag>
             </div>
             <AmountRow label="Precio del producto" value={money(quotes.transferencia.productPrice)}/>
-            <AmountRow label="Ganancia estimada SAEL" value={money(quotes.transferencia.profit??0)} strong/>
-            <Text type="secondary" className={styles.hint}>Comisión 1,50% + IVA = 1,815%. El envío se calcula después del descuento adicional.</Text>
+            <div className={styles.transferProfitLine}>
+              <Text strong>Ganancia estimada SAEL</Text>
+              <ProfitAmount q={quotes.transferencia} target={p.targetProfit} compact/>
+            </div>
+            <Text type="secondary" className={styles.hint}>
+              Comisión 1,50% + IVA = 1,815%. El envío gratis se determina después del descuento por transferencia.
+            </Text>
           </div>
-          <Collapse className={styles.cleanCollapse} size="small" items={[{
-            key:"tnDetails",label:"Ver desglose de comisiones y gastos",
+          <Collapse className={styles.greenDisclosure} size="small" items={[{
+            key:"tnDetails",
+            label:<span className={styles.greenDisclosureLabel}>Ver desglose de comisiones y gastos</span>,
             children:<div className={styles.breakdownCards}>
               {PROVIDERS.map(({key,name})=><div key={key}>
                 <Text strong>{name}</Text>
@@ -411,9 +427,13 @@ export function PricingCalculator() {
               </div>
             </div>,
           }]}/>
+          <Text type="secondary" className={styles.hint}>
+            La ganancia incluye costo de la prenda, comisiones, financiación, envío y friselina cuando corresponde.
+            Las tasas no confirmadas se muestran pendientes.
+          </Text>
         </Card>
 
-        <Card className={styles.stepCard} title="6 · ¿Cuánto ganás realmente en Mercado Libre?">
+        <Card className={styles.stepCard} title="5 · ¿Cuánto ganás realmente en Mercado Libre?">
           <div className={styles.mlOverview}>
             <div>
               <Text type="secondary" className={styles.hint}>Precio final del producto</Text>
