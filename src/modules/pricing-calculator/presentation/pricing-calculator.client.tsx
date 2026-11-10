@@ -237,6 +237,11 @@ export function PricingCalculator() {
   const mlQ = activeQuotes.mercadoLibre;
   const min = threshold(s);
   const productNames = PRODUCTS.map(x=>({label:x.name,id:x.id}));
+  const tnMain = activeQuotes.pagoNube;
+  const tnTransfer = activeQuotes.transferencia;
+  const tnChannelCosts = (q: Quote) => q.fee + q.platformFee + q.financeFee;
+  const formatProfit = (q: Quote) => q.profit === null ? "Pendiente" : money(q.profit);
+  const tnQuoteList = PROVIDERS.map(item=>({name:item.name, q:activeQuotes[item.key]}));
   const reset = ()=> {
     setProducts(DEFAULT_PRODUCTS.map(x=>({...x})));setActive(DEFAULT_PRODUCTS[0]!.id);setS({...FIRST});
     setPayouts({...FIRST_PAYOUTS});
@@ -288,6 +293,9 @@ export function PricingCalculator() {
       <Button onClick={reset}>Restablecer datos SAEL</Button>
     </div>
 
+    <Row gutter={[20,20]} align="top">
+      <Col xs={24} xl={16}>
+        <div style={{display:"grid",gap:20,minWidth:0}}>
     <Card title="1 · Elegí el producto" className={styles.controls}>
       <Radio.Group value={active} onChange={(e)=>setActive(String(e.target.value))} buttonStyle="solid" optionType="button"
         style={{display:"flex",flexWrap:"wrap",gap:8}}>
@@ -520,5 +528,138 @@ export function PricingCalculator() {
         <Link href="https://developers.mercadolibre.com.ar/comision-por-vender" target="_blank">Comisiones API Mercado Libre</Link>
       </Space>
     </Card>
+        </div>
+      </Col>
+      <Col xs={24} xl={8} style={{alignSelf:"stretch",minWidth:0}}>
+        <aside aria-label="Resumen en vivo de precios y ganancias" style={{
+          position:"sticky", top:20, display:"grid", gap:14,
+          maxHeight:"calc(100vh - 36px)", overflowY:"auto",
+          overscrollBehavior:"contain", paddingRight:3,
+        }}>
+          <div style={{display:"grid",gap:3,padding:"3px 2px"}}>
+            <Text strong style={{fontSize:15}}>Resumen en vivo</Text>
+            <Text type="secondary" style={{fontSize:12}}>
+              Se actualiza con cada selección de los pasos 1 al 6.
+            </Text>
+          </div>
+          <Card size="small" style={{borderRadius:15,borderColor:"#d9c1e9",boxShadow:"0 5px 20px rgba(89,45,118,.07)"}}
+            title={<Space size={8}><span style={{color:"#702e8b"}}>Tiendanube</span><Tag color="purple">{s.discount}% OFF</Tag></Space>}>
+            <div style={{display:"grid",gap:11}}>
+              <div style={{display:"grid",gap:3}}>
+                <Text strong>{p.name}</Text>
+                <Text type="secondary" style={{fontSize:11}}>Precio de lista <Text delete>{money(p.tiendaNubeList)}</Text></Text>
+                <Title level={3} style={{margin:0,color:"#67298d"}}>{money(afterTN)}</Title>
+                <Text type="secondary" style={{fontSize:11}}>
+                  {s.installments===1?"Tarjeta en 1 pago":s.installments+" cuotas sin interés"} · Pago Nube {payouts.pagoNube} días
+                </Text>
+              </div>
+              <div style={{background:"#f8f5fc",borderRadius:10,padding:11,display:"grid",gap:5,fontSize:12}}>
+                <div style={{display:"flex",justifyContent:"space-between",gap:8}}>
+                  <span>Costo de la prenda</span><strong>{money(p.cost)}</strong>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",gap:8}}>
+                  <span>Comisión y financiación Pago Nube</span>
+                  <strong>{tnMain.profit===null?"Tasa pendiente":money(tnChannelCosts(tnMain))}</strong>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",gap:8}}>
+                  <span>Porcentaje de cobro + cuotas</span>
+                  <strong>{tnMain.financeWithIva===null?"Pendiente":percent(tnMain.rateWithIva+(tnMain.financeWithIva??0))}</strong>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",gap:8}}>
+                  <span>Envío</span>
+                  <strong>{tnMain.freeShipping?"Gratis · SAEL":money(tnMain.shipCharged)+" cliente"}</strong>
+                </div>
+                {tnMain.freeShipping?<Text type="secondary" style={{fontSize:11}}>SAEL absorbe el envío de {money(tnMain.logistics)} y la friselina de {money(tnMain.bag)}.</Text>:null}
+                <div style={{display:"flex",justifyContent:"space-between",gap:8}}>
+                  <span>Total que paga el comprador</span><strong>{money(tnMain.totalCustomer)}</strong>
+                </div>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"center"}}>
+                <div style={{display:"grid",gap:1}}>
+                  <Text type="secondary" style={{fontSize:11}}>Ganancia estimada · Pago Nube</Text>
+                  <strong style={{fontSize:20,color:tnMain.profit===null?"#64748b":tnMain.profit>=p.targetProfit?"#067647":"#bd3d37"}}>
+                    {formatProfit(tnMain)}
+                  </strong>
+                </div>
+                <TrafficLight q={tnMain} target={p.targetProfit}/>
+              </div>
+              <Divider style={{margin:"2px 0"}}/>
+              <Text strong style={{fontSize:12}}>Otros medios en Tiendanube</Text>
+              {tnQuoteList.filter(item=>item.name!=="Pago Nube").map(item=>
+                <div key={item.name} style={{display:"flex",justifyContent:"space-between",gap:9,fontSize:12}}>
+                  <span>{item.name}</span>
+                  <strong style={{color:item.q.profit===null?"#64748b":item.q.profit>=p.targetProfit?"#067647":"#bd3d37"}}>{formatProfit(item.q)}</strong>
+                </div>
+              )}
+              <div style={{background:"#effaf5",padding:10,borderRadius:10,display:"grid",gap:4}}>
+                <Text strong style={{fontSize:12}}>Transferencia · 20% extra OFF</Text>
+                <div style={{display:"flex",justifyContent:"space-between",gap:6}}>
+                  <span>{money(tnTransfer.productPrice)} de productos</span>
+                  <strong>{formatProfit(tnTransfer)} SAEL</strong>
+                </div>
+                <Text type="secondary" style={{fontSize:11}}>
+                  Comprador paga {money(tnTransfer.totalCustomer)} · {tnTransfer.freeShipping?"envío gratis + friselina":"envío a cargo del comprador"}.
+                </Text>
+              </div>
+              <div style={{display:"grid",gap:7}}>
+                <Text type="secondary" style={{fontSize:11}}>Lista mínima recomendada {incomplete?"(parcial: faltan tasas)":""}</Text>
+                <Title level={4} style={{margin:0}}>{tnSuggested===null?"Pendiente":money(tnSuggested)}</Title>
+                <Button type="primary" block disabled={tnSuggested===null||tnSuggested===p.tiendaNubeList}
+                  onClick={()=>tnSuggested!==null&&updateProduct({tiendaNubeList:tnSuggested})}>Aplicar precio sugerido TN</Button>
+                {incomplete?<Text type="warning" style={{fontSize:11}}>Faltan tasas de cuotas: no se garantiza tu margen en todos los medios.</Text>:null}
+              </div>
+            </div>
+          </Card>
+          <Card size="small" style={{borderRadius:15,borderColor:"#c5d7f1",boxShadow:"0 5px 20px rgba(34,85,150,.06)"}}
+            title={<Space size={8}><span style={{color:"#245a9d"}}>Mercado Libre</span><Tag color="blue">{s.discount}% OFF</Tag></Space>}>
+            <div style={{display:"grid",gap:11}}>
+              <div style={{display:"grid",gap:3}}>
+                <Text strong>{p.name}</Text>
+                <Text type="secondary" style={{fontSize:11}}>Precio de lista <Text delete>{money(p.mercadoLibreList)}</Text></Text>
+                <Title level={3} style={{margin:0,color:"#245a9d"}}>{money(afterML)}</Title>
+                <Text type="secondary" style={{fontSize:11}}>
+                  {s.installments===1?"1 pago":s.installments+" cuotas"} · comisión base configurada {percent(s.mlCommission)}
+                </Text>
+              </div>
+              <div style={{background:"#f3f7fd",borderRadius:10,padding:11,display:"grid",gap:5,fontSize:12}}>
+                <div style={{display:"flex",justifyContent:"space-between",gap:8}}>
+                  <span>Costo de la prenda</span><strong>{money(p.cost)}</strong>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",gap:8}}>
+                  <span>Comisión de venta</span><strong>{money(mlQ.fee)} ({percent(s.mlCommission)})</strong>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",gap:8}}>
+                  <span>Financiación</span><strong>{mlQ.financeWithIva===null?"Pendiente":money(mlQ.financeFee)}</strong>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",gap:8}}>
+                  <span>Cargo fijo + logística</span><strong>{money(mlQ.fixedFee+mlQ.logistics)}</strong>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",gap:8}}>
+                  <span>Total que paga el comprador</span><strong>{money(mlQ.totalCustomer)}</strong>
+                </div>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"center"}}>
+                <div style={{display:"grid",gap:1}}>
+                  <Text type="secondary" style={{fontSize:11}}>Ganancia estimada</Text>
+                  <strong style={{fontSize:20,color:mlQ.profit===null?"#64748b":mlQ.profit>=p.targetProfit?"#067647":"#bd3d37"}}>
+                    {formatProfit(mlQ)}
+                  </strong>
+                </div>
+                <TrafficLight q={mlQ} target={p.targetProfit}/>
+              </div>
+              <div style={{display:"grid",gap:7}}>
+                <Text type="secondary" style={{fontSize:11}}>Lista mínima recomendada</Text>
+                <Title level={4} style={{margin:0}}>{mlSuggested===null?"Pendiente de tarifa":money(mlSuggested)}</Title>
+                <Button type="primary" block disabled={mlSuggested===null||mlSuggested===p.mercadoLibreList}
+                  onClick={()=>mlSuggested!==null&&updateProduct({mercadoLibreList:mlSuggested})}>Aplicar precio sugerido ML</Button>
+                <Text type="secondary" style={{fontSize:11}}>
+                  Valores estimados según tu publicación. Verificá envío, comisión y cuotas en el simulador oficial de Mercado Libre.
+                </Text>
+              </div>
+            </div>
+          </Card>
+        </aside>
+      </Col>
+    </Row>
   </div>;
 }
