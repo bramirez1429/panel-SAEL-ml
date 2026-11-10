@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import {
-  Alert, Button, Card, Col, Collapse, Divider, Input, InputNumber, Radio, Row,
-  Select, Space, Statistic, Table, Tag, Typography,
+  Alert, Button, Card, Checkbox, Col, Collapse, Divider, Input, InputNumber, Radio, Row,
+  Space, Statistic, Table, Tag, Typography,
 } from "antd";
 
 import {
@@ -14,6 +14,54 @@ import {
 import styles from "./pricing-calculator.module.css";
 
 const { Text, Title, Paragraph } = Typography;
+
+// Sólo ajusta la experiencia de la calculadora: no altera ni cobra pedidos reales.
+// Tarifas conocidas: 7 días Pago Nube 4,39% + IVA, transferencia 1,50% + IVA,
+// Mercado Pago Checkout 10 días 4,39% + IVA y Tiendanube Esencial extra 2%.
+// Las tasas de cuotas sin contrato verificado quedan SIN CONFIRMAR.
+const SAEL_DEFAULT_SETTINGS: Settings = {
+  ...SETTINGS,
+  freeShippingFrom: 90000,
+  freeShippingBag: 1300,
+  naveOne: 5.8 * 1.21,
+  mercadoPagoFinancing2: 7.79 * 1.21,
+  mercadoPagoFinancing3: 10.49 * 1.21,
+  pagoNubeFinancing2: null,
+  pagoNubeFinancing3: null,
+  naveFinancing2: null,
+  naveFinancing3: null,
+  mlFinancing2: null,
+  mlFinancing3: null,
+};
+
+function formatRate(rate: number): string {
+  return rate.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "%";
+}
+
+function financingExplanation(rate: number | null, mercadoLibre = false): string {
+  if (rate === null) return "Financiación pendiente: cargá la tasa de tu cuenta en Configuración";
+  if (mercadoLibre) return formatRate(rate) + " adicional (confirmá IVA y programa de cuotas de ML)";
+  return formatRate(rate / 1.21) + " + IVA (21%) = " + formatRate(rate) + " adicional";
+}
+
+function ExtraFinancingCost({ one, installment, profitTarget }: Readonly<{
+  one: Quote | null;
+  installment: Quote | null;
+  profitTarget: number;
+}>) {
+  if (!one || !installment) return null;
+  const additionalCost = Math.max(0, one.profit - installment.profit);
+  const netRate = 1 - installment.rate / 100;
+  const extraFinalPrice = netRate > 0 ? additionalCost / netRate : null;
+  return <div style={{ background: "#fff8ed", padding: 10, borderRadius: 8, fontSize: 12, marginTop: 8, display: "grid", gap: 4 }}>
+    <strong>¿Cuánto se encarece ofrecer cuotas?</strong>
+    <span>Costo extra de financiación para SAEL: <strong>{MONEY.format(additionalCost)}</strong></span>
+    <span>Ganancia que perdés respecto a 1 pago: <strong>{MONEY.format(additionalCost)}</strong></span>
+    <span>Para conservar la misma ganancia, subir el precio final aproximadamente: <strong>{extraFinalPrice === null ? "No calculable" : MONEY.format(extraFinalPrice)}</strong></span>
+    {installment.profit < profitTarget ? <Text type="danger">Queda por debajo de tu ganancia objetivo.</Text> : null}
+  </div>;
+}
+
 
 type MoneyInputProps = Readonly<{
   label: string;
@@ -139,12 +187,28 @@ function QuoteDetails({ quote, target, n = 1, showShipping = true, channel = "ti
 function PriceProduct({ p, s, onChange }: Readonly<{
   p: Product; s: Settings; onChange: (patch: Partial<Product>) => void;
 }>) {
+  const [visibleInstallments, setVisibleInstallments] = useState<Installments[]>([]);
+  const toggleInstallments = (n: Installments, checked: boolean) => {
+    setVisibleInstallments((previous) => checked
+      ? [...previous.filter((x) => x !== n), n].sort()
+      : previous.filter((x) => x !== n));
+  };
+  const verifiedTNPlans = visibleInstallments.filter((n) =>
+    PAYMENTS.every((provider) => financingRate(provider.key, n, s) !== null));
+  const suggestedTNOptions = [
+    recommendedTN(p, { ...s, installments: 1 }),
+    ...verifiedTNPlans.map((n) => recommendedTN(p, { ...s, installments: n })),
+  ].filter((v): v is number => v !== null);
+  const suggestedMLOptions = [
+    recommendedML(p, { ...s, installments: 1 }),
+    ...visibleInstallments.filter((n) => (n === 2 ? s.mlFinancing2 : s.mlFinancing3) !== null)
+      .map((n) => recommendedML(p, { ...s, installments: n })),
+  ].filter((v): v is number => v !== null);
   const transfer = tnQuote(p.tiendaNubeList, p.cost, "transferencia", s);
   const pn1 = tnQuote(p.tiendaNubeList, p.cost, "pagoNube", s);
-  const ml = mlQuote(p, s, s.installments);
   const ml1 = mlQuote(p, s, 1);
-  const suggestedTn = recommendedTN(p, s);
-  const suggestedMl = recommendedML(p, s);
+  const suggestedTn = suggestedTNOptions.length ? Math.max(...suggestedTNOptions) : null;
+  const suggestedMl = suggestedMLOptions.length ? Math.max(...suggestedMLOptions) : null;
   const recommendedTransfer = suggestedTn === null ? null : tnQuote(suggestedTn, p.cost, "transferencia", s);
   const afterDiscount = Math.round(p.tiendaNubeList * (1 - s.discount / 100));
 
@@ -166,11 +230,25 @@ function PriceProduct({ p, s, onChange }: Readonly<{
         <MoneyInput label="Precio de lista Mercado Libre" value={p.mercadoLibreList} onChange={(mercadoLibreList) => onChange({ mercadoLibreList })} />
       </Col>
     </Row>
+    <div style={{ marginTop: 16, padding: 14, border: "1px solid #ddd5ee", borderRadius: 12, background: "#fbf9ff", display: "grid", gap: 9 }}>
+      <Text strong>Simular cuotas sin interés en esta card</Text>
+      <Space wrap size="middle">
+        <Checkbox checked={visibleInstallments.includes(2)} onChange={(e) => toggleInstallments(2, e.target.checked)}>
+          2 cuotas desde $25.000
+        </Checkbox>
+        <Checkbox checked={visibleInstallments.includes(3)} onChange={(e) => toggleInstallments(3, e.target.checked)}>
+          3 cuotas desde $32.000
+        </Checkbox>
+      </Space>
+      <Text type="secondary" style={{ fontSize: 12 }}>
+        Calculamos la comisión y financiación con IVA por medio de pago, el aumento del costo y la diferencia de ganancia. Tildar una opción no activa cuotas en tu tienda.
+      </Text>
+    </div>
     <div className={styles.recommendations}>
       <div>
         <Text type="secondary">Lista sugerida · Tiendanube</Text>
         <strong>{suggestedTn === null ? "No calculable" : MONEY.format(suggestedTn)}</strong>
-        <small>Protege el objetivo en los medios con tasas configuradas{recommendedTransfer ? ", incluida transferencia a " + MONEY.format(recommendedTransfer.productPrice) : ""}.</small>
+        <small>Objetivo protegido en los medios con tasas configuradas{recommendedTransfer ? ", incluida transferencia a " + MONEY.format(recommendedTransfer.productPrice) : ""}. Si falta alguna tasa de cuotas, no está contemplada.</small>
       </div>
       <div>
         <Text type="secondary">Lista sugerida · Mercado Libre</Text>
@@ -202,32 +280,49 @@ function PriceProduct({ p, s, onChange }: Readonly<{
       ghost
       items={[{
         key: "payments",
-        label: "Comparar Pago Nube, Mercado Pago y NAVE" + (s.installments > 1 ? " · " + s.installments + " cuotas" : ""),
+        label: "Comparar Pago Nube, Mercado Pago y NAVE · 1 pago",
         children: <div className={styles.paymentGrid}>
           {PAYMENTS.map((provider) => <div className={styles.paymentBox} key={provider.key}>
-            <Text strong>{provider.label} · {s.installments} {s.installments === 1 ? "pago" : "cuotas"}</Text>
-            <QuoteDetails quote={tnQuote(p.tiendaNubeList, p.cost, provider.key, s, s.installments)} target={p.targetProfit} />
+            <Text strong>{provider.label} · 1 pago</Text>
+            <QuoteDetails quote={tnQuote(p.tiendaNubeList, p.cost, provider.key, s, 1)} target={p.targetProfit} />
           </div>)}
         </div>,
       }]}
     />
+    {visibleInstallments.map((n) => <Card key={"tn" + n} size="small" style={{ marginTop: 12, borderColor: "#e3d3ef" }} title={n + " cuotas sin interés · Tiendanube"}>
+      <Text type="secondary" style={{ display: "block", marginBottom: 10, fontSize: 12 }}>
+        Mínimo {MONEY.format(minimumInstallmentAmount(n))} en productos, luego del descuento promocional.
+      </Text>
+      <div className={styles.paymentGrid}>
+        {PAYMENTS.map((provider) => {
+          const rate = financingRate(provider.key, n, s);
+          const quote = tnQuote(p.tiendaNubeList, p.cost, provider.key, s, n);
+          const one = tnQuote(p.tiendaNubeList, p.cost, provider.key, s, 1);
+          return <div className={styles.paymentBox} key={provider.key + n}>
+            <Text strong>{provider.label}</Text>
+            <div style={{ margin: "6px 0", fontSize: 12 }}>Financiación: <strong>{financingExplanation(rate)}</strong></div>
+            <QuoteDetails quote={quote} target={p.targetProfit} />
+            <ExtraFinancingCost installment={quote} one={one} profitTarget={p.targetProfit} />
+          </div>;
+        })}
+      </div>
+    </Card>)}
     <Divider>Mercado Libre</Divider>
-    <Row gutter={[12, 12]}>
-      <Col xs={24} md={12}>
-        <div className={styles.paymentBox}>
-          <Text strong>Venta en 1 pago</Text>
-          <QuoteDetails quote={ml1} target={p.targetProfit} showShipping={false} channel="mercadoLibre" />
-          <Text type="secondary">Logística SAEL: {MONEY.format(ml1?.shippingExpense ?? 0)}</Text>
-        </div>
-      </Col>
-      <Col xs={24} md={12}>
-        <div className={styles.paymentBox}>
-          <Text strong>Venta en {s.installments} {s.installments === 1 ? "pago" : "cuotas"}</Text>
-          <QuoteDetails quote={ml} target={p.targetProfit} showShipping={false} channel="mercadoLibre" />
-          <Text type="secondary">Logística SAEL: {MONEY.format(ml?.shippingExpense ?? 0)}</Text>
-        </div>
-      </Col>
-    </Row>
+    <div className={styles.paymentBox}>
+      <Text strong>Venta en 1 pago</Text>
+      <QuoteDetails quote={ml1} target={p.targetProfit} showShipping={false} channel="mercadoLibre" />
+      <Text type="secondary">Logística a cargo de SAEL: {MONEY.format(ml1?.shippingExpense ?? 0)}</Text>
+    </div>
+    {visibleInstallments.map((n) => {
+      const quote = mlQuote(p, s, n);
+      const rate = n === 2 ? s.mlFinancing2 : s.mlFinancing3;
+      return <div className={styles.paymentBox} key={"ml" + n} style={{ marginTop: 12 }}>
+        <Text strong>Mercado Libre · {n} cuotas sin interés</Text>
+        <div style={{ marginTop: 6, fontSize: 12 }}>Financiación: <strong>{financingExplanation(rate, true)}</strong></div>
+        <QuoteDetails quote={quote} target={p.targetProfit} showShipping={false} channel="mercadoLibre" />
+        <ExtraFinancingCost one={ml1} installment={quote} profitTarget={p.targetProfit} />
+      </div>;
+    })}
     <Row gutter={[12, 12]} className={styles.productFooter}>
       <Col xs={12} sm={8}><MoneyInput label="Cargo fijo ML (< $33.000)" value={p.mlFixedFee} onChange={(mlFixedFee) => onChange({ mlFixedFee })} /></Col>
       <Col xs={12} sm={8}><MoneyInput label="Envío ML (≥ $33.000)" value={p.mlShipping} onChange={(mlShipping) => onChange({ mlShipping })} /></Col>
@@ -279,7 +374,7 @@ function SettingsPanel({ settings, onChange }: Readonly<{
     children: <>
       <Paragraph type="secondary">
         Los porcentajes incluyen IVA cuando corresponde. La comisión del 2% de Tiendanube se agrega a Mercado Pago y NAVE, pero no a Pago Nube.
-        Las tasas precargadas de financiación son referencias de SAEL, NO están verificadas para tu contrato. Modificalas según los paneles de cada proveedor.
+        Las tasas de financiación vacías no están confirmadas y NO se utilizan para calcular ganancias. Mercado Pago 2 y 3 cuotas usa tasas públicas referenciales: verificá su vigencia para Checkout de tu cuenta. Modificá todos los porcentajes según el panel de cada proveedor.
       </Paragraph>
       <div className={styles.settingsGrid}>
         <MoneyInput label="Envío estimado" value={settings.shipping} onChange={(shipping) => onChange({ shipping })} />
@@ -297,13 +392,13 @@ function SettingsPanel({ settings, onChange }: Readonly<{
       <div className={styles.settingsGrid}>
         {([
           ["pagoNubeFinancing2", "Pago Nube 2 cuotas"],
-          ["pagoNubeFinancing3", "Pago Nube 3 cuotas (referencia)"],
-          ["mercadoPagoFinancing2", "Mercado Pago 2 cuotas"],
-          ["mercadoPagoFinancing3", "Mercado Pago 3 cuotas (referencia)"],
+          ["pagoNubeFinancing3", "Pago Nube 3 cuotas (confirmar cuenta)"],
+          ["mercadoPagoFinancing2", "Mercado Pago 2 cuotas (referencia pública)"],
+          ["mercadoPagoFinancing3", "Mercado Pago 3 cuotas (referencia pública)"],
           ["naveFinancing2", "NAVE 2 cuotas"],
-          ["naveFinancing3", "NAVE 3 cuotas (referencia)"],
+          ["naveFinancing3", "NAVE 3 cuotas (confirmar cuenta)"],
           ["mlFinancing2", "Mercado Libre 2 cuotas"],
-          ["mlFinancing3", "Mercado Libre 3 cuotas (referencia)"],
+          ["mlFinancing3", "Mercado Libre 3 cuotas (confirmar publicación)"],
         ] as const).map(([key, label]) => <RateInput key={key} label={label} value={settings[key]} onChange={(rate) => onChange({ [key]: rate })} />)}
       </div>
     </>,
@@ -312,7 +407,7 @@ function SettingsPanel({ settings, onChange }: Readonly<{
 
 export function PricingCalculator() {
   const [products, setProducts] = useState<Product[]>(() => PRODUCTS.map((p) => ({ ...p })));
-  const [settings, setSettings] = useState<Settings>({ ...SETTINGS });
+  const [settings, setSettings] = useState<Settings>({ ...SAEL_DEFAULT_SETTINGS });
   const changeProduct = (id: string, patch: Partial<Product>) =>
     setProducts((previous) => previous.map((p) => p.id === id ? { ...p, ...patch } : p));
   const changeSettings = (patch: Partial<Settings>) => setSettings((previous) => ({ ...previous, ...patch }));
@@ -327,7 +422,7 @@ export function PricingCalculator() {
           Definí cuánto te cuesta producir y cuánto querés ganar. Calculamos el precio sugerido, las comisiones y la contribución real de cada venta.
         </Paragraph>
       </div>
-      <Button onClick={() => { setProducts(PRODUCTS.map((p) => ({ ...p }))); setSettings({ ...SETTINGS }); }}>Restablecer valores SAEL</Button>
+      <Button onClick={() => { setProducts(PRODUCTS.map((p) => ({ ...p }))); setSettings({ ...SAEL_DEFAULT_SETTINGS }); }}>Restablecer valores SAEL</Button>
     </div>
     <Card className={styles.controls}>
       <Space wrap size="large">
@@ -340,14 +435,7 @@ export function PricingCalculator() {
             options={[{ value: 10, label: "10% OFF" }, { value: 15, label: "15% OFF" }, { value: 20, label: "20% OFF" }]}
           />
         </div></div>
-        <div><Text strong>Tarjeta</Text><div className={styles.control}>
-          <Select
-            style={{ width: 190 }}
-            value={settings.installments}
-            options={[{ value: 1, label: "1 pago" }, { value: 2, label: "2 cuotas · desde $25.000" }, { value: 3, label: "3 cuotas · desde $32.000" }]}
-            onChange={(installments: Installments) => changeSettings({ installments })}
-          />
-        </div></div>
+        <Text type="secondary">1 pago siempre visible. Activá 2 o 3 cuotas desde las casillas de cada producto.</Text>
         <Statistic title="Envío gratis desde" value={settings.freeShippingFrom} precision={0} prefix="$" groupSeparator="." />
         <Statistic title="Prendas del carrito" value={selectedProduct} />
       </Space>
@@ -361,7 +449,7 @@ export function PricingCalculator() {
     </div>
     <Cart products={products} settings={settings} />
     <Card size="small">
-      <Text type="secondary">Los costos precargados ($7.100, $12.000, $21.000, $17.000, $20.000) ya incluyen DTF, luz, packaging habitual e IIBB estimado. No se descuentan de nuevo. La friselina extra solo se suma al envío gratis. Mercado Libre puede aplicar otros cargos según logística, categoría o financiación; usá el simulador de tu publicación para ajustarlos. Esta herramienta no reemplaza la liquidación real ni calcula los gastos fijos mensuales.</Text>
+      <Text type="secondary">Los costos precargados ($7.100, $12.000, $21.000, $17.000, $20.000) ya incluyen DTF, luz, packaging habitual e IIBB estimado. No se descuentan de nuevo. SAEL ofrece envío gratis desde $90.000 después de descuentos y suma una friselina adicional de $1.300 por pedido con envío gratis. Mercado Libre puede aplicar otros cargos según logística, categoría o financiación; usá el simulador de tu publicación para ajustarlos. Esta herramienta no reemplaza la liquidación real ni calcula los gastos fijos mensuales.</Text>
     </Card>
   </div>;
 }
