@@ -336,13 +336,15 @@ export function PricingCalculator() {
             <Radio.Group value={s.discount} optionType="button" buttonStyle="solid"
               onChange={e=>updateState({discount:e.target.value as State["discount"]})}
               options={[{label:"10% OFF",value:10},{label:"15% OFF",value:15},{label:"20% OFF",value:20}]}
-              className={styles.segmented}/>
+              className={styles.segmented}
+              style={{display:"flex",flexWrap:"wrap",gap:10}}/>
             <Text type="secondary" className={styles.hint}>10% habitual; 15% y 20% en campañas especiales. Transferencia suma otro 20% OFF.</Text>
             <label className={styles.label}>¿En cuántas cuotas sin interés?</label>
             <Radio.Group value={s.installments} optionType="button" buttonStyle="solid"
               onChange={e=>updateState({installments:e.target.value as Term})}
               options={[{label:"1 pago",value:1},{label:"2 cuotas",value:2},{label:"3 cuotas",value:3},{label:"6 cuotas",value:6}]}
-              className={styles.segmented}/>
+              className={styles.segmented}
+              style={{display:"flex",flexWrap:"wrap",gap:10}}/>
             {s.installments>1?
               <Text className={styles.hint}>Monto mínimo definido por SAEL: {money(chosenMin)} de productos después de descuentos.</Text>:
               <Text type="secondary" className={styles.hint}>Un pago: sin financiación adicional.</Text>}

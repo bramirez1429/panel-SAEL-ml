@@ -18,9 +18,26 @@
 .intro {font-size:12px;line-height:1.5;display:block;}
 .formStack {display:grid;gap:12px;}
 .label {color:#343a46;font-size:13px;font-weight:700;}
-.segmented{display:flex;flex-wrap:wrap;gap:6px;}
-.segmented :global(.ant-radio-button-wrapper){border-radius:9px !important;min-width:68px;text-align:center;}
-.segmented :global(.ant-radio-button-wrapper)::before{display:none !important;}
+.segmented {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 10px !important;
+}
+.segmented :global(.ant-radio-button-wrapper) {
+  min-width: 80px;
+  margin: 0 !important;
+  padding-inline: 16px;
+  border-radius: 9px !important;
+  text-align: center;
+}
+/* Radio.Button elimina el borde izquierdo entre botones pegados; se repone al separarlos. */
+.segmented :global(.ant-radio-button-wrapper:not(:first-child)) {
+  margin-inline-start: 0 !important;
+  border-inline-start-width: 1px !important;
+}
+.segmented :global(.ant-radio-button-wrapper)::before {
+  display: none !important;
+}
 .payouts {display:grid;gap:0;border:1px solid #eef0f4;border-radius:12px;padding:0 13px;}
 .payoutRow {display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;}
 .payoutRow + .payoutRow {border-top:1px solid #edf0f4;}
