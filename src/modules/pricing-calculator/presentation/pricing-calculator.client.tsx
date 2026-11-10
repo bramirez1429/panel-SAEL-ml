@@ -124,7 +124,7 @@ function quote(p: Product, channel: Channel, list: number, s: State, payouts: Pa
   const logistics = ml ? (freeShipping ? p.mlShipping : 0) : s.shipping;
   const bag = !ml && freeShipping ? s.bag : 0;
   const fixedFee = ml && productPrice < s.mlFreeFrom ? p.mlFixedFee : 0;
-  const rateBase = ml ? s.mlCommission : trans ? 1.5 : BASE_RATES[channel][payouts[channel]];
+  const rateBase = ml ? s.mlCommission : trans ? 1.5 : (BASE_RATES[channel][payouts[channel]] ?? 0);
   const rateWithIva = ml ? rateBase : rateBase * IVA;
   const ivaOnBase = ml ? 0 : rateWithIva-rateBase;
   const platformRate = ml || trans || channel === "pagoNube" ? 0 : 2;
@@ -194,14 +194,14 @@ function TrafficLight({q,target}:{q:Quote,target:number}) {
 
 export function PricingCalculator() {
   const [products,setProducts] = useState<Product[]>(() => DEFAULT_PRODUCTS.map(x=>({...x})));
-  const [active,setActive] = useState(DEFAULT_PRODUCTS[0].id);
+  const [active,setActive] = useState(DEFAULT_PRODUCTS[0]!.id);
   const [s,setS] = useState<State>({...FIRST});
   const [payouts,setPayouts] = useState<Payouts>({...FIRST_PAYOUTS});
   const [financing,setFinancing] = useState<Rates>(() => ({
     pagoNube:{...FIRST_FINANCING.pagoNube},mercadoPago:{...FIRST_FINANCING.mercadoPago},
     nave:{...FIRST_FINANCING.nave},mercadoLibre:{...FIRST_FINANCING.mercadoLibre},
   }));
-  const p = products.find(x=>x.id===active) ?? products[0];
+  const p = products.find(x=>x.id===active) ?? products[0]!;
   const updateProduct = (patch:Partial<Product>)=>setProducts(old=>old.map(x=>x.id===p.id?{...x,...patch}:x));
   const updateState = (patch:Partial<State>)=>setS(old=>({...old,...patch}));
   const payoutsUpdate = (provider:keyof Payouts,value:string)=>setPayouts(old=>({...old,[provider]:value}));
@@ -227,7 +227,7 @@ export function PricingCalculator() {
   const min = threshold(s);
   const productNames = PRODUCTS.map(x=>({label:x.name,id:x.id}));
   const reset = ()=> {
-    setProducts(DEFAULT_PRODUCTS.map(x=>({...x})));setActive(DEFAULT_PRODUCTS[0].id);setS({...FIRST});
+    setProducts(DEFAULT_PRODUCTS.map(x=>({...x})));setActive(DEFAULT_PRODUCTS[0]!.id);setS({...FIRST});
     setPayouts({...FIRST_PAYOUTS});
     setFinancing({
       pagoNube:{...FIRST_FINANCING.pagoNube},mercadoPago:{...FIRST_FINANCING.mercadoPago},
