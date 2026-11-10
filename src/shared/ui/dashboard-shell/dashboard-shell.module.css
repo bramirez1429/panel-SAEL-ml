@@ -22,12 +22,14 @@
   flex-direction: column;
   align-self: start;
   height: 100dvh;
-  padding: 0 12px 24px;
+  padding: 0 12px 24px 16px;
   overflow-y: auto;
   overflow-x: hidden;
   /* El scroll permanece operativo; su indicador fino aparece al interactuar. */
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
   background: var(--ant-color-bg-container, #ffffff);
   border-inline-end: 1px solid var(--ant-color-border-secondary, #e8ecf2);
 }
@@ -253,10 +255,10 @@
 /* Scrollbar sutil: visible al posar el cursor o usar el teclado. */
 .sidebar:hover,
 .sidebar:focus-within {
-  scrollbar-color: #b3bfd0 transparent;
+  scrollbar-color: #b7c5d9 transparent;
 }
 .sidebar::-webkit-scrollbar {
-  width: 4px;
+  width: 3px;
 }
 .sidebar::-webkit-scrollbar-track {
   background: transparent;
@@ -267,7 +269,7 @@
 }
 .sidebar:hover::-webkit-scrollbar-thumb,
 .sidebar:focus-within::-webkit-scrollbar-thumb {
-  background: #b3bfd0;
+  background: #b7c5d9;
 }
 
 .navigationToggleRow {
@@ -280,17 +282,27 @@
   padding-inline: 0;
 }
 .navigationCollapsed .navigationMenu {
-  width: 48px !important;
+  width: 100% !important;
+  min-width: 0;
 }
 .navigationCollapsed .navigationMenu :global(.ant-menu-item) {
-  width: 48px !important;
+  display: flex;
+  width: 42px !important;
   min-width: 0;
-  margin-inline: 0 !important;
-  padding-inline: 0 !important;
+  height: 42px;
+  margin: 4px auto !important;
+  padding: 0 !important;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
   text-align: center;
 }
+.navigationCollapsed .navigationMenu :global(.ant-menu-item-selected) {
+  color: #1677ff !important;
+  background: #e6f4ff !important;
+}
 .navigationCollapsed .navigationMenu :global(.ant-menu-item-icon) {
-  margin-inline: 0 !important;
+  margin: 0 !important;
   font-size: 18px;
 }
 .logoutIcon {
@@ -306,13 +318,13 @@
   gap: 8px;
 }
 
-/* 256px -> 56px: el menú ocupa ~78% menos de ancho. */
+/* 256px -> 64px: menú compacto con aire a ambos lados de cada ícono. */
 @media (min-width: 768px) {
   .shell:has(.navigationCollapsed) {
-    grid-template-columns: 56px minmax(0, 1fr);
+    grid-template-columns: 64px minmax(0, 1fr);
   }
   .shell:has(.navigationCollapsed) .sidebar {
-    padding-inline: 4px;
+    padding-inline: 8px 7px;
     padding-bottom: 12px;
   }
   .shell:has(.navigationCollapsed) .brand {
@@ -335,5 +347,8 @@
 @media (prefers-reduced-motion: reduce) {
   .shell {
     transition: none;
+  }
+  .sidebar {
+    scroll-behavior: auto;
   }
 }
