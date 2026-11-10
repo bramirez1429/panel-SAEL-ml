@@ -3,6 +3,7 @@ import { createElement, type ReactNode } from "react";
 import {
   ApiOutlined,
   ClockCircleOutlined,
+  CalculatorOutlined,
   CloudUploadOutlined,
   SwapOutlined,
   DashboardOutlined,
@@ -25,6 +26,7 @@ export type DashboardSection = Readonly<{
 
 export const dashboardSections = [
   { href: "/dashboard", title: "Dashboard", icon: createElement(DashboardOutlined) },
+  { href: "/calculadora-precios", title: "Calculadora ML y Tiendanube", icon: createElement(CalculatorOutlined) },
   { href: "/tiendanube/productos", title: "Tiendanube", icon: createElement(ShopOutlined) },
   { href: "/tienda-negocio/sincronizacion", title: "Sincronización Tienda Negocio", icon: createElement(SyncOutlined) },
   { href: "/tiendanube/edicion-masiva", title: "Tiendanube — Edición masiva", icon: createElement(TagsOutlined) },
