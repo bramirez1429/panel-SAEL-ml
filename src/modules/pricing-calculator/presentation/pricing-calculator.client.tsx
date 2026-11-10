@@ -280,6 +280,9 @@ export function PricingCalculator() {
   const [active,setActive] = useState(DEFAULT_PRODUCTS[0]!.id);
   const [s,setS] = useState<State>({...FIRST});
   const [payouts,setPayouts] = useState<Payouts>({...FIRST_PAYOUTS});
+  // Simulador opcional e independiente: el costo base de SAEL ya contempla IIBB.
+  const [iibbAmount,setIibbAmount] = useState(47000);
+  const [iibbRate,setIibbRate] = useState(3);
   const [financing,setFinancing] = useState<Rates>(()=>({
     pagoNube:{...FIRST_FINANCING.pagoNube},
     mercadoPago:{...FIRST_FINANCING.mercadoPago},
@@ -316,6 +319,8 @@ export function PricingCalculator() {
   const tnNeedsAdjustment=effectiveTNRecommendation!==null && p.tiendaNubeList<effectiveTNRecommendation;
   const mlNeedsAdjustment=suggestedML!==null && p.mercadoLibreList<suggestedML;
   const canAdjust=tnNeedsAdjustment||mlNeedsAdjustment;
+  const iibbDeduction=Math.round(iibbAmount*iibbRate)/100;
+  const iibbNet=iibbAmount-iibbDeduction;
 
   const applySuggested=(channel:"tn"|"ml")=>{
     if(channel==="tn" && tnNeedsAdjustment && effectiveTNRecommendation!==null) {
@@ -337,6 +342,8 @@ export function PricingCalculator() {
     setActive(DEFAULT_PRODUCTS[0]!.id);
     setS({...FIRST});
     setPayouts({...FIRST_PAYOUTS});
+    setIibbAmount(47000);
+    setIibbRate(3);
     setFinancing({
       pagoNube:{...FIRST_FINANCING.pagoNube},
       mercadoPago:{...FIRST_FINANCING.mercadoPago},
@@ -656,6 +663,55 @@ export function PricingCalculator() {
           }]}/>
           <Text type="secondary" className={styles.hint}>Los cargos de Mercado Libre se estiman con los valores de tu publicación; no se consultan en vivo.</Text>
         </Card>
+
+        <Collapse
+          className={styles.iibbSimulator}
+          size="small"
+          items={[{
+            key:"iibb",
+            label:<Space size={8}><span aria-hidden="true">%</span><Text strong>Simular Ingresos Brutos</Text><Text type="secondary" style={{fontSize:11}}>Opcional</Text></Space>,
+            children:<div className={styles.iibbInner}>
+              <Text type="secondary" className={styles.hint}>
+                Probá cuánto te descontarían según el monto y porcentaje que ingreses.
+              </Text>
+              <Row gutter={[12,12]}>
+                <Col xs={24} sm={13}>
+                  <MoneyInput label="Monto de la venta" value={iibbAmount} onChange={setIibbAmount}/>
+                </Col>
+                <Col xs={24} sm={11}>
+                  <label className={styles.iibbRateLabel}>
+                    Porcentaje de IIBB (%)
+                    <InputNumber
+                      min={0} max={100} step={0.5} controls={false}
+                      value={iibbRate}
+                      onChange={value=>setIibbRate(Math.min(100,clean(value)))}
+                      addonAfter="%"
+                      style={{width:"100%"}}
+                    />
+                  </label>
+                </Col>
+              </Row>
+              <div className={styles.iibbChoices}>
+                <Text type="secondary" className={styles.hint}>Pruebas rápidas:</Text>
+                <Radio.Group
+                  optionType="button" buttonStyle="solid" size="small"
+                  value={iibbRate}
+                  onChange={e=>setIibbRate(Number(e.target.value))}
+                  options={[{label:"3%",value:3},{label:"5%",value:5}]}
+                  className={styles.segmented}
+                />
+              </div>
+              <div className={styles.iibbResult}>
+                <AmountRow label={"Descuento simulado · "+percent(iibbRate)} value={"−"+money(iibbDeduction)}/>
+                <AmountRow label="Te quedaría" value={money(iibbNet)} strong/>
+              </div>
+              <Text type="secondary" className={styles.hint}>
+                Es solo una prueba, no una alícuota oficial asignada a tu cuenta. Las retenciones pueden ser pagos a cuenta.
+                No se vuelve a descontar este importe de la ganancia SAEL porque el costo unitario ya contempla IIBB estimado.
+              </Text>
+            </div>,
+          }]}
+        />
       </aside>
     </div>
   </div>;

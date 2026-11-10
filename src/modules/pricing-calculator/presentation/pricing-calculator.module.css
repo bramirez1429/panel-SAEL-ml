@@ -324,3 +324,49 @@
     text-align: left;
   }
 }
+
+
+/* Simulador independiente de IIBB: permanece cerrado para no sobrecargar el resumen. */
+.iibbSimulator {
+  min-width: 0;
+  border: 1px solid #e1e5ec !important;
+  border-radius: 12px !important;
+  background: #f6f7f9 !important;
+}
+.iibbSimulator :global(.ant-collapse-header) {
+  align-items: center !important;
+  background: #f6f7f9;
+  border-radius: 12px !important;
+}
+.iibbSimulator :global(.ant-collapse-content) {
+  background: #fff;
+}
+.iibbInner {
+  display: grid;
+  gap: 12px;
+}
+.iibbRateLabel {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  color: #45415c;
+  font-size: 12px;
+  font-weight: 650;
+}
+.iibbChoices {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.iibbResult {
+  display: grid;
+  gap: 10px;
+  background: #f7f8fb;
+  border: 1px solid #e8ebf0;
+  padding: 12px;
+  border-radius: 10px;
+}
+.iibbResult .amountRow:last-child {
+  font-size: 15px;
+}
