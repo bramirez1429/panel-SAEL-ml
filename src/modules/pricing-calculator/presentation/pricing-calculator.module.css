@@ -265,3 +265,62 @@
 @media (max-width: 760px) {
   .profitSuggestion :global(.ant-btn) { width: 100%; }
 }
+
+/* Resumen en vivo de Tiendanube: los tres medios visibles, gastos desplegables. */
+.summaryProviders {
+  display: grid;
+  gap: 0;
+  min-width: 0;
+  border: 1px solid #edf0f5;
+  border-radius: 11px;
+  overflow: hidden;
+}
+.summaryProviderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px;
+  background: #fff;
+}
+.summaryProviderRow + .summaryProviderRow {
+  border-top: 1px solid #edf0f5;
+}
+.summaryProviderLabel {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.summaryProviderRow .profitBlock {
+  justify-items: end;
+  flex-shrink: 0;
+  text-align: right;
+}
+.summaryProviderRow .profitBlock strong {
+  font-size: 18px !important;
+}
+.summaryProviderRow .profitBlock :global(.ant-tag) {
+  font-size: 10px;
+  margin-inline-end: 0;
+  max-width: 155px;
+  text-align: center;
+}
+.summaryProviderDetail {
+  display: grid;
+  gap: 8px;
+}
+.summaryProviderDetail + .summaryProviderDetail {
+  border-top: 1px solid #eceef3;
+  padding-top: 12px;
+}
+@media (max-width: 390px) {
+  .summaryProviderRow {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .summaryProviderRow .profitBlock {
+    justify-items: start;
+    text-align: left;
+  }
+}

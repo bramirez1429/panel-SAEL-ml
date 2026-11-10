@@ -78,7 +78,8 @@ const FIRST_PAYOUTS: Payouts = {pagoNube: "7", mercadoPago: "10", nave: "now"};
 const FIRST_FINANCING: Rates = {
   pagoNube: {2: 4.4, 3: 10.2, 6: 14},
   mercadoPago: {2: 7.79, 3: 10.49, 6: null},
-  nave: {2: null, 3: 5.76, 6: null},
+  // Tasas de Cuota NAVE según simulador del comercio: 3 cuotas 5,76%; 6 cuotas 9,90% (sin IVA).
+  nave: {2: null, 3: 5.76, 6: 9.9},
   mercadoLibre: {2: null, 3: null, 6: null},
 };
 const PAYOUT_OPTIONS = {
@@ -306,7 +307,10 @@ export function PricingCalculator() {
   const suggestedML = useMemo(()=>solve(p,["mercadoLibre"],s,payouts,financing,"ml"),[p,s,payouts,financing]);
   const tnPrice = Math.round(p.tiendaNubeList*(1-s.discount/100));
   const mlPrice = Math.round(p.mercadoLibreList*(1-s.discount/100));
-  const missingTN = s.installments>1 && PROVIDERS.some(({key})=>financing[key][s.installments as TermRate]===null);
+  const missingProviders = s.installments === 1 ? [] : PROVIDERS
+    .filter(({key}) => financing[key][s.installments as TermRate] === null)
+    .map(({name}) => name);
+  const missingTN = missingProviders.length > 0;
   const effectiveTNRecommendation=suggestedTN;
   const mlIncomplete = quotes.mercadoLibre.profit===null;
   const tnNeedsAdjustment=effectiveTNRecommendation!==null && p.tiendaNubeList<effectiveTNRecommendation;
@@ -423,7 +427,7 @@ export function PricingCalculator() {
               </Text>
               {missingTN || mlIncomplete ?
                 <Text type="warning" className={styles.hint}>
-                  {missingTN?"En algún medio de Tiendanube falta confirmar financiación. ":""}
+                  {missingTN?"Falta confirmar financiación de "+missingProviders.join(", ")+". ":""}
                   {mlIncomplete?"Mercado Libre necesita su tasa real de cuotas. ":""}
                   La recomendación no garantiza el margen en los medios pendientes.
                 </Text> : null}
@@ -589,14 +593,30 @@ export function PricingCalculator() {
         <Card className={styles.summaryCard} title={<Space><span>Tiendanube</span><Tag color="purple">{s.discount}% OFF</Tag></Space>}>
           <Text type="secondary" className={styles.hint}>Precio de lista recomendado</Text>
           <Title level={2} style={{margin:"3px 0 0"}}>{effectiveTNRecommendation===null?"Pendiente":money(effectiveTNRecommendation)}</Title>
-          {missingTN?<Text type="warning" className={styles.hint}>Precio provisional: falta confirmar financiación en al menos un medio. No garantiza tu ganancia con todas las opciones.</Text>:null}
+          {missingTN?<Text type="warning" className={styles.hint}>
+            Precio provisional para los medios con tasa conocida: falta confirmar la financiación de {missingProviders.join(", ")}.
+          </Text>:null}
           <div className={styles.summaryRows}>
             <AmountRow label="Precio promocional actual" value={money(tnPrice)}/>
             <AmountRow label="Por transferencia · 20% extra" value={money(quotes.transferencia.productPrice)}/>
           </div>
           <Divider style={{margin:"4px 0"}}/>
-          <Text type="secondary" className={styles.hint}>Ganancia Pago Nube</Text>
-          <ProfitAmount q={quotes.pagoNube} target={p.targetProfit} compact/>
+          <Text strong style={{fontSize:13}}>Ganancia por medio de pago</Text>
+          <div className={styles.summaryProviders}>
+            {PROVIDERS.map(({key,name})=>{
+              const q=quotes[key];
+              const totalRate=q.financeWithIva === null ? null : q.rateWithIva+q.platformRate+q.financeWithIva;
+              return <div key={key} className={styles.summaryProviderRow}>
+                <div className={styles.summaryProviderLabel}>
+                  <Text strong>{name}</Text>
+                  <Text type="secondary" className={styles.hint}>
+                    {totalRate===null?"Cuotas: falta confirmar tarifa":"Comisiones + cuotas: "+percent(totalRate)}
+                  </Text>
+                </div>
+                <ProfitAmount q={q} target={p.targetProfit} compact/>
+              </div>;
+            })}
+          </div>
           <div className={styles.transferMini}>
             <Text strong style={{color:"#087c50"}}>Transferencia · 20% OFF extra</Text>
             <AmountRow label="Ganancia SAEL" value={money(quotes.transferencia.profit??0)}/>
@@ -606,12 +626,14 @@ export function PricingCalculator() {
           <Collapse className={styles.cleanCollapse} size="small" items={[{
             key:"summaryTN",label:"Ver desglose de gastos",
             children:<div className={styles.formStack}>
-              <Breakdown q={quotes.pagoNube} channel="tn"/>
-              <Divider style={{margin:"2px 0"}}/>
-              <Text strong>Otros cobros en Tiendanube</Text>
-              <AmountRow label="Mercado Pago · ganancia" value={quotes.mercadoPago.profit===null?"Pendiente":money(quotes.mercadoPago.profit)}/>
-              <AmountRow label="NAVE · ganancia" value={quotes.nave.profit===null?"Pendiente":money(quotes.nave.profit)}/>
-              <AmountRow label="Transferencia · total cliente" value={money(quotes.transferencia.totalCustomer)}/>
+              {PROVIDERS.map(({key,name})=><div key={key} className={styles.summaryProviderDetail}>
+                <Text strong>{name}</Text>
+                <Breakdown q={quotes[key]} channel="tn"/>
+              </div>)}
+              <div className={styles.summaryProviderDetail}>
+                <Text strong style={{color:"#087c50"}}>Transferencia</Text>
+                <Breakdown q={quotes.transferencia} channel="tn"/>
+              </div>
             </div>,
           }]}/>
         </Card>
