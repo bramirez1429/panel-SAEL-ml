@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import {
-  Alert, Button, Card, Checkbox, Col, Collapse, Divider, Input, InputNumber, Radio, Row,
+  Alert, Button, Card, Col, Collapse, Divider, Input, InputNumber, Radio, Row,
   Space, Statistic, Table, Tag, Typography,
 } from "antd";
 
@@ -312,12 +312,7 @@ function PriceProduct({ p, s, six, minimumSix, onChange }: Readonly<{
   p: Product; s: Settings; six: SixRates; minimumSix: number;
   onChange: (patch: Partial<Product>) => void;
 }>) {
-  const [visibleInstallments, setVisibleInstallments] = useState<PlanCount[]>([]);
-  const toggleInstallments = (n: PlanCount, checked: boolean) => {
-    setVisibleInstallments((previous) => checked
-      ? [...previous.filter((x) => x !== n), n].sort()
-      : previous.filter((x) => x !== n));
-  };
+  const [selectedInstallments, setSelectedInstallments] = useState<PlanCount | null>(null);
   const transfer = tnQuote(p.tiendaNubeList, p.cost, "transferencia", s);
   const pn1 = tnQuote(p.tiendaNubeList, p.cost, "pagoNube", s);
   const ml1 = mlQuote(p, s, 1);
@@ -345,20 +340,22 @@ function PriceProduct({ p, s, six, minimumSix, onChange }: Readonly<{
       </Col>
     </Row>
     <div style={{ marginTop: 16, padding: 14, border: "1px solid #ddd5ee", borderRadius: 12, background: "#fbf9ff", display: "grid", gap: 9 }}>
-      <Text strong>Simular cuotas sin interés en esta card</Text>
-      <Space wrap size="middle">
-        <Checkbox checked={visibleInstallments.includes(2)} onChange={(e) => toggleInstallments(2, e.target.checked)}>
-          2 cuotas desde $25.000
-        </Checkbox>
-        <Checkbox checked={visibleInstallments.includes(3)} onChange={(e) => toggleInstallments(3, e.target.checked)}>
-          3 cuotas desde $32.000
-        </Checkbox>
-        <Checkbox checked={visibleInstallments.includes(6)} onChange={(e) => toggleInstallments(6, e.target.checked)}>
-          6 cuotas {minimumSix ? "desde " + MONEY.format(minimumSix) : "· mínimo configurable"}
-        </Checkbox>
-      </Space>
+      <Text strong>Simular financiación · elegí solo una opción</Text>
+      <Radio.Group
+        value={selectedInstallments ?? 1}
+        onChange={(e) => {
+          const value = Number(e.target.value);
+          setSelectedInstallments(value === 1 ? null : value as PlanCount);
+        }}
+        options={[
+          { label: "1 pago · sin financiación", value: 1 },
+          { label: "2 cuotas desde $25.000", value: 2 },
+          { label: "3 cuotas desde $32.000", value: 3 },
+          { label: minimumSix ? "6 cuotas desde " + MONEY.format(minimumSix) : "6 cuotas · mínimo configurable", value: 6 },
+        ]}
+      />
       <Text type="secondary" style={{ fontSize: 12 }}>
-        Calculamos la comisión y financiación con IVA por medio de pago, el aumento del costo y la diferencia de ganancia. Tildar una opción no activa cuotas en tu tienda.
+        Seleccionar otro plazo reemplaza al anterior. Se muestra una sola simulación por producto con comisión, IVA, ganancia y precio sugerido. No activa cuotas en tus publicaciones.
       </Text>
     </div>
     <div className={styles.recommendations}>
@@ -412,7 +409,7 @@ function PriceProduct({ p, s, six, minimumSix, onChange }: Readonly<{
       <QuoteDetails quote={ml1} target={p.targetProfit} showShipping={false} channel="mercadoLibre" />
       <Text type="secondary">Logística a cargo de SAEL: {MONEY.format(ml1?.shippingExpense ?? 0)}</Text>
     </div>
-    {visibleInstallments.map((n) => <Card
+    {(selectedInstallments === null ? [] : [selectedInstallments]).map((n) => <Card
       key={"cuotas-" + n}
       size="small"
       style={{ marginTop: 14, borderColor: "#e3d3ef" }}
@@ -571,7 +568,7 @@ export function PricingCalculator() {
             options={[{ value: 10, label: "10% OFF" }, { value: 15, label: "15% OFF" }, { value: 20, label: "20% OFF" }]}
           />
         </div></div>
-        <Text type="secondary">1 pago siempre visible. Activá 2, 3 o 6 cuotas desde las casillas de cada producto.</Text>
+        <Text type="secondary">1 pago siempre visible. Elegí un solo plazo de financiación por producto: 2, 3 o 6 cuotas.</Text>
         <Statistic title="Envío gratis desde" value={settings.freeShippingFrom} precision={0} prefix="$" groupSeparator="." />
         <Statistic title="Prendas del carrito" value={selectedProduct} />
       </Space>
