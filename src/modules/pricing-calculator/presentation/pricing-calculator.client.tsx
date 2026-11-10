@@ -128,7 +128,7 @@ function PriceProduct({ p, s, onChange }: Readonly<{
         <small>Según comisión, cargo fijo, logística y cuotas configuradas.</small>
       </div>
     </div>
-    <Divider orientation="start">Tiendanube</Divider>
+    <Divider>Tiendanube</Divider>
     <div className={styles.priceRow}>
       <div><Text type="secondary">Precio con {s.discount}% OFF</Text><Title level={4}>{MONEY.format(afterDiscount)}</Title></div>
       <Tag color="green">Transferencia +{s.transferDiscount}% OFF</Tag>
@@ -161,7 +161,7 @@ function PriceProduct({ p, s, onChange }: Readonly<{
         </div>,
       }]}
     />
-    <Divider orientation="start">Mercado Libre</Divider>
+    <Divider>Mercado Libre</Divider>
     <Row gutter={[12, 12]}>
       <Col xs={24} md={12}>
         <div className={styles.paymentBox}>
