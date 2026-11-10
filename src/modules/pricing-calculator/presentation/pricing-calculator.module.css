@@ -241,3 +241,27 @@
   height: auto;
   min-height: 32px;
 }
+
+/* Acción clara para aplicar el precio necesario según la ganancia deseada. */
+.profitSuggestion {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  background: #f1f5fd;
+  border: 1px solid #d6e2fa;
+  border-radius: 12px;
+}
+.profitSuggestionTitle {
+  display: grid;
+  gap: 7px;
+}
+.profitSuggestion :global(.ant-btn) {
+  width: fit-content;
+  max-width: 100%;
+  min-height: 36px;
+  height: auto;
+  white-space: normal;
+}
+@media (max-width: 760px) {
+  .profitSuggestion :global(.ant-btn) { width: 100%; }
+}

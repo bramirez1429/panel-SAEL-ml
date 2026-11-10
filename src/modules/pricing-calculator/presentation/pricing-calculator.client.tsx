@@ -27,9 +27,6 @@ type State = {
   transferDiscount: number;
   mlCommission: number;
   mlFreeFrom: number;
-  min2: number;
-  min3: number;
-  min6: number;
 };
 
 type Quote = {
@@ -54,7 +51,6 @@ type Quote = {
   cost: number;
   profit: number | null;
   freeShipping: boolean;
-  eligible: boolean;
   reason: string | null;
 };
 
@@ -75,9 +71,6 @@ const FIRST: State = {
   transferDiscount: 20,
   mlCommission: 15.5,
   mlFreeFrom: 33000,
-  min2: 30000,
-  min3: 32000,
-  min6: 180000,
 };
 const FIRST_PAYOUTS: Payouts = {pagoNube: "7", mercadoPago: "10", nave: "now"};
 // Tarifas de la cuenta de SAEL, noviembre 2026. Son adicionales a la comisión de cobro.
@@ -119,15 +112,6 @@ const NAVE_CFT = [
 const NAVE_CFT_CURRENT: Partial<Record<Term, number>> = {1: 0, 3: 7.64, 6: 13.89};
 const RATE_MISSING = "No hay tasa de financiación confirmada para este medio. Cargala en Ajustes; el simulador no inventa esa ganancia.";
 
-function threshold(s: State): number {
-  return s.installments === 2 ? s.min2 : s.installments === 3 ? s.min3 : s.installments === 6 ? s.min6 : 0;
-}
-function minimumInstallmentList(s: State): number {
-  const min=threshold(s);
-  if(s.installments===1 || min<=0) return 0;
-  return Math.ceil(min/(1-s.discount/100));
-}
-
 function quote(p: Product, channel: Channel, list: number, s: State, payouts: Payouts, rates: Rates): Quote {
   const price = Math.round(clean(list) * (1 - s.discount/100));
   const trans = channel === "transferencia";
@@ -144,8 +128,6 @@ function quote(p: Product, channel: Channel, list: number, s: State, payouts: Pa
   const ivaOnBase = ml ? 0 : rateWithIva-rateBase;
   const platformRate = ml || trans || channel === "pagoNube" ? 0 : 2;
   const n: Term = trans ? 1 : s.installments;
-  const min = trans || ml ? 0 : threshold(s);
-  const eligible = productPrice >= min;
   const financeBeforeIva = n === 1 ? 0 : rates[channel as Exclude<Channel,"transferencia">][n];
   const financeWithIva = financeBeforeIva === null ? null : ml ? financeBeforeIva : financeBeforeIva * IVA;
   const base = ml ? productPrice : totalCustomer;
@@ -153,25 +135,64 @@ function quote(p: Product, channel: Channel, list: number, s: State, payouts: Pa
   const platformFee = base * platformRate/100;
   const financeFee = financeWithIva === null ? 0 : base * financeWithIva/100;
   const cost = p.cost;
-  const reason = !eligible ? "Una unidad no alcanza el mínimo configurado para estas cuotas; el carrito puede completarlo con otros productos." : financeWithIva === null ? RATE_MISSING : null;
+  const reason = financeWithIva === null ? RATE_MISSING : null;
   const profit = reason ? null : totalCustomer - fee - platformFee - financeFee - fixedFee - logistics - bag - cost;
   return {provider:channel,price:clean(list),productPrice,originalPrice:clean(list),shipCharged,totalCustomer,rateBase,ivaOnBase,rateWithIva,platformRate,
-    financeBeforeIva,financeWithIva,fee,platformFee,financeFee,fixedFee,logistics,bag,cost,profit,freeShipping,eligible,reason};
+    financeBeforeIva,financeWithIva,fee,platformFee,financeFee,fixedFee,logistics,bag,cost,profit,freeShipping,reason};
 }
 
+// Busca el menor precio que cumple la ganancia en los medios con tarifas conocidas.
+// La ganancia es creciente por tramos; el envío gratis cambia en los umbrales,
+// por eso analizamos cada tramo por separado en lugar de asumir continuidad.
 function solve(
   p: Product, channels: Channel[], s: State, payouts: Payouts, rates: Rates,
   channelType: "tn" | "ml",
 ): number | null {
-  const known = channels.filter((ch) => !(s.installments !== 1 && ch !== "transferencia" && rates[ch as Exclude<Channel,"transferencia">][s.installments as TermRate] === null));
+  const known = channels.filter((ch) =>
+    s.installments === 1 || ch === "transferencia" ||
+    rates[ch as Exclude<Channel, "transferencia">][s.installments as TermRate] !== null);
   if (known.length === 0) return null;
-  for (let list = Math.max(1000,Math.ceil(p.cost/100)*100); list <= 500000; list+=100) {
-    let ok = true;
-    for (const ch of known) {
-      const q = quote(p,ch,list,s,payouts,rates);
-      if (q.profit === null || q.profit < p.targetProfit) {ok=false;break;}
+  const minIndex = Math.max(1, Math.ceil(p.cost / 100));
+  const meets = (index: number) => known.every((ch) => {
+    const result = quote(p, ch, index * 100, s, payouts, rates);
+    return result.profit !== null && result.profit + 0.001 >= p.targetProfit;
+  });
+  let maxIndex = Math.max(5000, minIndex);
+  while (!meets(maxIndex) && maxIndex < 100000000) {
+    maxIndex *= 2;
+  }
+  if (!meets(maxIndex)) return null;
+
+  const discountFactor = 1 - s.discount / 100;
+  const transferFactor = 1 - s.transferDiscount / 100;
+  const breaks: number[] = [];
+  if (channelType === "tn" && s.freeThreshold > 0 && !s.forceFreeShipping) {
+    breaks.push(s.freeThreshold / discountFactor);
+    if (channels.includes("transferencia")) {
+      breaks.push(s.freeThreshold / (discountFactor * transferFactor));
     }
-    if (ok) return list;
+  }
+  if (channelType === "ml" && s.mlFreeFrom > 0) {
+    breaks.push(s.mlFreeFrom / discountFactor);
+  }
+  const cuts = new Set<number>([minIndex, maxIndex + 1]);
+  for (const value of breaks) {
+    const position = Math.ceil(value / 100);
+    for (let offset = -3; offset <= 3; offset++) {
+      const at = position + offset;
+      if (at > minIndex && at <= maxIndex) cuts.add(at);
+    }
+  }
+  const sorted = [...cuts].sort((a, b) => a - b);
+  for (let i = 0; i + 1 < sorted.length; i++) {
+    let lo = sorted[i]!, hi = sorted[i + 1]! - 1;
+    if (!meets(hi)) continue;
+    while (lo < hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      if (meets(mid)) hi = mid;
+      else lo = mid + 1;
+    }
+    if (meets(lo)) return lo * 100;
   }
   return null;
 }
@@ -201,7 +222,6 @@ function RateInput({label,value,onChange,ml = false}:Readonly<{label:string;valu
 }
 
 function TrafficLight({q,target}:{q:Quote,target:number}) {
-  if(!q.eligible) return <Tag color="orange">Mínimo no alcanzado</Tag>;
   if(q.reason) return <Tag color="warning">Tarifa pendiente</Tag>;
   if((q.profit ?? 0) < 0) return <Tag color="error">Pérdida</Tag>;
   if((q.profit ?? 0) < target) return <Tag color="warning">Ganancia insuficiente</Tag>;
@@ -220,7 +240,7 @@ function ProfitAmount({q,target,compact=false}:Readonly<{q:Quote;target:number;c
   return <div className={styles.profitBlock}>
     <strong className={q.profit===null?styles.pending:q.profit>=target?styles.positive:styles.negative}
       style={{fontSize:compact?20:24}}>
-      {!q.eligible?"No disponible":q.profit===null?"Tarifa pendiente":money(q.profit)}
+      {q.profit===null?"Tarifa pendiente":money(q.profit)}
     </strong>
     <TrafficLight q={q} target={target}/>
   </div>;
@@ -245,7 +265,7 @@ function Breakdown({q,channel}:Readonly<{q:Quote;channel:"tn"|"ml"}>) {
     </>}
     <Divider style={{margin:"5px 0"}}/>
     <AmountRow label="Total pagado por el cliente" value={money(q.totalCustomer)} strong/>
-    <AmountRow label="Ganancia estimada SAEL" value={!q.eligible?"No disponible":q.profit===null?"Tarifa pendiente":money(q.profit)} strong/>
+    <AmountRow label="Ganancia estimada SAEL" value={q.profit===null?"Tarifa pendiente":money(q.profit)} strong/>
     {q.reason?<Text type="warning" style={{fontSize:12}}>{q.reason}</Text>:null}
   </div>;
 }
@@ -286,18 +306,27 @@ export function PricingCalculator() {
   const suggestedML = useMemo(()=>solve(p,["mercadoLibre"],s,payouts,financing,"ml"),[p,s,payouts,financing]);
   const tnPrice = Math.round(p.tiendaNubeList*(1-s.discount/100));
   const mlPrice = Math.round(p.mercadoLibreList*(1-s.discount/100));
-  const chosenMin=threshold(s);
-  const minimumList=minimumInstallmentList(s);
-  const needsMinimum=s.installments>1 && tnPrice<chosenMin;
-  const missingAmount=Math.max(0,chosenMin-tnPrice);
   const missingTN = s.installments>1 && PROVIDERS.some(({key})=>financing[key][s.installments as TermRate]===null);
-  const effectiveTNRecommendation=suggestedTN===null?null:Math.max(suggestedTN,minimumList);
+  const effectiveTNRecommendation=suggestedTN;
   const mlIncomplete = quotes.mercadoLibre.profit===null;
+  const tnNeedsAdjustment=effectiveTNRecommendation!==null && p.tiendaNubeList<effectiveTNRecommendation;
+  const mlNeedsAdjustment=suggestedML!==null && p.mercadoLibreList<suggestedML;
+  const canAdjust=tnNeedsAdjustment||mlNeedsAdjustment;
 
   const applySuggested=(channel:"tn"|"ml")=>{
-    const recommendation=channel==="tn"?effectiveTNRecommendation:suggestedML;
-    if(recommendation===null)return;
-    updateProduct(channel==="tn"?{tiendaNubeList:recommendation}:{mercadoLibreList:recommendation});
+    if(channel==="tn" && tnNeedsAdjustment && effectiveTNRecommendation!==null) {
+      updateProduct({tiendaNubeList:effectiveTNRecommendation});
+    }
+    if(channel==="ml" && mlNeedsAdjustment && suggestedML!==null) {
+      updateProduct({mercadoLibreList:suggestedML});
+    }
+  };
+  const applyAllSuggested=()=>{
+    if(!canAdjust) return;
+    updateProduct({
+      ...(tnNeedsAdjustment && effectiveTNRecommendation!==null ? {tiendaNubeList:effectiveTNRecommendation} : {}),
+      ...(mlNeedsAdjustment && suggestedML!==null ? {mercadoLibreList:suggestedML} : {}),
+    });
   };
   const reset=()=>{
     setProducts(DEFAULT_PRODUCTS.map(item=>({...item})));
@@ -369,9 +398,11 @@ export function PricingCalculator() {
                   options={[{label:"1 pago",value:1},{label:"2 cuotas",value:2},{label:"3 cuotas",value:3},{label:"6 cuotas",value:6}]}
                   className={styles.segmented}
                   style={{display:"flex",flexWrap:"wrap",gap:10}}/>
-                {s.installments>1?
-                  <Text className={styles.hint}>Compra mínima para las cuotas elegidas: {money(chosenMin)} de productos después de descuentos.</Text>:
-                  <Text type="secondary" className={styles.hint}>1 pago, sin costo adicional de financiación.</Text>}
+                <Text type="secondary" className={styles.hint}>
+                  {s.installments>1
+                    ? "Calculamos " + s.installments + " cuotas sin limitar el importe de la prenda. La financiación que paga SAEL se incluye en la ganancia."
+                    : "1 pago, sin financiación adicional."}
+                </Text>
                 <Checkbox checked={s.forceFreeShipping} onChange={e=>updateState({forceFreeShipping:e.target.checked})}>
                   Ofrecer envío gratis adicional en Tiendanube
                 </Checkbox>
@@ -382,19 +413,28 @@ export function PricingCalculator() {
               </div>
             </section>
           </div>
-          {needsMinimum?<Alert
-            type="warning"
-            showIcon
-            message={"El precio actual no habilita "+s.installments+" cuotas para una unidad"}
-            description={<div className={styles.installmentNotice}>
-              <span>El producto con {s.discount}% OFF cuesta <strong>{money(tnPrice)}</strong>. El mínimo para cuotas es <strong>{money(chosenMin)}</strong>; faltan <strong>{money(missingAmount)}</strong>.</span>
-              <span>Precio de lista mínimo para habilitar cuotas en una unidad: <strong>{money(minimumList)}</strong>.</span>
-              <span>Precio sugerido para alcanzar tu ganancia con las tarifas conocidas: <strong>{effectiveTNRecommendation===null?"Pendiente":money(effectiveTNRecommendation)}</strong>{missingTN?" (provisional: faltan tasas por confirmar).":"."}</span>
-              <Button type="primary" size="small" onClick={()=>applySuggested("tn")}
-                disabled={effectiveTNRecommendation===null||effectiveTNRecommendation===p.tiendaNubeList}>Aplicar precio sugerido</Button>
-              <Text type="secondary" className={styles.hint}>También podés conservar el precio si el cliente agrega otros productos al carrito. Este botón solo modifica la simulación, no las publicaciones reales.</Text>
-            </div>}
-          />:null}
+          <div className={styles.profitSuggestion}>
+            <div className={styles.profitSuggestionTitle}>
+              <Text strong>¿Querés asegurar tu ganancia de {money(p.targetProfit)} por prenda?</Text>
+              <Text type="secondary" className={styles.hint}>
+                Precio mínimo recomendado con las comisiones conocidas: Tiendanube
+                <strong> {effectiveTNRecommendation===null?"Pendiente":money(effectiveTNRecommendation)}</strong>
+                {" · "}Mercado Libre <strong>{suggestedML===null?"Pendiente":money(suggestedML)}</strong>.
+              </Text>
+              {missingTN || mlIncomplete ?
+                <Text type="warning" className={styles.hint}>
+                  {missingTN?"En algún medio de Tiendanube falta confirmar financiación. ":""}
+                  {mlIncomplete?"Mercado Libre necesita su tasa real de cuotas. ":""}
+                  La recomendación no garantiza el margen en los medios pendientes.
+                </Text> : null}
+            </div>
+            <Button type="primary" onClick={applyAllSuggested} disabled={!canAdjust}>
+              {canAdjust?"Aplicar precios para alcanzar mi ganancia":"Los precios conocidos ya cumplen tu objetivo"}
+            </Button>
+            <Text type="secondary" className={styles.hint}>
+              Solo cambia los precios simulados. Si configuraste mínimos de cuotas en el checkout de Tiendanube, quitarlos allí es un ajuste independiente.
+            </Text>
+          </div>
         </Card>
 
         <Card className={styles.stepCard} title="3 · ¿Cuándo recibís el dinero y cuánto ganás en Tiendanube?">
@@ -431,7 +471,7 @@ export function PricingCalculator() {
                   <Text className={styles.combinedCaption}>Cargos totales</Text>
                   <strong>{totalRate===null?"Pendiente":percent(totalRate)}</strong>
                   <Text type="secondary" className={styles.hint}>
-                    {!q.eligible?"Mínimo no alcanzado":q.profit===null?"Tarifa pendiente":money(q.fee+q.platformFee+q.financeFee)}
+                    {q.profit===null?"Tarifa pendiente":money(q.fee+q.platformFee+q.financeFee)}
                   </Text>
                 </div>
                 <div className={styles.combinedProviderProfit}>
@@ -516,9 +556,6 @@ export function PricingCalculator() {
               <Col xs={24} sm={12}><MoneyInput label="Envío gratis desde ($)" value={s.freeThreshold} onChange={freeThreshold=>updateState({freeThreshold})}/></Col>
               <Col xs={24} sm={12}><MoneyInput label="Friselina extra ($)" value={s.bag} onChange={bag=>updateState({bag})}/></Col>
               <Col xs={24} sm={12}><MoneyInput label="Umbral logístico ML ($)" value={s.mlFreeFrom} onChange={mlFreeFrom=>updateState({mlFreeFrom})}/></Col>
-              <Col xs={24} sm={8}><MoneyInput label="Mínimo 2 cuotas ($)" value={s.min2} onChange={min2=>updateState({min2})}/></Col>
-              <Col xs={24} sm={8}><MoneyInput label="Mínimo 3 cuotas ($)" value={s.min3} onChange={min3=>updateState({min3})}/></Col>
-              <Col xs={24} sm={8}><MoneyInput label="Mínimo 6 cuotas ($)" value={s.min6} onChange={min6=>updateState({min6})}/></Col>
             </Row>
             <Divider style={{margin:"4px 0"}}/>
             <Text strong>Tasas de financiación adicionales</Text>
@@ -552,13 +589,6 @@ export function PricingCalculator() {
         <Card className={styles.summaryCard} title={<Space><span>Tiendanube</span><Tag color="purple">{s.discount}% OFF</Tag></Space>}>
           <Text type="secondary" className={styles.hint}>Precio de lista recomendado</Text>
           <Title level={2} style={{margin:"3px 0 0"}}>{effectiveTNRecommendation===null?"Pendiente":money(effectiveTNRecommendation)}</Title>
-          {needsMinimum?<Alert type="warning" showIcon
-            message={"Una unidad no habilita "+s.installments+" cuotas"}
-            description={<div className={styles.installmentNotice}>
-              <span>Precio con promoción: <strong>{money(tnPrice)}</strong>; mínimo de compra: <strong>{money(chosenMin)}</strong>.</span>
-              <span>Precio de lista mínimo para habilitar cuotas: <strong>{money(minimumList)}</strong>.</span>
-            </div>}
-          />:null}
           {missingTN?<Text type="warning" className={styles.hint}>Precio provisional: falta confirmar financiación en al menos un medio. No garantiza tu ganancia con todas las opciones.</Text>:null}
           <div className={styles.summaryRows}>
             <AmountRow label="Precio promocional actual" value={money(tnPrice)}/>
@@ -571,8 +601,8 @@ export function PricingCalculator() {
             <Text strong style={{color:"#087c50"}}>Transferencia · 20% OFF extra</Text>
             <AmountRow label="Ganancia SAEL" value={money(quotes.transferencia.profit??0)}/>
           </div>
-          <Button type="primary" block disabled={effectiveTNRecommendation===null||effectiveTNRecommendation===p.tiendaNubeList}
-            onClick={()=>applySuggested("tn")}>Aplicar precio sugerido</Button>
+          <Button type="primary" block disabled={!tnNeedsAdjustment}
+            onClick={()=>applySuggested("tn")}>{tnNeedsAdjustment?"Aplicar precio sugerido":"El precio ya cumple el objetivo"}</Button>
           <Collapse className={styles.cleanCollapse} size="small" items={[{
             key:"summaryTN",label:"Ver desglose de gastos",
             children:<div className={styles.formStack}>
@@ -596,8 +626,8 @@ export function PricingCalculator() {
           <Divider style={{margin:"4px 0"}}/>
           <Text type="secondary" className={styles.hint}>Ganancia estimada SAEL</Text>
           <ProfitAmount q={quotes.mercadoLibre} target={p.targetProfit} compact/>
-          <Button block disabled={suggestedML===null||suggestedML===p.mercadoLibreList}
-            onClick={()=>applySuggested("ml")}>Probar precio sugerido</Button>
+          <Button block disabled={!mlNeedsAdjustment}
+            onClick={()=>applySuggested("ml")}>{mlNeedsAdjustment?"Aplicar precio sugerido":"Pendiente o precio suficiente"}</Button>
           <Collapse className={styles.cleanCollapse} size="small" items={[{
             key:"summaryML",label:"Ver desglose de gastos",
             children:<Breakdown q={quotes.mercadoLibre} channel="ml"/>,
