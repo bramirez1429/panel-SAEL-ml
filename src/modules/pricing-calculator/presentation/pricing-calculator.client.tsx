@@ -107,6 +107,17 @@ const PROVIDERS: Array<{key: "pagoNube" | "mercadoPago" | "nave";name:string}> =
 const NAMES: Record<Channel, string> = {
   pagoNube:"Pago Nube",mercadoPago:"Mercado Pago",nave:"NAVE",transferencia:"Transferencia Pago Nube",mercadoLibre:"Mercado Libre",
 };
+// CFT publicado por Banco Galicia para cobros con tarjeta de crédito vía NAVE.
+// Fuente: https://www.galicia.ar/empresas/tarjetas-y-cuentas/cuenta-comercio/nave
+// Informativo: NO es un recargo adicional que deba sumarse a la comisión + cuota.
+const NAVE_CFT = [
+  { cuotas: 1, cft: 0 },
+  { cuotas: 3, cft: 7.64 },
+  { cuotas: 6, cft: 13.89 },
+  { cuotas: 9, cft: 29.76 },
+  { cuotas: 12, cft: 40.24 },
+] as const;
+const NAVE_CFT_CURRENT: Partial<Record<Term, number>> = {1: 0, 3: 7.64, 6: 13.89};
 const RATE_MISSING = "No hay tasa de financiación confirmada para este medio. Cargala en Ajustes; el simulador no inventa esa ganancia.";
 
 function threshold(s: State): number {
@@ -358,6 +369,20 @@ export function PricingCalculator() {
             <Text strong style={{display:"block",marginBottom:8}}>{name}</Text>
             <Select style={{width:"100%"}} value={payouts[key]} options={PAYOUT_OPTIONS[key]} onChange={(v)=>payoutsUpdate(key,v)} />
             <Text type="secondary" style={{display:"block",marginTop:8,fontSize:11}}>{key==="pagoNube"?"0% extra de Tiendanube":"2% extra de Tiendanube (plan Esencial)"}</Text>
+            {key==="nave"?<div style={{marginTop:12,padding:10,borderRadius:10,background:"#f4effe",border:"1px solid #e4d9fb"}}>
+              <Text strong style={{display:"block",fontSize:12}}>CFT publicado por NAVE / Banco Galicia</Text>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
+                {NAVE_CFT.map(item=><Tag key={item.cuotas} color={item.cuotas===s.installments?"purple":"default"} style={{margin:0,fontSize:11}}>
+                  {item.cuotas} {item.cuotas===1?"cuota":"cuotas"}: {percent(item.cft)}
+                </Tag>)}
+              </div>
+              <Text type="secondary" style={{display:"block",fontSize:11,marginTop:8}}>
+                El CFT es informativo. No se suma nuevamente al cargo de venta; para calcular la ganancia usamos la comisión de cobro y la financiación directa configurada.
+              </Text>
+              <a href="https://www.galicia.ar/empresas/tarjetas-y-cuentas/cuenta-comercio/nave" target="_blank" rel="noopener noreferrer" style={{fontSize:11}}>
+                Ver tasas CFT oficiales de NAVE
+              </a>
+            </div>:null}
           </div>
         </Col>)}
       </Row>
@@ -371,6 +396,11 @@ export function PricingCalculator() {
         message={"Financiación en "+s.installments+" cuotas"}
         description={"Pago Nube usa tarifas de tu propia cuenta. Mercado Pago 2/3 usa tasas de la simulación compartida (confirmar Checkout); NAVE 3 usa tu simulación. Las tasas sin verificar no se sustituyen por estimaciones."}/>
         :null}
+      <Text type="secondary" style={{display:"block",fontSize:12,marginBottom:10}}>
+        NAVE · {s.installments} {s.installments===1?"cuota":"cuotas"}: {NAVE_CFT_CURRENT[s.installments]===undefined
+          ? "CFT no publicado para este plazo"
+          : "CFT oficial " + percent(NAVE_CFT_CURRENT[s.installments] ?? 0)}. Es una referencia separada de la tasa directa de financiación.
+      </Text>
       <Table<TnRow> size="middle" scroll={{x:860}} pagination={false} columns={columns} dataSource={rows} />
       <Divider/>
       <Row gutter={[12,12]} align="middle">
@@ -463,6 +493,10 @@ export function PricingCalculator() {
               </Col>)}
             </Row>
             {provider==="mercadoPago"?<Text type="secondary" style={{fontSize:11}}>2 y 3 de tu captura de Mercado Pago. Para 6 cuotas no precargamos la tasa pública de Link de Pago como si fuera Checkout.</Text>:null}
+            {provider==="nave"?<Text type="secondary" style={{display:"block",fontSize:11,marginTop:8}}>
+              CFT oficial: 1 cuota 0%, 3 cuotas 7,64%, 6 cuotas 13,89%, 9 cuotas 29,76%, 12 cuotas 40,24%.
+              No reemplaza el porcentaje de financiación adicional que tenés que cargar acá.
+            </Text>:null}
             {provider==="mercadoLibre"?<Text type="secondary" style={{fontSize:11}}>Usá financiación adicional final del simulador ML, sin sumar IVA dos veces.</Text>:null}
           </div>
         </Col>)}
