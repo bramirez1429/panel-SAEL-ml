@@ -166,8 +166,8 @@ export default async function StockUnificadoPage({
   const tn = data?.tiendanube.variants ?? [];
   const complete = Boolean(data && !data.mercadoLibre.error && !data.tiendanube.error);
   const oneToOne = complete && ml.length === 1 && tn.length === 1;
-  const mlVariant: MlVariant | null = oneToOne ? ml[0] : null;
-  const tnVariant: TnVariant | null = oneToOne ? tn[0] : null;
+  const mlVariant: MlVariant | null = oneToOne ? (ml[0] ?? null) : null;
+  const tnVariant: TnVariant | null = oneToOne ? (tn[0] ?? null) : null;
   const alreadyLinked = Boolean(mlVariant && tnVariant && links?.some(
     (link) => link.mlItemId === mlVariant.itemId &&
       link.mlVariationId === mlVariant.variationId &&
