@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { CalculatorOutlined, ArrowRightOutlined } from "@ant-design/icons";
 
 import { createGetBackendStatusQuery } from "@/modules/backend-status/backend-status.composition.server";
 import type { BackendStatus } from "@/modules/backend-status/domain/backend-status.model";
@@ -26,13 +25,13 @@ export default async function DashboardPage() {
     <div className={styles.page}>
       <Link href="/calculadora-precios" className={styles.calculatorCard}>
         <span className={styles.calculatorIcon} aria-hidden="true">
-          <CalculatorOutlined />
+          ▦
         </span>
         <span className={styles.calculatorText}>
           <strong>Calculadora de Mercado Libre y Tiendanube</strong>
           <span>Precios, comisiones, descuentos, cuotas, envíos y ganancias de SAEL.</span>
         </span>
-        <ArrowRightOutlined className={styles.calculatorArrow} aria-hidden="true" />
+        <span className={styles.calculatorArrow} aria-hidden="true">→</span>
       </Link>
 
       <div className={styles.lowerGrid}>
