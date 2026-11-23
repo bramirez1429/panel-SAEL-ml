@@ -461,22 +461,28 @@ function WorkspaceTabs({
           key: "publication",
           label: "Publicación",
           children: (
-            <PublicationTab
-              selection={selection}
-              visualOrder={visualOrder}
-              getTiendanubeProductByMlAction={getTiendanubeProductByMlAction}
-              onChanged={onChanged}
-              onSave={onSave}
-              onStatusChange={onStatusChange}
-              onTitleSave={onTitleSave}
-            />
+            <section className={styles.workspaceContentCard} data-testid="publication-content-module">
+              <PublicationTab
+                selection={selection}
+                visualOrder={visualOrder}
+                getTiendanubeProductByMlAction={getTiendanubeProductByMlAction}
+                onChanged={onChanged}
+                onSave={onSave}
+                onStatusChange={onStatusChange}
+                onTitleSave={onTitleSave}
+              />
+            </section>
           ),
         },
         {
           key: "promotion",
           label: "Promoción",
           children: promotionOpened
-            ? <PublicationWorkspacePromotions selection={selection} visualOrder={visualOrder} onChanged={onChanged} />
+            ? (
+                <section className={styles.workspaceContentCard} data-testid="promotion-content-module">
+                  <PublicationWorkspacePromotions selection={selection} visualOrder={visualOrder} onChanged={onChanged} />
+                </section>
+              )
             : null,
         },
       ]}

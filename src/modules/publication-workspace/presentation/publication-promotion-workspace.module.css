@@ -1336,6 +1336,20 @@
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Explicit content module keeps every family detail, image, edit control and
+   variant group inside the same visible card, independent of AntD tab internals. */
+.unifiedWorkspace .workspaceContentCard {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-width: 0;
   padding: var(--workspace-module-padding);
   background: #fff;
   border: var(--workspace-module-border);
@@ -1384,7 +1398,7 @@
     gap: 8px;
   }
 
-  .unifiedWorkspace .workspaceTabs :global(.ant-tabs-content-holder) {
+  .unifiedWorkspace .workspaceContentCard {
     padding: var(--workspace-module-padding);
   }
 

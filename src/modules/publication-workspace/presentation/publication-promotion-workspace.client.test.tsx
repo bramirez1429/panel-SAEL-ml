@@ -193,12 +193,15 @@ describe("PublicationPromotionWorkspace", () => {
     const unifiedLayout = screen.getByTestId("publication-search-and-tabs");
     const searchModule = screen.getByRole("region", { name: "Búsqueda de publicaciones y promociones" });
     const tabModule = screen.getByRole("tablist").closest(".ant-tabs-nav");
-    const contentModule = familyHeading.closest(".ant-tabs-content-holder");
+    const contentModule = screen.getByTestId("publication-content-module");
     expect(searchModule.parentElement).toBe(unifiedLayout);
     expect(tabModule).not.toBeNull();
-    expect(contentModule).not.toBeNull();
+    expect(contentModule.closest(".ant-tabs-content-holder")).not.toBeNull();
     expect(tabModule).not.toContainElement(familyHeading);
     expect(contentModule).toContainElement(familyHeading);
+    expect(contentModule).toContainElement(screen.getByText("Family ID: 456"));
+    expect(contentModule).toContainElement(screen.getByRole("button", { name: "Abrir Negro" }));
+    expect(contentModule).toContainElement(screen.getByRole("button", { name: "Abrir Blanco" }));
     expect(screen.getByRole("button", { name: "Abrir Negro" }))
       .toHaveAttribute("aria-expanded", "false");
     expect(screen.getByRole("img", { name: "Imagen de Negro" })).toBeInTheDocument();
@@ -374,7 +377,10 @@ describe("PublicationPromotionWorkspace", () => {
     await search(user, "MLA1");
     await user.click(await screen.findByRole("tab", { name: "Promoción" }));
 
-    expect(screen.getByText("Las promociones todavía no están disponibles en este workspace.")).toBeInTheDocument();
+    const promotionModule = screen.getByTestId("promotion-content-module");
+    expect(promotionModule).toContainElement(
+      screen.getByText("Las promociones todavía no están disponibles en este workspace."),
+    );
     expect(onSearch).toHaveBeenCalledTimes(1);
     expect(onSelect).toHaveBeenCalledTimes(1);
     expect(successfulSave).not.toHaveBeenCalled();
