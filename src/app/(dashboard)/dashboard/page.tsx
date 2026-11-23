@@ -34,6 +34,17 @@ export default async function DashboardPage() {
         <span className={styles.calculatorArrow} aria-hidden="true">→</span>
       </Link>
 
+      <Link href="/stock-unificado" className={styles.calculatorCard}>
+        <span className={styles.calculatorIcon} aria-hidden="true">
+          ▤
+        </span>
+        <span className={styles.calculatorText}>
+          <strong>Stock Unificado ML + Tiendanube</strong>
+          <span>Compará variantes, detectá diferencias de stock y vinculá SKU entre los dos canales.</span>
+        </span>
+        <span className={styles.calculatorArrow} aria-hidden="true">→</span>
+      </Link>
+
       <div className={styles.lowerGrid}>
         <DashboardTasks />
 

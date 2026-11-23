@@ -11,6 +11,9 @@ describe("findDashboardSection", () => {
     expect(findDashboardSection("/publicacion-promocion")?.title).toBe(
       "Publicación y promoción",
     );
+    expect(findDashboardSection("/stock-unificado")?.title).toBe(
+      "Stock Unificado",
+    );
   });
 
   it("returns undefined for a path outside the dashboard sections", () => {
