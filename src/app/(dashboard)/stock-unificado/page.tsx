@@ -266,7 +266,7 @@ export default async function StockUnificadoPage({
     const normalized = cleanSku(sku);
     if (!normalized || rows.filter((row) => cleanSku(row.sku) === normalized).length !== 1) return null;
     const candidates = tnVariants.filter((candidate) => cleanSku(candidate.sku) === normalized);
-    return candidates.length === 1 ? candidates[0] : null;
+    return candidates.length === 1 ? (candidates[0] ?? null) : null;
   };
   const matchedCount = rows.filter((item) => uniqueTnBySku(item.sku) !== null).length;
   const unequalCount = rows.filter((item) => {
@@ -352,7 +352,7 @@ export default async function StockUnificadoPage({
           const matchedTn = uniqueTnBySku(item.sku);
           const hasValidSavedLink = Boolean(savedLink && savedTn &&
             matchedTn?.key === savedTn.key && cleanSku(item.sku) === cleanSku(savedTn.sku));
-          const hasIncompatibleLink = Boolean(savedLink && savedTn && !hasValidSavedLink);
+          const hasIncompatibleLink = Boolean(savedLink && savedTn && cleanSku(item.sku) !== cleanSku(savedTn.sku));
           const canLink = Boolean(matchedTn && !savedLink && !linkByTn.has(matchedTn.key) && links !== null);
           const sku = cleanSku(item.sku);
           const isDuplicate = sku !== "" && (rows.filter((row) => cleanSku(row.sku) === sku).length > 1 ||
@@ -404,7 +404,7 @@ export default async function StockUnificadoPage({
               ) : !hasValidSavedLink ? (
                 <p style={{ ...softText, borderTop: "1px solid #e2e8f2", margin: "12px 0 0", paddingTop: 12 }}>
                   {hasIncompatibleLink
-                    ? "Existe una vinculación anterior con otro SKU. No se utiliza; requiere revisión."
+                    ? "Existe una vinculación anterior con otro SKU. No se considera válida; requiere revisión."
                     : savedLink
                       ? "Existe un vínculo guardado, pero su SKU no se puede verificar en los lotes cargados."
                       : isDuplicate
