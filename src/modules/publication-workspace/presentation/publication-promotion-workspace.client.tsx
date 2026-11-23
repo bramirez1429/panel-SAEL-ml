@@ -1,7 +1,7 @@
 "use client";
 
-import { ArrowRightOutlined, CheckOutlined, EditOutlined, LoadingOutlined, PictureOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
-import { Button, Card, Divider, Dropdown, Image, Input, InputNumber, List, Modal, Progress, Space, Tabs, Typography, message, type InputRef } from "antd";
+import { ArrowRightOutlined, CheckOutlined, EditOutlined, LoadingOutlined, PictureOutlined, SearchOutlined } from "@ant-design/icons";
+import { Button, Card, Divider, Image, Input, InputNumber, List, Modal, Progress, Space, Tabs, Typography, message, type InputRef } from "antd";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -77,7 +77,6 @@ export function PublicationPromotionWorkspace({
   const selectionRequestRef = useRef<PublicationWorkspaceSelectionRequest | null>(null);
   const searchInputRef = useRef<InputRef>(null);
   const [query, setQuery] = useState("");
-  const [searchPlaceholder, setSearchPlaceholder] = useState("Buscá una publicación por nombre o código…");
   const [selection, setSelection] = useState<PublicationWorkspaceSelection | null>(null);
   const [visualOrder, setVisualOrder] = useState<PublicationVisualOrder>({});
   const [matches, setMatches] = useState<readonly PublicationWorkspaceSearchItem[]>([]);
@@ -245,39 +244,6 @@ export function PublicationPromotionWorkspace({
             allowClear
             aria-label="Buscar publicación"
             autoComplete="off"
-            prefix={
-              <Dropdown
-                trigger={["click"]}
-                placement="bottomLeft"
-                menu={{
-                  items: [
-                    { key: "title", label: "Buscar por nombre" },
-                    { key: "mla", label: "Buscar por MLA" },
-                    { key: "mlau", label: "Buscar por MLAU" },
-                    { key: "family", label: "Buscar por Family ID" },
-                  ],
-                  onClick: ({ key }) => {
-                    const hints: Record<string, string> = {
-                      title: "Escribí el nombre de la publicación…",
-                      mla: "Ingresá el código MLA…",
-                      mlau: "Ingresá el código MLAU…",
-                      family: "Ingresá el Family ID…",
-                    };
-                    setSearchPlaceholder(hints[key] ?? "Buscá una publicación…");
-                    searchInputRef.current?.focus();
-                  },
-                }}
-              >
-                <Button
-                  aria-label="Opciones de búsqueda"
-                  title="Elegir tipo de búsqueda"
-                  className={styles.searchOptionsButton}
-                  icon={<PlusOutlined />}
-                  type="text"
-                  shape="circle"
-                />
-              </Dropdown>
-            }
             onChange={(event) => {
               const nextQuery = event.target.value;
               setQuery(nextQuery);
@@ -289,7 +255,7 @@ export function PublicationPromotionWorkspace({
             onPressEnter={() => {
               if (viewState !== "searching") void handleSearch(query);
             }}
-            placeholder={searchPlaceholder}
+            placeholder="Buscá una publicación por nombre o código…"
             size="large"
             suffix={
               <Button
