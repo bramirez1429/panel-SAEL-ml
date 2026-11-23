@@ -8,6 +8,7 @@ export const SYNC_GROUP_KEY = "group:sincronizacion";
 export const HIDDEN_NAVIGATION_ROUTES = [
   "/ranking-productos",
   "/ventas",
+  "/replicar",
 ] as const;
 const hiddenRoutes = new Set<string>(HIDDEN_NAVIGATION_ROUTES);
 

@@ -49,7 +49,7 @@ describe("menús desplegables Tienda Nube y Sincronización", () => {
     expect(entries[0]?.kind).toBe("link");
   });
 
-  it("oculta Ranking productos y Ventas 24 hs sin borrar las rutas originales", () => {
+  it("oculta Ranking productos, Ventas 24 hs y Replicar sin borrar las rutas originales", () => {
     const paths = createDashboardNavigationEntries().flatMap((entry) =>
       entry.kind === "link"
         ? [entry.section.href]
@@ -57,8 +57,10 @@ describe("menús desplegables Tienda Nube y Sincronización", () => {
     );
     expect(paths).not.toContain("/ranking-productos");
     expect(paths).not.toContain("/ventas");
+    expect(paths).not.toContain("/replicar");
     expect(dashboardSections.some((section) => section.href === "/ranking-productos")).toBe(true);
     expect(dashboardSections.some((section) => section.href === "/ventas")).toBe(true);
+    expect(dashboardSections.some((section) => section.href === "/replicar")).toBe(true);
   });
 
   it("conserva otras herramientas como accesos principales", () => {
@@ -67,7 +69,7 @@ describe("menús desplegables Tienda Nube y Sincronización", () => {
       .map((entry) => entry.section.href);
     expect(links).toContain("/calculadora-precios");
     expect(links).toContain("/publicacion-promocion");
-    expect(links).toContain("/replicar");
+    expect(links).toContain("/migracion-global");
   });
 
   it("abre el grupo correcto en rutas principales y subrutas", () => {
