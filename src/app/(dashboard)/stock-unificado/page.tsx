@@ -7,6 +7,7 @@ import { z } from "zod";
 import { getApiConfig } from "@/shared/api/api-config";
 import { createAuthenticatedHttpClient } from "@/shared/api/authenticated-http-client.server";
 import { HttpClient } from "@/shared/api/http-client.server";
+import { StockProductPhoto } from "./stock-product-photo.client";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ const mlVariantSchema = z.object({
   size: z.string().nullable(),
   sku: z.string(),
   stock: z.number().nullable(),
+  imageUrl: z.string().url().nullable().optional(),
 });
 const tnVariantSchema = z.object({
   productId: z.string(),
@@ -27,6 +29,7 @@ const tnVariantSchema = z.object({
   size: z.string().nullable(),
   sku: z.string(),
   stock: z.number().nullable(),
+  imageUrl: z.string().url().nullable().optional(),
   status: z.string(),
 });
 const skuResponseSchema = z.object({
@@ -129,23 +132,39 @@ function messageFor(value: string): string | null {
 }
 
 function ResultCard({
-  channel, title, subtitle, sku, stock, id,
+  channel, title, subtitle, sku, stock, id, imageUrl,
 }: Readonly<{
   channel: string; title: string; subtitle: string;
   sku: string; stock: number | null; id: string;
+  imageUrl: string | null;
 }>) {
   return (
-    <div style={{ border: "1px solid #e4e9f3", borderRadius: 13, padding: 15, display: "grid", gap: 7 }}>
-      <span style={{ color: "#677da6", fontWeight: 800, fontSize: 11 }}>{channel}</span>
-      <strong style={{ fontSize: 14, color: "#263b64" }}>{title}</strong>
-      <span style={softText}>{subtitle}</span>
-      <span style={softText}>SKU: <strong>{sku}</strong></span>
+    <article style={{
+      border: "1px solid #e4e9f3",
+      borderRadius: 13,
+      padding: 15,
+      display: "grid",
+      gap: 12,
+      background: "#fff",
+    }}>
+      <div style={{ display: "flex", alignItems: "start", gap: 14, minWidth: 0 }}>
+        <StockProductPhoto imageUrl={imageUrl} alt={title + " · " + subtitle} />
+        <div style={{ display: "grid", gap: 6, flex: 1, minWidth: 0 }}>
+          <span style={{ color: "#677da6", fontWeight: 800, fontSize: 11 }}>{channel}</span>
+          <strong style={{ fontSize: 14, color: "#263b64", overflowWrap: "anywhere" }}>{title}</strong>
+          <span style={softText}>{subtitle}</span>
+          <span style={{ ...softText, overflowWrap: "anywhere" }}>SKU: <strong>{sku}</strong></span>
+        </div>
+      </div>
       <span style={{ ...softText, overflowWrap: "anywhere" }}>{id}</span>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        borderTop: "1px solid #edf1f7", paddingTop: 10,
+      }}>
         <span style={softText}>Stock actual</span>
         <strong style={{ fontSize: 24, color: "#304771" }}>{stockValue(stock)}</strong>
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -230,7 +249,7 @@ export default async function StockUnificadoPage({
                       ml.map((item) => (
                         <ResultCard key={item.itemId + ":" + (item.variationId ?? "item")} channel="MERCADO LIBRE"
                           title={item.title} subtitle={variantText(item.color, item.size)} sku={item.sku}
-                          stock={item.stock} id={"ML: " + item.itemId + (item.variationId ? " · Variación " + item.variationId : "")} />
+                          stock={item.stock} imageUrl={item.imageUrl ?? null} id={"ML: " + item.itemId + (item.variationId ? " · Variación " + item.variationId : "")} />
                       ))}
                   </div>
                   <div style={{ display: "grid", gap: 12, alignContent: "start" }}>
@@ -240,7 +259,7 @@ export default async function StockUnificadoPage({
                       tn.map((item) => (
                         <ResultCard key={item.productId + ":" + item.variantId} channel="TIENDANUBE"
                           title={item.name} subtitle={variantText(item.color, item.size)} sku={item.sku}
-                          stock={item.stock} id={"TN: " + item.productId + " · Variante " + item.variantId + " · " + item.status} />
+                          stock={item.stock} imageUrl={item.imageUrl ?? null} id={"TN: " + item.productId + " · Variante " + item.variantId + " · " + item.status} />
                       ))}
                   </div>
                 </div>
