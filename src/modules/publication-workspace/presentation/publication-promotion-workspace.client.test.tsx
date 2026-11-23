@@ -57,6 +57,33 @@ describe("PublicationPromotionWorkspace", () => {
     expect(await screen.findByText("No encontramos publicaciones.")).toBeInTheDocument();
   });
 
+  it("centra el buscador al iniciar y muestra resultados debajo después de buscar", async () => {
+    const user = userEvent.setup();
+    const onSearch = vi.fn().mockResolvedValue({
+      status: "success",
+      searchType: "TITLE",
+      query: "remera",
+      items: [
+        { itemId: "MLA101", familyId: "456", userProductId: null, title: "Remera negra", imageUrl: null, price: 100, currency: "ARS", status: "active", stock: 4 },
+        { itemId: "MLA102", familyId: "456", userProductId: null, title: "Remera blanca", imageUrl: null, price: 100, currency: "ARS", status: "active", stock: 3 },
+      ],
+    });
+    const onSelect = vi.fn();
+    renderWorkspace(onSearch, onSelect);
+
+    expect(screen.getByRole("main")).toHaveAttribute("data-layout", "landing");
+    expect(screen.getByText("Buscá una publicación para comenzar.")).toBeInTheDocument();
+
+    await search(user, "remera");
+
+    expect(await screen.findByRole("heading", { name: "Resultados de publicaciones" })).toBeInTheDocument();
+    expect(screen.getByRole("main")).toHaveAttribute("data-layout", "results");
+    expect(screen.getByRole("searchbox", { name: "Buscar publicación" })).toHaveValue("remera");
+    expect(screen.getByText("Remera negra")).toBeInTheDocument();
+    expect(screen.getByText("Remera blanca")).toBeInTheDocument();
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
   it("no hace requests con una búsqueda vacía", async () => {
     const user = userEvent.setup();
     const onSearch = vi.fn();
@@ -245,6 +272,7 @@ describe("PublicationPromotionWorkspace", () => {
     await user.click(await screen.findByRole("button", { name: /Remera feminismo blanca/ }));
 
     expect(onSelect).toHaveBeenCalledWith({ itemId: "MLA2" });
+    expect(screen.getByRole("main")).toHaveAttribute("data-layout", "results");
     expect(onSelect).not.toHaveBeenCalledWith(expect.objectContaining({ familyId: "456" }));
   });
 

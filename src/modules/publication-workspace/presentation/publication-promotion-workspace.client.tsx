@@ -82,6 +82,7 @@ export function PublicationPromotionWorkspace({
   const [matches, setMatches] = useState<readonly PublicationWorkspaceSearchItem[]>([]);
   const [viewState, setViewState] = useState<ViewState>("initial");
   const criteria = parsePublicationSearch(query);
+  const isLanding = viewState === "initial";
 
   useEffect(() => {
     function focusSearchOnShortcut(event: KeyboardEvent) {
@@ -217,8 +218,14 @@ export function PublicationPromotionWorkspace({
   };
 
   return (
-    <main className={styles.page}>
-      <section className={styles.searchSection} aria-label="Búsqueda de publicaciones y promociones">
+    <main
+      className={`${styles.page} ${isLanding ? styles.pageLanding : styles.pageWithResults}`}
+      data-layout={isLanding ? "landing" : "results"}
+    >
+      <section
+        className={`${styles.searchSection} ${isLanding ? styles.searchSectionLanding : styles.searchSectionResults}`}
+        aria-label="Búsqueda de publicaciones y promociones"
+      >
         <div className={styles.searchHeading}>
           <div className={styles.eyebrow}>
             <span className={styles.signalDot} aria-hidden="true" />
@@ -336,14 +343,14 @@ function PublicationMatches({ items, onSelect }: Readonly<{
   onSelect(item: PublicationWorkspaceSearchItem): void;
 }>) {
   return (
-    <section aria-label="Coincidencias de publicaciones">
+    <section className={styles.matchesSection} aria-label="Coincidencias de publicaciones">
       <div className={styles.matchesHeading}>
-        <Typography.Title level={4}>Elegí una publicación</Typography.Title>
+        <Typography.Title level={4}>Resultados de publicaciones</Typography.Title>
         <Typography.Text type="secondary">{items.length} coincidencias encontradas</Typography.Text>
       </div>
       <List
         dataSource={[...items]}
-        grid={{ gutter: 12, xs: 1, sm: 2, lg: 4 }}
+        grid={{ gutter: 12, xs: 1, sm: 1, lg: 1 }}
         renderItem={(item) => (
           <List.Item>
             <Button className={styles.matchButton} onClick={() => onSelect(item)} type="text">
