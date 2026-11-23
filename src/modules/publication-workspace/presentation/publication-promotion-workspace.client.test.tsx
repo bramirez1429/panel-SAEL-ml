@@ -42,6 +42,25 @@ describe("PublicationPromotionWorkspace", () => {
     expect(onSearch).not.toHaveBeenCalled();
   });
 
+  it("muestra la barra tipo Google y el menú + permite elegir un formato sin buscar todavía", async () => {
+    const user = userEvent.setup();
+    const onSearch = vi.fn();
+    renderWorkspace(onSearch, vi.fn());
+
+    const input = screen.getByRole("searchbox", { name: "Buscar publicación" });
+    const options = screen.getByRole("button", { name: "Opciones de búsqueda" });
+    expect(input).toHaveAttribute("placeholder", "Buscá una publicación por nombre o código…");
+    expect(options.querySelector("svg")).not.toBeNull();
+
+    await user.click(options);
+    await user.click(await screen.findByRole("menuitem", { name: "Buscar por MLA" }));
+    expect(input).toHaveAttribute("placeholder", "Ingresá el código MLA…");
+    expect(onSearch).not.toHaveBeenCalled();
+
+    await user.type(input, "MLA123456789{Enter}");
+    expect(onSearch).toHaveBeenCalledWith("MLA123456789");
+  });
+
   it("mantiene la búsqueda mediante Enter desde el campo principal", async () => {
     const user = userEvent.setup();
     const onSearch = vi.fn().mockResolvedValue({
@@ -329,6 +348,6 @@ function renderWorkspace(
 }
 
 async function search(user: ReturnType<typeof userEvent.setup>, term: string) {
-  await user.type(screen.getByPlaceholderText("Buscar por MLA, MLAU, Family ID o nombre"), term);
+  await user.type(screen.getByRole("searchbox", { name: "Buscar publicación" }), term);
   await user.click(screen.getByRole("button", { name: "Buscar" }));
 }

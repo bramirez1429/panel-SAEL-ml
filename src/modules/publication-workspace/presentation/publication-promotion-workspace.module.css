@@ -101,27 +101,58 @@
   min-width: 0;
 }
 
+/* Inspired by a clean Google-style search capsule: no heavy gradients. */
 .searchInput:global(.ant-input-affix-wrapper) {
   display: flex;
   align-items: center;
   width: 100%;
   min-width: 0;
-  height: 86px;
-  padding: 9px 12px 9px 30px;
+  height: 82px;
+  padding: 10px 12px 10px 16px;
   background: #fff;
-  border: 1px solid #cbd6ed;
+  border: 1px solid #dfe2e8;
   border-radius: 999px;
-  box-shadow: 0 10px 34px rgb(26 50 117 / 11%);
+  box-shadow: 0 3px 12px rgb(35 43 64 / 11%);
   transition: border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .searchInput:global(.ant-input-affix-wrapper):hover {
-  border-color: #aab9e9;
+  border-color: #d1d7e0;
+  box-shadow: 0 4px 18px rgb(35 43 64 / 14%);
 }
 
 .searchInput:global(.ant-input-affix-wrapper):focus-within {
-  border-color: #6974ec;
-  box-shadow: 0 0 0 4px rgb(106 114 239 / 11%), 0 14px 38px rgb(26 50 117 / 13%);
+  border-color: #c9d0dc;
+  box-shadow: 0 4px 20px rgb(35 43 64 / 15%);
+}
+
+.searchInput :global(.ant-input-prefix) {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  margin-inline-end: 14px;
+}
+
+.searchOptionsButton:global(.ant-btn) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  min-width: 46px;
+  height: 46px;
+  padding: 0;
+  color: #292d36;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  box-shadow: none;
+  font-size: 22px;
+}
+
+.searchOptionsButton:global(.ant-btn):hover,
+.searchOptionsButton:global(.ant-btn):focus-visible {
+  color: #151a23 !important;
+  background: #f1f3f6 !important;
 }
 
 .searchInput :global(.ant-input) {
@@ -129,41 +160,43 @@
   height: 100%;
   padding: 0;
   background: transparent;
-  color: #172750;
-  font-size: clamp(16px, 1.5vw, 19px);
-  font-weight: 500;
+  color: #212936;
+  font-size: clamp(16px, 1.45vw, 19px);
+  font-weight: 400;
 }
 
 .searchInput :global(.ant-input)::placeholder {
-  color: #8895b0;
+  color: #9197a1;
 }
 
 .searchInput :global(.ant-input-suffix) {
-  margin-inline-start: 10px;
+  display: flex;
+  align-items: center;
+  margin-inline-start: 12px;
 }
 
 .searchIconButton:global(.ant-btn) {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 64px;
-  min-width: 64px;
-  height: 64px;
+  width: 58px;
+  min-width: 58px;
+  height: 58px;
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: linear-gradient(135deg, #3169f5, #6053e5);
-  box-shadow: 0 5px 16px rgb(59 77 209 / 20%);
-  color: #fff;
-  font-size: 27px;
-  transition: background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+  background: #f1f3f8;
+  box-shadow: none;
+  color: #344b79;
+  font-size: 24px;
+  transition: background 180ms ease, box-shadow 180ms ease;
 }
 
 .searchIconButton:global(.ant-btn):hover,
 .searchIconButton:global(.ant-btn):focus-visible {
-  background: linear-gradient(135deg, #245be7, #5043d4) !important;
-  box-shadow: 0 7px 19px rgb(59 77 209 / 29%);
-  color: #fff !important;
+  color: #273d67 !important;
+  background: #e7edf8 !important;
+  box-shadow: 0 2px 9px rgb(44 65 103 / 9%) !important;
 }
 
 .searchFooter {
@@ -432,13 +465,24 @@
   }
 
   .searchInput:global(.ant-input-affix-wrapper) {
-    height: 66px;
-    padding: 7px 8px 7px 18px;
-    border-radius: 20px;
+    height: 67px;
+    padding: 7px 8px;
+    border-radius: 999px;
   }
 
   .searchInput :global(.ant-input) {
     font-size: 14px;
+  }
+
+  .searchInput :global(.ant-input-prefix) {
+    margin-inline-end: 5px;
+  }
+
+  .searchOptionsButton:global(.ant-btn) {
+    width: 41px;
+    min-width: 41px;
+    height: 41px;
+    font-size: 20px;
   }
 
   .searchInput :global(.ant-input-suffix) {
@@ -446,10 +490,10 @@
   }
 
   .searchIconButton:global(.ant-btn) {
-    min-width: 50px;
-    width: 50px;
-    height: 50px;
-    font-size: 22px;
+    width: 49px;
+    min-width: 49px;
+    height: 49px;
+    font-size: 21px;
   }
 
   .keyboardShortcut {
@@ -478,6 +522,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .searchInput:global(.ant-input-affix-wrapper),
+  .searchOptionsButton:global(.ant-btn),
   .searchIconButton:global(.ant-btn),
   .matchButton:global(.ant-btn) {
     transition: none;
@@ -983,7 +1028,7 @@
 
 .searchSectionLanding .searchInput:global(.ant-input-affix-wrapper) {
   border-radius: 999px;
-  box-shadow: 0 9px 34px rgb(23 48 110 / 10%);
+  box-shadow: 0 3px 14px rgb(35 43 64 / 13%);
 }
 
 .pageLanding .statePanel {
@@ -1062,9 +1107,9 @@
 
 .searchSectionResults .searchInput:global(.ant-input-affix-wrapper) {
   height: 70px;
-  padding: 6px 9px 6px 22px;
+  padding: 6px 9px;
   border-radius: 999px;
-  box-shadow: 0 5px 18px rgb(23 48 110 / 8%);
+  box-shadow: 0 3px 12px rgb(35 43 64 / 10%);
 }
 
 .searchSectionResults .searchInput :global(.ant-input) {
@@ -1191,9 +1236,9 @@
   }
 
   .searchSectionResults .searchInput:global(.ant-input-affix-wrapper) {
-    height: 62px;
-    padding: 6px 8px 6px 16px;
-    border-radius: 19px;
+    height: 63px;
+    padding: 6px 8px;
+    border-radius: 999px;
   }
 
   .searchSectionResults .searchInput :global(.ant-input) {
