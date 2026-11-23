@@ -4,6 +4,13 @@ import { dashboardSections } from "./dashboard-sections";
 export const TIENDANUBE_GROUP_KEY = "group:tiendanube";
 export const SYNC_GROUP_KEY = "group:sincronizacion";
 
+// Hide legacy screens from the sidebar without deleting routes or page titles.
+export const HIDDEN_NAVIGATION_ROUTES = [
+  "/ranking-productos",
+  "/ventas",
+] as const;
+const hiddenRoutes = new Set<string>(HIDDEN_NAVIGATION_ROUTES);
+
 type DashboardGroupKey = typeof TIENDANUBE_GROUP_KEY | typeof SYNC_GROUP_KEY;
 
 export type DashboardNavigationEntry =
@@ -38,11 +45,12 @@ function groupKeyForSection(section: DashboardSection): DashboardGroupKey | null
 export function createDashboardNavigationEntries(
   sections: readonly DashboardSection[] = dashboardSections,
 ): readonly DashboardNavigationEntry[] {
-  const tiendanubeSections = sections.filter(isTiendanubeSection);
-  const syncSections = sections.filter(isSyncSection);
+  const visibleSections = sections.filter((section) => !hiddenRoutes.has(section.href));
+  const tiendanubeSections = visibleSections.filter(isTiendanubeSection);
+  const syncSections = visibleSections.filter(isSyncSection);
   const inserted = new Set<DashboardGroupKey>();
 
-  return sections.flatMap((section): DashboardNavigationEntry[] => {
+  return visibleSections.flatMap((section): DashboardNavigationEntry[] => {
     const key = groupKeyForSection(section);
     if (!key) return [{ kind: "link", section }];
     if (inserted.has(key)) return [];
