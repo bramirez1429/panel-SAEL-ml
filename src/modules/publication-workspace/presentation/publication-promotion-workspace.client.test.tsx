@@ -267,6 +267,8 @@ describe("PublicationPromotionWorkspace", () => {
 
     expect(onSelect).toHaveBeenCalledWith({ itemId: "MLA1" });
     expect(await screen.findByText("MLA1")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Publicación y promoción" })).not.toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: "Buscar publicación" })).toHaveValue("MLA1");
     expect(screen.queryByText("Publicaciones de la familia")).not.toBeInTheDocument();
   });
 
@@ -314,6 +316,34 @@ describe("PublicationPromotionWorkspace", () => {
     expect(onSelect).not.toHaveBeenCalledWith(expect.objectContaining({ familyId: "456" }));
   });
 
+  it("incluye Replicar en Tiendanube junto a las pestañas sin duplicarlo debajo", async () => {
+    const user = userEvent.setup();
+    const publication = { ...child("MLA1", "active"), familyId: null, model: "SHARED" as const };
+    const onSearch = vi.fn().mockResolvedValue({
+      status: "success", searchType: "MLA", query: "MLA1",
+      items: [{ itemId: "MLA1", familyId: null, userProductId: null, title: publication.title, imageUrl: null, price: 1, currency: "ARS", status: "active", stock: 4 }],
+    });
+    const onSelect = vi.fn().mockResolvedValue({
+      status: "success", selection: { type: "publication", publication },
+    });
+    const replicateAction = vi.fn();
+    const getStateAction = vi.fn().mockResolvedValue({
+      status: "NOT_REPLICATED", sourceKey: "item:MLA1", tiendanubeProductId: null,
+    });
+    renderWorkspace(onSearch, onSelect, {
+      getTiendanubeStateAction: getStateAction,
+      replicateTiendanubeAction: replicateAction,
+    });
+
+    await search(user, "MLA1");
+    const replicateButton = await screen.findByRole("button", { name: "Replicar en Tiendanube" });
+    expect(screen.getAllByRole("button", { name: "Replicar en Tiendanube" })).toHaveLength(1);
+    expect(replicateButton.closest(".ant-tabs-extra-content")).not.toBeNull();
+    await user.click(replicateButton);
+    expect(await screen.findByRole("dialog", { name: "Replicar en Tiendanube" })).toBeInTheDocument();
+    expect(replicateAction).not.toHaveBeenCalled();
+  });
+
   it("la tab Promoción no dispara consultas adicionales", async () => {
     const user = userEvent.setup();
     const publication = { ...child("MLA1", "active"), familyId: null, model: "SHARED" as const };
@@ -336,11 +366,12 @@ type WorkspaceProps = ComponentProps<typeof PublicationPromotionWorkspace>;
 function renderWorkspace(
   onSearch: WorkspaceProps["onSearch"],
   onSelect: WorkspaceProps["onSelect"],
+  additionalProps: Partial<WorkspaceProps> = {},
 ) {
   successfulSave.mockClear();
   successfulStatus.mockClear();
   successfulTitle.mockClear();
-  return render(<PublicationPromotionWorkspace onSearch={onSearch} onSelect={onSelect} onSave={successfulSave} onStatusChange={successfulStatus} onTitleSave={successfulTitle} />);
+  return render(<PublicationPromotionWorkspace onSearch={onSearch} onSelect={onSelect} onSave={successfulSave} onStatusChange={successfulStatus} onTitleSave={successfulTitle} {...additionalProps} />);
 }
 
 async function search(user: ReturnType<typeof userEvent.setup>, term: string) {

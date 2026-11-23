@@ -226,7 +226,7 @@ export function PublicationPromotionWorkspace({
         className={`${styles.searchSection} ${isLanding ? styles.searchSectionLanding : styles.searchSectionResults}`}
         aria-label="Búsqueda de publicaciones y promociones"
       >
-        <div className={styles.searchHeading}>
+        {isLanding ? <div className={styles.searchHeading}>
           <div className={styles.eyebrow}>
             <span className={styles.signalDot} aria-hidden="true" />
             <span>CENTRO DE GESTIÓN · MERCADO LIBRE</span>
@@ -236,7 +236,7 @@ export function PublicationPromotionWorkspace({
           <Typography.Paragraph className={styles.description}>
             Encontrá cualquier publicación y gestioná sus datos, variantes y promociones desde un solo lugar.
           </Typography.Paragraph>
-        </div>
+        </div> : null}
         <div className={styles.searchBox}>
           <Input
             ref={searchInputRef}
@@ -407,6 +407,12 @@ function WorkspaceTabs({
 }>) {
   const [activeTab, setActiveTab] = useState("publication");
   const [promotionOpened, setPromotionOpened] = useState(false);
+  const sourceKey = tiendanubeSourceKey(selection);
+  const initialState: TiendanubeReplicationState = {
+    sourceKey,
+    status: "UNKNOWN",
+    tiendanubeProductId: null,
+  };
 
   function changeTab(key: string): void {
     setActiveTab(key);
@@ -418,6 +424,25 @@ function WorkspaceTabs({
       className={styles.workspaceTabs}
       activeKey={activeTab}
       onChange={changeTab}
+      tabBarExtraContent={
+        replicateTiendanubeAction && getTiendanubeStateAction
+          ? {
+              right: (
+                <div className={styles.replicateToolbar}>
+                  <TiendanubeReplicationCell
+                    key={sourceKey}
+                    action={replicateTiendanubeAction}
+                    categories={tiendanubeCategories}
+                    getStateAction={getTiendanubeStateAction}
+                    initialState={initialState}
+                    sourceKey={sourceKey}
+                    prominent
+                  />
+                </div>
+              ),
+            }
+          : undefined
+      }
       items={[
         {
           key: "publication",
@@ -426,14 +451,11 @@ function WorkspaceTabs({
             <PublicationTab
               selection={selection}
               visualOrder={visualOrder}
-              getTiendanubeStateAction={getTiendanubeStateAction}
               getTiendanubeProductByMlAction={getTiendanubeProductByMlAction}
               onChanged={onChanged}
               onSave={onSave}
               onStatusChange={onStatusChange}
               onTitleSave={onTitleSave}
-              replicateTiendanubeAction={replicateTiendanubeAction}
-              tiendanubeCategories={tiendanubeCategories}
             />
           ),
         },
@@ -452,47 +474,22 @@ function WorkspaceTabs({
 function PublicationTab({
   selection,
   visualOrder,
-  getTiendanubeStateAction,
   getTiendanubeProductByMlAction,
   onChanged,
   onSave,
   onStatusChange,
   onTitleSave,
-  replicateTiendanubeAction,
-  tiendanubeCategories,
 }: Readonly<{
   selection: PublicationWorkspaceSelection;
   visualOrder: PublicationVisualOrder;
-  getTiendanubeStateAction?: GetTiendanubeReplicationStateAction;
   getTiendanubeProductByMlAction?: GetTiendanubeProductByMlAction;
   onChanged: () => Promise<void>;
   onSave: WorkspaceSaveAction;
   onStatusChange: WorkspaceStatusAction;
   onTitleSave: WorkspaceTitleAction;
-  replicateTiendanubeAction?: ReplicatePublicationAction;
-  tiendanubeCategories: readonly TiendanubeCategory[];
 }>) {
-  const sourceKey = tiendanubeSourceKey(selection);
-  const initialState: TiendanubeReplicationState = {
-    sourceKey,
-    status: "UNKNOWN",
-    tiendanubeProductId: null,
-  };
-
   return (
     <>
-      {replicateTiendanubeAction && getTiendanubeStateAction ? (
-        <div style={{ marginBottom: 16 }}>
-          <TiendanubeReplicationCell
-            key={sourceKey}
-            action={replicateTiendanubeAction}
-            categories={tiendanubeCategories}
-            getStateAction={getTiendanubeStateAction}
-            initialState={initialState}
-            sourceKey={sourceKey}
-          />
-        </div>
-      ) : null}
       {selection.type === "family" ? (
         <FamilyWorkspace family={selection} visualOrder={visualOrder} onChanged={onChanged} onSave={onSave} onStatusChange={onStatusChange} onTitleSave={onTitleSave} getTiendanubeProductByMlAction={getTiendanubeProductByMlAction} />
       ) : (

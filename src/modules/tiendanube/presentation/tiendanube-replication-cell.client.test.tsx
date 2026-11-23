@@ -16,6 +16,23 @@ describe("TiendanubeReplicationCell", () => {
     expect(screen.getByLabelText("Categoría")).toBeInTheDocument();
   });
 
+  it("muestra un botón destacado en el workspace sin ejecutar la réplica antes de confirmar", () => {
+    const action = vi.fn();
+    render(<TiendanubeReplicationCell
+      action={action}
+      initialState={state}
+      sourceKey={state.sourceKey}
+      categories={categories}
+      prominent
+    />);
+    const button = screen.getByRole("button", { name: "Replicar en Tiendanube" });
+    expect(button).toHaveClass("ant-btn-primary");
+    expect(button.querySelector("svg")).not.toBeNull();
+    fireEvent.click(button);
+    expect(screen.getByRole("dialog", { name: "Replicar en Tiendanube" })).toBeInTheDocument();
+    expect(action).not.toHaveBeenCalled();
+  });
+
   it("confirma y muestra el estado replicado", async () => {
     const action = vi.fn().mockResolvedValue({ ok: true, action: "created" as const });
     render(<TiendanubeReplicationCell action={action} initialState={state} sourceKey={state.sourceKey} categories={categories} />);

@@ -108,7 +108,7 @@
   width: 100%;
   min-width: 0;
   height: 82px;
-  padding: 10px 12px 10px 16px;
+  padding: 10px 12px 10px 26px;
   background: #fff;
   border: 1px solid #dfe2e8;
   border-radius: 999px;
@@ -376,8 +376,10 @@
 }
 
 .workspaceTabs :global(.ant-tabs-nav) {
-  padding: 9px;
+  padding: 9px 12px;
   margin-bottom: 20px;
+  gap: 12px;
+  flex-wrap: wrap;
   background: #ffffff;
   border: 1px solid #dfe5f1;
   border-radius: 18px;
@@ -442,7 +444,7 @@
 
   .searchInput:global(.ant-input-affix-wrapper) {
     height: 67px;
-    padding: 7px 8px;
+    padding: 7px 8px 7px 18px;
     border-radius: 999px;
   }
 
@@ -1023,9 +1025,8 @@
   top: var(--dashboard-header-height, 64px);
   z-index: 8;
   display: grid;
-  grid-template-columns: minmax(175px, 235px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
-  column-gap: clamp(12px, 2vw, 30px);
   row-gap: 0;
   width: 100%;
   max-width: none;
@@ -1043,33 +1044,14 @@
   display: none;
 }
 
-.searchSectionResults .searchHeading {
-  grid-column: 1;
-  grid-row: 1 / 3;
-  gap: 0;
-  align-self: center;
-}
-
-.searchSectionResults .eyebrow,
-.searchSectionResults .description {
-  display: none;
-}
-
-.searchSectionResults .title:global(.ant-typography) {
-  margin: 0 !important;
-  font-size: clamp(18px, 1.75vw, 23px) !important;
-  letter-spacing: -0.035em;
-  line-height: 1.25 !important;
-}
-
 .searchSectionResults .searchBox {
-  grid-column: 2;
+  grid-column: 1;
   grid-row: 1;
 }
 
 .searchSectionResults .searchInput:global(.ant-input-affix-wrapper) {
   height: 70px;
-  padding: 6px 9px;
+  padding: 6px 9px 6px 30px;
   border-radius: 999px;
   box-shadow: 0 3px 12px rgb(35 43 64 / 10%);
 }
@@ -1084,7 +1066,7 @@
 }
 
 .searchSectionResults .searchFooter {
-  grid-column: 2;
+  grid-column: 1;
   grid-row: 2;
   justify-content: flex-start;
   margin-top: 7px;
@@ -1179,25 +1161,20 @@
     border-radius: 16px;
   }
 
-  .searchSectionResults .searchHeading {
+  .searchSectionResults .searchBox {
     grid-column: 1;
     grid-row: 1;
   }
 
-  .searchSectionResults .searchBox {
-    grid-column: 1;
-    grid-row: 2;
-  }
-
   .searchSectionResults .searchFooter {
     grid-column: 1;
-    grid-row: 3;
+    grid-row: 2;
     margin-top: 0;
   }
 
   .searchSectionResults .searchInput:global(.ant-input-affix-wrapper) {
     height: 63px;
-    padding: 6px 8px;
+    padding: 6px 8px 6px 20px;
     border-radius: 999px;
   }
 
@@ -1219,5 +1196,63 @@
   .searchSectionLanding .searchInput:global(.ant-input-affix-wrapper),
   .searchSectionResults .searchInput:global(.ant-input-affix-wrapper) {
     transition: none;
+  }
+}
+
+
+/* Tiendanube replication is part of the same tabs toolbar, not a stray action below it. */
+.replicateToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 44px;
+  padding: 2px 0;
+}
+
+.replicateToolbar :global(.ant-btn) {
+  min-height: 42px;
+  padding: 0 18px;
+  border: 1px solid #d1dcfa;
+  border-radius: 12px;
+  color: #fff;
+  background: linear-gradient(135deg, #356fe9, #5b58d6);
+  box-shadow: 0 5px 16px rgb(50 82 180 / 18%);
+  font-size: 13px;
+  font-weight: 700;
+  transition: box-shadow 160ms ease, background 160ms ease;
+}
+
+.replicateToolbar :global(.ant-btn):hover,
+.replicateToolbar :global(.ant-btn):focus-visible {
+  border-color: #b8c8f0 !important;
+  color: #fff !important;
+  background: linear-gradient(135deg, #245fda, #4e49c5) !important;
+  box-shadow: 0 7px 19px rgb(50 82 180 / 22%);
+}
+
+.replicateToolbar :global(.ant-btn-dangerous) {
+  border-color: #f3b7b7;
+  background: linear-gradient(135deg, #d85059, #bf3f5a);
+}
+
+.replicateToolbar :global(.ant-btn-dangerous):hover {
+  border-color: #eaa0aa !important;
+  background: linear-gradient(135deg, #c9404e, #aa344e) !important;
+}
+
+@media (max-width: 640px) {
+  .workspaceTabs :global(.ant-tabs-nav) {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .replicateToolbar {
+    min-height: 38px;
+  }
+
+  .replicateToolbar :global(.ant-btn) {
+    min-height: 38px;
+    padding: 0 12px;
+    font-size: 12px;
   }
 }

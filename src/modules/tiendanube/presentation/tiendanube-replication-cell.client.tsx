@@ -1,5 +1,6 @@
 "use client";
 
+import { CloudUploadOutlined, ReloadOutlined } from "@ant-design/icons";
 import { Button, Tag } from "antd";
 import { useEffect, useState } from "react";
 
@@ -18,9 +19,10 @@ type Props = Readonly<{
   action: ReplicatePublicationAction;
   categories?: readonly TiendanubeCategory[];
   getStateAction?: GetTiendanubeReplicationStateAction;
+  prominent?: boolean;
 }>;
 
-export function TiendanubeReplicationCell({ sourceKey, initialState, action, categories = [], getStateAction }: Props) {
+export function TiendanubeReplicationCell({ sourceKey, initialState, action, categories = [], getStateAction, prominent = false }: Props) {
   const [state, setState] = useState(initialState);
   const [open, setOpen] = useState(false);
 
@@ -55,8 +57,14 @@ export function TiendanubeReplicationCell({ sourceKey, initialState, action, cat
 
   return <>
     {modal}
-    <Button danger={state.status === "FAILED"} onClick={() => setOpen(true)} size="small">
-      {state.status === "FAILED" ? "Reintentar" : "Replicar TN"}
+    <Button
+      danger={state.status === "FAILED"}
+      icon={prominent ? (state.status === "FAILED" ? <ReloadOutlined /> : <CloudUploadOutlined />) : undefined}
+      onClick={() => setOpen(true)}
+      size={prominent ? "middle" : "small"}
+      type={prominent ? "primary" : "default"}
+    >
+      {state.status === "FAILED" ? "Reintentar" : prominent ? "Replicar en Tiendanube" : "Replicar TN"}
     </Button>
   </>;
 }
