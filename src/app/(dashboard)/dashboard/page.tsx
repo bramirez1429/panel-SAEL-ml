@@ -40,7 +40,7 @@ export default async function DashboardPage() {
         </span>
         <span className={styles.calculatorText}>
           <strong>Stock Unificado ML + Tiendanube</strong>
-          <span>Compará variantes, detectá diferencias de stock y vinculá SKU entre los dos canales.</span>
+          <span>Compará stock y vinculá variantes de Mercado Libre y Tiendanube sólo cuando tengan el mismo SKU.</span>
         </span>
         <span className={styles.calculatorArrow} aria-hidden="true">→</span>
       </Link>
