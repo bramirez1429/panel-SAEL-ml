@@ -9,6 +9,7 @@ import {
   isTiendanubePath,
   SYNC_GROUP_KEY,
   TIENDANUBE_GROUP_KEY,
+  HIDDEN_NAVIGATION_ROUTES,
 } from "./dashboard-navigation.model";
 import { dashboardSections } from "./dashboard-sections";
 
@@ -39,10 +40,25 @@ describe("menús desplegables Tienda Nube y Sincronización", () => {
       entry.kind === "link" ? [entry.section.href] :
         entry.sections.map((section) => section.href),
     );
-    expect(allLinks).toHaveLength(dashboardSections.length);
-    expect(new Set(allLinks).size).toBe(dashboardSections.length);
-    expect([...allLinks].sort()).toEqual(dashboardSections.map((item) => item.href).sort());
+    const expectedRoutes = dashboardSections.filter(
+      (section) => !HIDDEN_NAVIGATION_ROUTES.includes(section.href as typeof HIDDEN_NAVIGATION_ROUTES[number]),
+    ).map((section) => section.href);
+    expect(allLinks).toHaveLength(expectedRoutes.length);
+    expect(new Set(allLinks).size).toBe(expectedRoutes.length);
+    expect([...allLinks].sort()).toEqual(expectedRoutes.sort());
     expect(entries[0]?.kind).toBe("link");
+  });
+
+  it("oculta Ranking productos y Ventas 24 hs sin borrar las rutas originales", () => {
+    const paths = createDashboardNavigationEntries().flatMap((entry) =>
+      entry.kind === "link"
+        ? [entry.section.href]
+        : entry.sections.map((section) => section.href),
+    );
+    expect(paths).not.toContain("/ranking-productos");
+    expect(paths).not.toContain("/ventas");
+    expect(dashboardSections.some((section) => section.href === "/ranking-productos")).toBe(true);
+    expect(dashboardSections.some((section) => section.href === "/ventas")).toBe(true);
   });
 
   it("conserva otras herramientas como accesos principales", () => {
