@@ -28,6 +28,35 @@ const successfulStatus = vi.fn().mockResolvedValue({ ok: true, confirmed: "activ
 const successfulTitle = vi.fn().mockImplementation(async ({ title }) => ({ ok: true, title }));
 
 describe("PublicationPromotionWorkspace", () => {
+  it("muestra el buscador moderno y permite enfocarlo con Ctrl+K", async () => {
+    const user = userEvent.setup();
+    const onSearch = vi.fn();
+    renderWorkspace(onSearch, vi.fn());
+
+    expect(screen.getByRole("heading", { name: "Publicación y promoción" })).toBeInTheDocument();
+    expect(screen.getByText("CENTRO DE GESTIÓN · MERCADO LIBRE")).toBeInTheDocument();
+    expect(screen.getByText("Family ID")).toBeInTheDocument();
+    const input = screen.getByRole("searchbox", { name: "Buscar publicación" });
+    await user.keyboard("{Control>}k{/Control}");
+    expect(input).toHaveFocus();
+    expect(onSearch).not.toHaveBeenCalled();
+  });
+
+  it("mantiene la búsqueda mediante Enter desde el campo principal", async () => {
+    const user = userEvent.setup();
+    const onSearch = vi.fn().mockResolvedValue({
+      status: "success",
+      searchType: "TITLE",
+      query: "remera",
+      items: [],
+    });
+    renderWorkspace(onSearch, vi.fn());
+
+    await user.type(screen.getByRole("searchbox", { name: "Buscar publicación" }), "remera{Enter}");
+    expect(onSearch).toHaveBeenCalledWith("remera");
+    expect(await screen.findByText("No encontramos publicaciones.")).toBeInTheDocument();
+  });
+
   it("no hace requests con una búsqueda vacía", async () => {
     const user = userEvent.setup();
     const onSearch = vi.fn();

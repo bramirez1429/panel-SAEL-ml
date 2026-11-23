@@ -1,7 +1,7 @@
 "use client";
 
-import { CheckOutlined, EditOutlined, LoadingOutlined, PictureOutlined } from "@ant-design/icons";
-import { Button, Card, Divider, Image, Input, InputNumber, List, Modal, Progress, Space, Tabs, Typography, message } from "antd";
+import { ArrowRightOutlined, CheckOutlined, EditOutlined, LoadingOutlined, PictureOutlined, SearchOutlined } from "@ant-design/icons";
+import { Button, Card, Divider, Image, Input, InputNumber, List, Modal, Progress, Space, Tabs, Typography, message, type InputRef } from "antd";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -75,12 +75,25 @@ export function PublicationPromotionWorkspace({
   const searchParams = useSearchParams();
   const hydratedSearchRef = useRef(false);
   const selectionRequestRef = useRef<PublicationWorkspaceSelectionRequest | null>(null);
+  const searchInputRef = useRef<InputRef>(null);
   const [query, setQuery] = useState("");
   const [selection, setSelection] = useState<PublicationWorkspaceSelection | null>(null);
   const [visualOrder, setVisualOrder] = useState<PublicationVisualOrder>({});
   const [matches, setMatches] = useState<readonly PublicationWorkspaceSearchItem[]>([]);
   const [viewState, setViewState] = useState<ViewState>("initial");
   const criteria = parsePublicationSearch(query);
+
+  useEffect(() => {
+    function focusSearchOnShortcut(event: KeyboardEvent) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    }
+
+    document.addEventListener("keydown", focusSearchOnShortcut);
+    return () => document.removeEventListener("keydown", focusSearchOnShortcut);
+  }, []);
 
   async function handleSearch(rawTerm: string) {
     const criteria = parsePublicationSearch(rawTerm);
@@ -205,38 +218,64 @@ export function PublicationPromotionWorkspace({
 
   return (
     <main className={styles.page}>
-      <section className={styles.searchSection}>
-        <Typography.Title className={styles.title} level={2}>Publicación y promoción</Typography.Title>
-        <Typography.Paragraph className={styles.description}>
-          Buscá una publicación para trabajar sobre sus datos y promociones.
-        </Typography.Paragraph>
-        <Input.Search
-          allowClear
-          aria-label="Buscar publicación"
-          enterButton="Buscar"
-          loading={viewState === "searching"}
-          onChange={(event) => {
-            const nextQuery = event.target.value;
-            setQuery(nextQuery);
+      <section className={styles.searchSection} aria-label="Búsqueda de publicaciones y promociones">
+        <div className={styles.searchHeading}>
+          <div className={styles.eyebrow}>
+            <span className={styles.signalDot} aria-hidden="true" />
+            <span>CENTRO DE GESTIÓN · MERCADO LIBRE</span>
+            <span className={styles.eyebrowTag}>PUBLICACIONES + PROMOCIONES</span>
+          </div>
+          <Typography.Title className={styles.title} level={2}>Publicación y promoción</Typography.Title>
+          <Typography.Paragraph className={styles.description}>
+            Encontrá cualquier publicación y gestioná sus datos, variantes y promociones desde un solo lugar.
+          </Typography.Paragraph>
+        </div>
+        <div className={styles.searchBox}>
+          <SearchOutlined className={styles.searchLeadingIcon} aria-hidden="true" />
+          <Input.Search
+            ref={searchInputRef}
+            className={styles.searchInput}
+            allowClear
+            aria-label="Buscar publicación"
+            autoComplete="off"
+            enterButton="Buscar"
+            loading={viewState === "searching"}
+            onChange={(event) => {
+              const nextQuery = event.target.value;
+              setQuery(nextQuery);
 
-            if (!nextQuery) {
-              replaceSearchQuery(null);
-            }
-          }}
-          onSearch={handleSearch}
-          placeholder="Buscar por MLA, MLAU, Family ID o nombre"
-          size="large"
-          value={query}
-        />
-        <Typography.Text className={styles.searchType} type="secondary">
-          {criteria ? searchTypeLabel(criteria.type) : "MLA · MLAU · Familia · Nombre"}
-        </Typography.Text>
+              if (!nextQuery) {
+                replaceSearchQuery(null);
+              }
+            }}
+            onSearch={handleSearch}
+            placeholder="Buscar por MLA, MLAU, Family ID o nombre"
+            size="large"
+            type="search"
+            value={query}
+          />
+        </div>
+        <div className={styles.searchFooter}>
+          <div className={styles.searchModes} aria-label="Tipos de búsqueda compatibles">
+            <span className={styles.modesLabel}>BUSCÁ POR</span>
+            <span className={styles.modeChip}>MLA</span>
+            <span className={styles.modeChip}>MLAU</span>
+            <span className={styles.modeChip}>Family ID</span>
+            <span className={styles.modeChip}>Nombre</span>
+          </div>
+          <div className={styles.searchHints}>
+            <Typography.Text className={styles.searchType}>
+              {criteria ? searchTypeLabel(criteria.type) : "Ingresá un código o el nombre del producto"}
+            </Typography.Text>
+            <span className={styles.keyboardShortcut}>Ctrl / ⌘ K</span>
+          </div>
+        </div>
       </section>
 
-      {viewState === "initial" && <WorkspaceMessage>Buscá una publicación para comenzar.</WorkspaceMessage>}
-      {viewState === "searching" && <WorkspaceMessage>Consultando publicación...</WorkspaceMessage>}
-      {viewState === "empty" && <WorkspaceMessage>No encontramos publicaciones.</WorkspaceMessage>}
-      {viewState === "error" && <WorkspaceMessage>No pudimos consultar la publicación.</WorkspaceMessage>}
+      {viewState === "initial" && <WorkspaceMessage state="initial">Buscá una publicación para comenzar.</WorkspaceMessage>}
+      {viewState === "searching" && <WorkspaceMessage state="searching">Consultando publicación...</WorkspaceMessage>}
+      {viewState === "empty" && <WorkspaceMessage state="empty">No encontramos publicaciones.</WorkspaceMessage>}
+      {viewState === "error" && <WorkspaceMessage state="error">No pudimos consultar la publicación.</WorkspaceMessage>}
       {viewState === "results" && <PublicationMatches items={matches} onSelect={(item) => loadSelection({ itemId: item.itemId })} />}
       {viewState === "selected" && selection && (
         <WorkspaceTabs
@@ -263,8 +302,33 @@ function searchTypeLabel(type: "FAMILY" | "MLA" | "MLAU" | "TITLE"): string {
   return "Búsqueda por nombre";
 }
 
-function WorkspaceMessage({ children }: React.PropsWithChildren) {
-  return <Typography.Text className={styles.emptyState} type="secondary">{children}</Typography.Text>;
+function WorkspaceMessage({
+  children,
+  state,
+}: React.PropsWithChildren<{ state: "initial" | "searching" | "empty" | "error" }>) {
+  return (
+    <section className={styles.statePanel} aria-live="polite" aria-busy={state === "searching"}>
+      <span className={styles.stateIcon} aria-hidden="true">
+        {state === "searching" ? <LoadingOutlined spin /> : <SearchOutlined />}
+      </span>
+      <Typography.Text className={styles.emptyState}>{children}</Typography.Text>
+      {state === "initial" ? (
+        <Typography.Text className={styles.stateHelp}>
+          Usá el buscador superior para encontrar publicaciones por nombre, MLA, MLAU o Family ID.
+        </Typography.Text>
+      ) : null}
+      {state === "empty" ? (
+        <Typography.Text className={styles.stateHelp}>
+          Probá con otro identificador o una parte del título.
+        </Typography.Text>
+      ) : null}
+      {state === "error" ? (
+        <Typography.Text className={styles.stateHelp}>
+          No se pudo completar la consulta. Volvé a intentar.
+        </Typography.Text>
+      ) : null}
+    </section>
+  );
 }
 
 function PublicationMatches({ items, onSelect }: Readonly<{
@@ -273,16 +337,25 @@ function PublicationMatches({ items, onSelect }: Readonly<{
 }>) {
   return (
     <section aria-label="Coincidencias de publicaciones">
-      <Typography.Title level={4}>Elegí una publicación</Typography.Title>
+      <div className={styles.matchesHeading}>
+        <Typography.Title level={4}>Elegí una publicación</Typography.Title>
+        <Typography.Text type="secondary">{items.length} coincidencias encontradas</Typography.Text>
+      </div>
       <List
         dataSource={[...items]}
         grid={{ gutter: 12, xs: 1, sm: 2, lg: 4 }}
         renderItem={(item) => (
           <List.Item>
             <Button className={styles.matchButton} onClick={() => onSelect(item)} type="text">
-              <span className={styles.matchTitle}>{item.title}</span>
-              <span>{item.itemId}</span>
-              {item.familyId && <span>Family ID: {item.familyId}</span>}
+              <span className={styles.matchImage} aria-hidden="true">
+                {item.imageUrl ? <Image src={item.imageUrl} alt="" preview={false} /> : <PictureOutlined />}
+              </span>
+              <span className={styles.matchDetails}>
+                <span className={styles.matchTitle}>{item.title}</span>
+                <span className={styles.matchId}>{item.itemId}</span>
+                {item.familyId && <span className={styles.matchFamily}>Family ID: {item.familyId}</span>}
+              </span>
+              <span className={styles.matchArrow} aria-hidden="true"><ArrowRightOutlined /></span>
             </Button>
           </List.Item>
         )}
@@ -324,6 +397,7 @@ function WorkspaceTabs({
 
   return (
     <Tabs
+      className={styles.workspaceTabs}
       activeKey={activeTab}
       onChange={changeTab}
       items={[
