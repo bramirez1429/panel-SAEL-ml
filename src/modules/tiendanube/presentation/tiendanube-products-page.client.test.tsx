@@ -28,7 +28,7 @@ describe("TiendanubeProductsPageClient", () => {
     navigation.params.set("page", "3");
     render(<TiendanubeProductsPageClient activeSearch="" page={page()} />);
 
-    const search = screen.getByPlaceholderText("Buscar por nombre, SKU o tags");
+    const search = screen.getByRole("textbox", { name: "Buscar productos Tiendanube" });
     await user.type(search, "remera");
     await user.keyboard("{Enter}");
 

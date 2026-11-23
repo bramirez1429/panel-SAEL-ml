@@ -14,67 +14,102 @@
   top: var(--dashboard-header-height, 64px);
   z-index: 9;
   display: grid;
-  gap: 10px;
-  padding: 12px;
-  background: var(--ant-color-bg-container, #ffffff);
-  border: 1px solid var(--ant-color-border-secondary, #e7eaf0);
-  border-radius: var(--ant-border-radius, 8px);
-  box-shadow: 0 2px 8px rgb(15 23 42 / 5%);
+  gap: 18px;
+  padding: clamp(16px, 2.4vw, 28px);
+  background:
+    radial-gradient(circle at 95% -20%, rgb(124 133 255 / 17%), transparent 38%),
+    linear-gradient(135deg, #ffffff 15%, #f7f9ff 80%, #f6fcff);
+  border: 1px solid #dce3f4;
+  border-radius: 24px;
+  box-shadow: 0 18px 56px rgb(30 51 102 / 8%), inset 0 1px 0 #fff;
+  backdrop-filter: blur(18px);
 }
 
 .toolbarPrimary {
-  display: flex;
-  gap: 12px;
-  align-items: end;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
 }
 
 .toolbarSearch {
-  flex: 1 1 40%;
-  min-width: 320px;
+  width: 100%;
+  min-width: 0;
 }
 
 .filters {
   display: grid;
-  flex: 1 1 55%;
-  grid-template-columns: minmax(130px, 1fr) minmax(160px, 1.15fr) auto;
-  gap: 10px;
+  width: 100%;
+  grid-template-columns: minmax(150px, 1fr) minmax(190px, 1fr) minmax(150px, 200px);
+  gap: 12px;
   align-items: end;
-  min-width: 440px;
+  min-width: 0;
 }
 
 .filterField {
   display: grid;
-  gap: 4px;
+  gap: 7px;
   min-width: 0;
-  color: var(--ant-color-text-secondary, #667085);
-  font-size: 0.875rem;
-  font-weight: 600;
+  color: #58688c;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.015em;
+}
+
+.filterField :global(.ant-select-selector),
+.filterField :global(.ant-input) {
+  min-height: 44px;
+  border: 1px solid #dbe2ef !important;
+  border-radius: 12px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.filterField :global(.ant-select-selection-wrap) {
+  align-self: center;
 }
 
 .filterField :global(.ant-select) {
   width: 100%;
 }
 
-.filterButton {
-  min-width: 128px;
+.filterButton:global(.ant-btn) {
+  min-width: 150px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid #d7ddf8;
+  background: #eef2ff;
+  color: #4255b5;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.filterButton:global(.ant-btn):hover {
+  color: #32449e !important;
+  border-color: #b3c0fa !important;
+  background: #e2e9ff !important;
 }
 
 .quickFilters {
   width: 100%;
+  padding-top: 14px;
+  border-top: 1px solid #e8edf8;
 }
 
 .quickFilter {
   display: inline-flex;
-  min-height: 32px;
-  gap: 8px;
+  min-height: 40px;
+  gap: 10px;
   align-items: center;
   justify-content: space-between;
-  padding: 2px 6px 2px 8px;
-  color: var(--ant-color-text, #172033);
-  background: var(--ant-color-bg-container, #ffffff);
-  border: 1px solid var(--ant-color-border-secondary, #e7eaf0);
-  border-radius: var(--ant-border-radius, 8px);
-  font-size: 0.875rem;
+  padding: 5px 10px 5px 14px;
+  color: #405172;
+  background: rgb(255 255 255 / 82%);
+  border: 1px solid #e0e6f3;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgb(37 65 118 / 3%);
 }
 
 .summary,
@@ -454,14 +489,9 @@
 }
 
 @media (max-width: 900px) {
-  .toolbarPrimary {
-    flex-wrap: wrap;
-  }
-
-  .toolbarSearch,
-  .filters {
-    flex-basis: 100%;
-    min-width: 0;
+  .toolbar {
+    position: relative;
+    top: auto;
   }
 
   .filters {
@@ -475,15 +505,16 @@
   }
 
   .toolbar {
-    gap: 8px;
-    padding: 10px;
+    gap: 14px;
+    padding: 14px;
+    border-radius: 18px;
   }
 
   .filters {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .filterButton {
+  .filterButton:global(.ant-btn) {
     width: 100%;
   }
 

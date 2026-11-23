@@ -1,0 +1,137 @@
+.searchCard:global(.ant-card) {
+  overflow: hidden;
+  border: 1px solid #dce3f4;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 95% -12%, rgb(113 114 250 / 17%), transparent 44%),
+    linear-gradient(130deg, #ffffff 10%, #f8faff 68%, #f4fbff);
+  box-shadow: 0 16px 46px rgb(29 53 107 / 8%);
+}
+
+.searchCard :global(.ant-card-body) {
+  padding: clamp(18px, 2.5vw, 30px);
+}
+
+.searchIntro {
+  display: grid;
+  gap: 5px;
+}
+
+.eyebrow {
+  color: #6173bc;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+}
+
+.searchTitle:global(.ant-typography) {
+  margin: 0 !important;
+  color: #18254e;
+  font-size: clamp(21px, 2.3vw, 31px) !important;
+  letter-spacing: -0.035em;
+}
+
+.searchSubtitle {
+  color: #64738f;
+  font-size: 14px;
+}
+
+.searchInput {
+  width: 100%;
+}
+
+.searchInput :global(.ant-input-group) {
+  display: flex;
+  gap: 8px;
+  padding: 7px;
+  padding-left: 14px;
+  border: 1px solid #ced8ee;
+  border-radius: 21px;
+  background: #fff;
+  box-shadow: 0 9px 26px rgb(38 63 129 / 9%);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.searchInput :global(.ant-input-group):focus-within {
+  border-color: #777bf3;
+  box-shadow: 0 0 0 4px rgb(104 110 250 / 11%), 0 12px 30px rgb(38 63 129 / 11%);
+}
+
+.searchInput :global(.ant-input-group > .ant-input-affix-wrapper) {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 58px;
+  padding: 10px 14px;
+  border: 0 !important;
+  background: transparent;
+  box-shadow: none !important;
+}
+
+.searchInput :global(.ant-input-group .ant-input) {
+  font-size: clamp(15px, 1.15vw, 18px);
+  color: #19264e;
+  background: transparent;
+}
+
+.searchInput :global(.ant-input-group .ant-input)::placeholder {
+  color: #8b96ab;
+}
+
+.searchInput :global(.ant-input-group-addon) {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  background: transparent;
+}
+
+.searchInput :global(.ant-input-search-button.ant-btn) {
+  height: 54px;
+  padding-inline: 26px;
+  border: 0;
+  border-radius: 15px;
+  color: #fff;
+  background: linear-gradient(135deg, #3468f4, #6556e9);
+  font-size: 15px;
+  font-weight: 750;
+  box-shadow: 0 6px 16px rgb(74 86 210 / 22%);
+}
+
+.searchInput :global(.ant-input-search-button.ant-btn):hover {
+  color: #fff !important;
+  background: linear-gradient(135deg, #2a59e8, #5545d7) !important;
+}
+
+@media (max-width: 640px) {
+  .searchCard:global(.ant-card) {
+    border-radius: 18px;
+  }
+
+  .searchCard :global(.ant-card-body) {
+    padding: 16px;
+  }
+
+  .searchInput :global(.ant-input-group) {
+    padding: 5px;
+    padding-left: 7px;
+    gap: 4px;
+    border-radius: 15px;
+  }
+
+  .searchInput :global(.ant-input-group > .ant-input-affix-wrapper) {
+    height: 50px;
+    padding-inline: 6px;
+  }
+
+  .searchInput :global(.ant-input-search-button.ant-btn) {
+    height: 48px;
+    padding-inline: 12px;
+    border-radius: 11px;
+    font-size: 13px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .searchInput :global(.ant-input-group) {
+    transition: none;
+  }
+}

@@ -18,6 +18,7 @@ import {
   type StockInputs,
   type StockUpdate,
 } from "../domain/stock-by-size";
+import styles from "./tiendanube-size-rename-view.module.css";
 
 type Props = Readonly<{
   loadPageAction(search: string, page: number): Promise<LoadSizeCatalogResult>;
@@ -200,9 +201,19 @@ export function TiendanubeSizeRenameView({
         </Typography.Text>
       </header>
 
-      <Card title="Buscar todos los productos visibles">
+      <Card className={styles.searchCard}>
         <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
+          <div className={styles.searchIntro}>
+            <span className={styles.eyebrow}>INVENTARIO INTELIGENTE · TIENDA NUBE</span>
+            <Typography.Title level={3} className={styles.searchTitle}>
+              Buscá productos, gestioná stock
+            </Typography.Title>
+            <Typography.Text className={styles.searchSubtitle}>
+              Todos los talles y colores visibles, en una sola búsqueda.
+            </Typography.Text>
+          </div>
           <Input.Search
+            className={styles.searchInput}
             aria-label="Buscar productos de Tiendanube"
             enterButton="Buscar todos"
             size="large"
