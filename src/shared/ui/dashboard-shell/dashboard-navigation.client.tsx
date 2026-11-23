@@ -1,24 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, Drawer, Menu } from "antd";
-import { MenuFoldOutlined, MenuUnfoldOutlined } from "@ant-design/icons";
+import { MenuFoldOutlined, MenuUnfoldOutlined, ShopOutlined } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { findDashboardSection } from "./dashboard-sections";
 import {
-  dashboardSections,
-  findDashboardSection,
-} from "./dashboard-sections";
+  createDashboardNavigationEntries,
+  getTiendanubeSubmenuTitle,
+  isTiendanubePath,
+  TIENDANUBE_GROUP_KEY,
+} from "./dashboard-navigation.model";
 import styles from "./dashboard-shell.module.css";
 
-const menuItems: MenuProps["items"] = dashboardSections.map((section) => ({
-  key: section.href,
-  label: <Link href={section.href}>{section.title}</Link>,
-  icon: "icon" in section ? section.icon : undefined,
-  title: section.title,
-}));
+const menuItems: MenuProps["items"] = createDashboardNavigationEntries().map((entry) => {
+  if (entry.kind === "group") {
+    return {
+      key: entry.key,
+      label: entry.title,
+      title: entry.title,
+      icon: <ShopOutlined />,
+      children: entry.sections.map((section) => ({
+        key: section.href,
+        label: <Link href={section.href}>{getTiendanubeSubmenuTitle(section)}</Link>,
+        title: getTiendanubeSubmenuTitle(section),
+      })),
+    };
+  }
+
+  const { section } = entry;
+  return {
+    key: section.href,
+    label: <Link href={section.href}>{section.title}</Link>,
+    icon: section.icon,
+    title: section.title,
+  };
+});
 
 type NavigationMenuProps = Readonly<{
   onNavigate?: () => void;
@@ -28,6 +48,20 @@ type NavigationMenuProps = Readonly<{
 function NavigationMenu({ onNavigate, collapsed = false }: NavigationMenuProps) {
   const pathname = usePathname();
   const activeSection = findDashboardSection(pathname);
+  const [openKeys, setOpenKeys] = useState<string[]>(() =>
+    isTiendanubePath(pathname) ? [TIENDANUBE_GROUP_KEY] : [],
+  );
+
+  // Navigating directly to any Tiendanube page opens its parent group.
+  useEffect(() => {
+    if (isTiendanubePath(pathname)) {
+      setOpenKeys((current) =>
+        current.includes(TIENDANUBE_GROUP_KEY)
+          ? current
+          : [...current, TIENDANUBE_GROUP_KEY],
+      );
+    }
+  }, [pathname]);
 
   return (
     <Menu
@@ -35,6 +69,8 @@ function NavigationMenu({ onNavigate, collapsed = false }: NavigationMenuProps) 
       items={menuItems}
       mode="inline"
       inlineCollapsed={collapsed}
+      openKeys={collapsed ? undefined : openKeys}
+      onOpenChange={setOpenKeys}
       onClick={onNavigate}
       selectedKeys={activeSection ? [activeSection.href] : []}
     />

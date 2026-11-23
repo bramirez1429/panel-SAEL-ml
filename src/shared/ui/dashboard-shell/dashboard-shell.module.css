@@ -301,6 +301,24 @@
   color: #1677ff !important;
   background: #e6f4ff !important;
 }
+
+/* Submenu Tienda Nube uses the same compact sizing as normal menu items. */
+.navigationCollapsed .navigationMenu :global(.ant-menu-submenu-title) {
+  display: flex;
+  width: 42px !important;
+  min-width: 0;
+  height: 42px;
+  margin: 4px auto !important;
+  padding: 0 !important;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+}
+
+.navigationCollapsed .navigationMenu :global(.ant-menu-submenu-selected > .ant-menu-submenu-title) {
+  color: #1677ff !important;
+  background: #e6f4ff !important;
+}
 .navigationCollapsed .navigationMenu :global(.ant-menu-item-icon) {
   margin: 0 !important;
   font-size: 18px;
