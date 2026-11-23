@@ -222,6 +222,10 @@ export function PublicationPromotionWorkspace({
       className={`${styles.page} ${isLanding ? styles.pageLanding : styles.pageWithResults}`}
       data-layout={isLanding ? "landing" : "results"}
     >
+      <div
+        className={viewState === "selected" && selection ? styles.unifiedWorkspace : styles.searchOnlyContainer}
+        data-testid="publication-search-and-tabs"
+      >
       <section
         className={`${styles.searchSection} ${isLanding ? styles.searchSectionLanding : styles.searchSectionResults}`}
         aria-label="Búsqueda de publicaciones y promociones"
@@ -289,12 +293,6 @@ export function PublicationPromotionWorkspace({
           </div>
         </div>
       </section>
-
-      {viewState === "initial" && <WorkspaceMessage state="initial">Buscá una publicación para comenzar.</WorkspaceMessage>}
-      {viewState === "searching" && <WorkspaceMessage state="searching">Consultando publicación...</WorkspaceMessage>}
-      {viewState === "empty" && <WorkspaceMessage state="empty">No encontramos publicaciones.</WorkspaceMessage>}
-      {viewState === "error" && <WorkspaceMessage state="error">No pudimos consultar la publicación.</WorkspaceMessage>}
-      {viewState === "results" && <PublicationMatches items={matches} onSelect={(item) => loadSelection({ itemId: item.itemId })} />}
       {viewState === "selected" && selection && (
         <WorkspaceTabs
           selection={selection}
@@ -309,6 +307,14 @@ export function PublicationPromotionWorkspace({
           tiendanubeCategories={tiendanubeCategories}
         />
       )}
+      </div>
+
+      {viewState === "initial" && <WorkspaceMessage state="initial">Buscá una publicación para comenzar.</WorkspaceMessage>}
+      {viewState === "searching" && <WorkspaceMessage state="searching">Consultando publicación...</WorkspaceMessage>}
+      {viewState === "empty" && <WorkspaceMessage state="empty">No encontramos publicaciones.</WorkspaceMessage>}
+      {viewState === "error" && <WorkspaceMessage state="error">No pudimos consultar la publicación.</WorkspaceMessage>}
+      {viewState === "results" && <PublicationMatches items={matches} onSelect={(item) => loadSelection({ itemId: item.itemId })} />}
+
     </main>
   );
 }

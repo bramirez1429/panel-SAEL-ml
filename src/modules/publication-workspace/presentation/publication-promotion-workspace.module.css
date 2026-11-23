@@ -1256,3 +1256,84 @@
     font-size: 12px;
   }
 }
+
+
+/* Unified search + publication/promotion tabs: one outer border, one shared surface.
+ * Keep the landing state and search-results listing unchanged. */
+.searchOnlyContainer {
+  display: contents;
+}
+
+.unifiedWorkspace {
+  display: grid;
+  box-sizing: border-box;
+  gap: 0;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  border: 1px solid #e3e8f4;
+  border-radius: 22px;
+  background: rgb(255 255 255 / 97%);
+  box-shadow: 0 6px 23px rgb(23 45 105 / 7%);
+}
+
+.unifiedWorkspace .searchSectionResults {
+  position: relative;
+  top: auto;
+  z-index: 1;
+  width: 100%;
+  margin: 0;
+  padding: 20px clamp(16px, 2.5vw, 30px) 14px;
+  border: 0;
+  border-radius: 22px 22px 0 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.unifiedWorkspace .workspaceTabs {
+  width: 100%;
+  min-width: 0;
+}
+
+.unifiedWorkspace .workspaceTabs :global(.ant-tabs-nav) {
+  min-height: 68px;
+  margin: 0 !important;
+  padding: 12px clamp(16px, 2.5vw, 30px);
+  background: transparent;
+  border: 0;
+  border-top: 1px solid #e7ebf5;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.unifiedWorkspace .workspaceTabs :global(.ant-tabs-nav::before) {
+  border-bottom: 0;
+}
+
+.unifiedWorkspace .workspaceTabs :global(.ant-tabs-content-holder) {
+  min-width: 0;
+  padding: 20px clamp(16px, 2.5vw, 30px) 28px;
+  border-top: 1px solid #f1f3f8;
+}
+
+@media (max-width: 700px) {
+  .unifiedWorkspace {
+    border-radius: 18px;
+  }
+
+  .unifiedWorkspace .searchSectionResults {
+    padding: 16px 12px 10px;
+    border-radius: 18px 18px 0 0;
+  }
+
+  .unifiedWorkspace .workspaceTabs :global(.ant-tabs-nav) {
+    min-height: 58px;
+    padding: 8px 12px;
+    gap: 8px;
+  }
+
+  .unifiedWorkspace .workspaceTabs :global(.ant-tabs-content-holder) {
+    padding: 14px 12px 22px;
+  }
+}

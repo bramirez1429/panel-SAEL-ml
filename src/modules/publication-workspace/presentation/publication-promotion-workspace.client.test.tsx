@@ -339,6 +339,13 @@ describe("PublicationPromotionWorkspace", () => {
     const replicateButton = await screen.findByRole("button", { name: "Replicar en Tiendanube" });
     expect(screen.getAllByRole("button", { name: "Replicar en Tiendanube" })).toHaveLength(1);
     expect(replicateButton.closest(".ant-tabs-extra-content")).not.toBeNull();
+
+    // El buscador, las pestañas y la acción Replicar comparten un único módulo.
+    const module = screen.getByTestId("publication-search-and-tabs");
+    const searchSection = screen.getByRole("region", { name: "Búsqueda de publicaciones y promociones" });
+    expect(searchSection.parentElement).toBe(module);
+    expect(screen.getByRole("tablist").closest(".ant-tabs")?.parentElement).toBe(module);
+    expect(module).toContainElement(replicateButton);
     await user.click(replicateButton);
     expect(await screen.findByRole("dialog", { name: "Replicar en Tiendanube" })).toBeInTheDocument();
     expect(replicateAction).not.toHaveBeenCalled();
