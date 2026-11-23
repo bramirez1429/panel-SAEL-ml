@@ -347,7 +347,7 @@ export default async function StockUnificadoPage({
           const choices = tnVariants.filter((candidate) => !linkByTn.has(candidate.key));
           const suggestions = choices.filter((candidate) =>
             cleanSku(item.sku) !== "" && cleanSku(item.sku) === cleanSku(candidate.sku));
-          const suggested = suggestions.length === 1 ? suggestions[0].key : "";
+          const suggested = suggestions.length === 1 ? (suggestions[0]?.key ?? "") : "";
           const difference = matchingTn && item.stock !== null && matchingTn.stock !== null
             ? item.stock - matchingTn.stock : null;
           return (
