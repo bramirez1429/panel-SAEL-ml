@@ -57,6 +57,29 @@ describe("PublicationPromotionWorkspace", () => {
     expect(await screen.findByText("No encontramos publicaciones.")).toBeInTheDocument();
   });
 
+  it("reemplaza el botón de texto por una lupa integrada que también busca al hacer clic", async () => {
+    const user = userEvent.setup();
+    const onSearch = vi.fn().mockResolvedValue({
+      status: "success",
+      searchType: "TITLE",
+      query: "remera",
+      items: [],
+    });
+    renderWorkspace(onSearch, vi.fn());
+
+    const lupa = screen.getByRole("button", { name: "Buscar" });
+    expect(lupa).toHaveAttribute("aria-label", "Buscar");
+    expect(lupa).not.toHaveTextContent("Buscar");
+    expect(lupa.querySelector("svg")).not.toBeNull();
+
+    await user.type(screen.getByRole("searchbox", { name: "Buscar publicación" }), "remera");
+    await user.click(lupa);
+
+    expect(onSearch).toHaveBeenCalledWith("remera");
+    expect(onSearch).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText("No encontramos publicaciones.")).toBeInTheDocument();
+  });
+
   it("centra el buscador al iniciar y muestra resultados debajo después de buscar", async () => {
     const user = userEvent.setup();
     const onSearch = vi.fn().mockResolvedValue({
