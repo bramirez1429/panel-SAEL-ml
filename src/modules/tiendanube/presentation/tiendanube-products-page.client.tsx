@@ -64,19 +64,30 @@ export function TiendanubeProductsPageClient({ page, activeSearch, errorMessage 
   return (
     <main className={styles.page}>
       <div className={styles.header}>
-        <div>
-          <Typography.Title level={2} className={styles.title}>Tiendanube</Typography.Title>
-          <Typography.Text type="secondary">Productos y variantes sincronizados con tu tienda.</Typography.Text>
+        <div className={styles.headerCopy}>
+          <span className={styles.eyebrow}>TIENDA NUBE · CATÁLOGO</span>
+          <Typography.Title level={2} className={styles.title}>Explorá tus productos</Typography.Title>
+          <Typography.Text className={styles.subtitle}>
+            Encontrá productos y variantes sincronizados con tu tienda.
+          </Typography.Text>
         </div>
-        <Input.Search
-          allowClear
-          className={styles.search}
-          enterButton={<SearchOutlined />}
-          onChange={(event) => setSearch(event.target.value)}
-          onSearch={submitSearch}
-          placeholder="Buscar por nombre, SKU o tags"
-          value={search}
-        />
+        <div className={styles.searchPanel}>
+          <span className={styles.searchLabel}><SearchOutlined /> BÚSQUEDA DE PRODUCTOS</span>
+          <Input.Search
+            allowClear
+            aria-label="Buscar productos Tiendanube"
+            className={styles.search}
+            enterButton="Buscar"
+            size="large"
+            onChange={(event) => setSearch(event.target.value)}
+            onSearch={submitSearch}
+            placeholder="Nombre del producto, SKU o etiqueta..."
+            value={search}
+          />
+          <span className={styles.searchHint}>
+            Nombre · SKU · Etiquetas &nbsp;·&nbsp; Presioná Enter para buscar
+          </span>
+        </div>
       </div>
 
       {errorMessage ? <Alert action={integrationReconnectRequired ? <Button href="/integraciones" size="small" type="primary">Reconectar Tiendanube</Button> : undefined} description={integrationReconnectRequired ? "La conexión con Tiendanube falta o venció. Reconectala para consultar los productos sin cerrar tu sesión del panel." : undefined} type="error" showIcon message={integrationReconnectRequired ? "Tiendanube requiere reconexión." : errorMessage} /> : null}

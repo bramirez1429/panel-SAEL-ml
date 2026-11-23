@@ -35,6 +35,15 @@ describe("PublicationSearchBar", () => {
     expect(sessionStorage.length).toBe(0);
   });
 
+  it("permite enfocar el nuevo buscador con Ctrl+K sin modificar filtros", async () => {
+    const user = userEvent.setup();
+    render(<PublicationSearchBar initialSearch="" />);
+
+    await user.keyboard("{Control>}k{/Control}");
+    expect(screen.getByRole("textbox", { name: "Buscar publicaciones" })).toHaveFocus();
+    expect(navigation.push).not.toHaveBeenCalled();
+  });
+
   it("limpia la búsqueda y vuelve al listado normal", async () => {
     const user = userEvent.setup();
     render(<PublicationSearchBar initialSearch="remera" />);
