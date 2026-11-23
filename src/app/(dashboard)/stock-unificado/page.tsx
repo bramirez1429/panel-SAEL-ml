@@ -96,7 +96,7 @@ function queryText(value: string): string {
   return value.trim().slice(0, 100);
 }
 function cleanSku(value: string | null): string {
-  return value?.trim().normalize("NFKC").toLocaleUpperCase("es") ?? "";
+  return value?.trim() ?? "";
 }
 function attr(attributes: readonly PublicationAttribute[], ids: readonly string[]): string | null {
   return attributes.find((item) => ids.includes(item.id.toLocaleUpperCase("es")))?.value ?? null;
@@ -229,9 +229,9 @@ function stockValue(stock: number | null) {
   return stock === null ? "Sin dato" : String(stock);
 }
 function messageFor(result: string): string | null {
-  if (result === "ok") return "Vinculación guardada. Los stocks no fueron modificados.";
-  if (result === "invalid") return "Revisá la publicación y la variante seleccionada.";
-  if (result === "error") return "No se pudo vincular. Verificá que ambas variantes existan y no estén vinculadas a otros productos.";
+  if (result === "ok") return "SKU iguales: vinculación guardada. No modificamos el stock.";
+  if (result === "invalid") return "Revisá las variantes y sus SKU antes de vincular.";
+  if (result === "error") return "No se pudo vincular. Ambos SKU deben ser idénticos, no estar vacíos ni tener vinculaciones incompatibles.";
   return null;
 }
 
@@ -262,10 +262,15 @@ export default async function StockUnificadoPage({
   ]));
   const tnByKey = new Map(tnVariants.map((variant) => [variant.key, variant]));
   const rows = ml?.variants ?? [];
-  const linkedCount = rows.filter((item) => linkByMl.has(item.key)).length;
+  const uniqueTnBySku = (sku: string | null): TnVariant | null => {
+    const normalized = cleanSku(sku);
+    if (!normalized || rows.filter((row) => cleanSku(row.sku) === normalized).length !== 1) return null;
+    const candidates = tnVariants.filter((candidate) => cleanSku(candidate.sku) === normalized);
+    return candidates.length === 1 ? candidates[0] : null;
+  };
+  const matchedCount = rows.filter((item) => uniqueTnBySku(item.sku) !== null).length;
   const unequalCount = rows.filter((item) => {
-    const link = linkByMl.get(item.key);
-    const match = link ? tnByKey.get(link.tnProductId + ":" + link.tnVariantId) : null;
+    const match = uniqueTnBySku(item.sku);
     return match && item.stock !== null && match.stock !== null && item.stock !== match.stock;
   }).length;
 
@@ -286,7 +291,7 @@ export default async function StockUnificadoPage({
           <div>
             {smallLabel("INVENTARIO · PRIMERA ETAPA")}
             <h1 style={{ margin: "6px 0", fontSize: "clamp(22px, 2.5vw, 30px)", color: "#1d2e53" }}>Control de stock ML + Tiendanube</h1>
-            <p style={{ ...softText, margin: 0 }}>Detectá SKU iguales, vinculá SKU diferentes y compará el stock de cada variante.</p>
+            <p style={{ ...softText, margin: 0 }}>Vinculá sólo variantes con SKU idénticos y compará el stock de ambos canales.</p>
           </div>
           <span style={{ color: "#315b89", background: "#eef5ff", padding: "8px 12px", borderRadius: 20, fontWeight: 700, fontSize: 12 }}>
             Sólo lectura de stock
@@ -313,7 +318,7 @@ export default async function StockUnificadoPage({
       {notice ? <p role="status" style={{ ...surface, margin: 0, color: "#315b89", background: "#f1f6ff" }}>{notice}</p> : null}
       {links === null ? (
         <p role="alert" style={{ ...surface, margin: 0, color: "#b04d31", background: "#fff5ef" }}>
-          No se pudieron consultar los vínculos guardados. La vinculación está deshabilitada para evitar duplicaciones. Verificá que el backend de esta rama esté disponible.
+          No se pudieron consultar los vínculos guardados. Podés revisar coincidencias de SKU, pero no guardar nuevas vinculaciones hasta recuperar la conexión.
         </p>
       ) : null}
 
@@ -321,7 +326,7 @@ export default async function StockUnificadoPage({
         {[
           ["Variantes ML cargadas", rows.length],
           ["Variantes TN cargadas", tnVariants.length],
-          ["ML vinculadas visibles", linkedCount],
+          ["SKU coincidentes", matchedCount],
           ["Diferencias detectadas", unequalCount],
         ].map(([label, count]) => (
           <div key={label} style={surface}>
@@ -334,7 +339,7 @@ export default async function StockUnificadoPage({
       <section style={{ ...surface, display: "grid", gap: 14 }}>
         <div>
           <h2 style={{ margin: "0 0 5px", color: "#23375e", fontSize: 19 }}>Variantes de Mercado Libre</h2>
-          <p style={{ ...softText, margin: 0 }}>Seleccioná la variante equivalente de Tiendanube. Los SKU que coinciden se proponen, pero nunca se vinculan sin tu confirmación.</p>
+          <p style={{ ...softText, margin: 0 }}>El sistema identifica SKU idénticos. Si hay una coincidencia única, podés guardarla con un clic. No se permite elegir SKU diferentes.</p>
         </div>
 
         {ml === null ? <p role="alert">No se pudieron cargar las publicaciones de Mercado Libre.</p> : null}
@@ -342,16 +347,25 @@ export default async function StockUnificadoPage({
         {ml && rows.length === 0 ? <p style={softText}>No se encontraron variantes en este lote.</p> : null}
 
         {rows.map((item) => {
-          const link = linkByMl.get(item.key);
-          const matchingTn = link ? tnByKey.get(link.tnProductId + ":" + link.tnVariantId) : null;
-          const choices = tnVariants.filter((candidate) => !linkByTn.has(candidate.key));
-          const suggestions = choices.filter((candidate) =>
-            cleanSku(item.sku) !== "" && cleanSku(item.sku) === cleanSku(candidate.sku));
-          const suggested = suggestions.length === 1 ? (suggestions[0]?.key ?? "") : "";
-          const difference = matchingTn && item.stock !== null && matchingTn.stock !== null
-            ? item.stock - matchingTn.stock : null;
+          const savedLink = linkByMl.get(item.key);
+          const savedTn = savedLink ? tnByKey.get(savedLink.tnProductId + ":" + savedLink.tnVariantId) : null;
+          const matchedTn = uniqueTnBySku(item.sku);
+          const hasValidSavedLink = Boolean(savedLink && savedTn &&
+            matchedTn?.key === savedTn.key && cleanSku(item.sku) === cleanSku(savedTn.sku));
+          const hasIncompatibleLink = Boolean(savedLink && savedTn && !hasValidSavedLink);
+          const canLink = Boolean(matchedTn && !savedLink && !linkByTn.has(matchedTn.key) && links !== null);
+          const sku = cleanSku(item.sku);
+          const isDuplicate = sku !== "" && (rows.filter((row) => cleanSku(row.sku) === sku).length > 1 ||
+            tnVariants.filter((variant) => cleanSku(variant.sku) === sku).length > 1);
+          const difference = matchedTn && item.stock !== null && matchedTn.stock !== null
+            ? item.stock - matchedTn.stock : null;
+          const status = hasValidSavedLink ? "Vinculada por SKU" :
+            hasIncompatibleLink ? "Vínculo incompatible" :
+            savedLink ? "Vínculo sin verificar" :
+            isDuplicate ? "SKU duplicado" :
+            matchedTn ? "SKU coincidente" : "Sin coincidencia";
           return (
-            <article key={item.key} style={{ padding: 16, border: "1px solid #e4e9f3", borderRadius: 13, background: link ? "#f8fbff" : "#fff" }}>
+            <article key={item.key} style={{ padding: 16, border: "1px solid #e4e9f3", borderRadius: 13, background: hasValidSavedLink ? "#f8fbff" : "#fff" }}>
               <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
                 <div style={{ display: "grid", gap: 4, minWidth: 180, flex: 1 }}>
                   <strong style={{ color: "#263b64", fontSize: 14 }}>{item.title}</strong>
@@ -362,43 +376,45 @@ export default async function StockUnificadoPage({
                 <div style={{ display: "grid", gap: 6, textAlign: "right", alignContent: "start" }}>
                   {smallLabel("STOCK ML")}
                   <strong style={{ fontSize: 25, color: "#304771" }}>{stockValue(item.stock)}</strong>
-                  <span style={{ color: link ? "#287d59" : "#8b651f", fontSize: 12, fontWeight: 700 }}>{link ? "Vinculada" : "Sin vincular"}</span>
+                  <span style={{ color: hasValidSavedLink || matchedTn ? "#287d59" : "#8b651f", fontSize: 12, fontWeight: 700 }}>{status}</span>
                 </div>
               </div>
 
-              {link ? (
+              {matchedTn && !hasIncompatibleLink ? (
                 <div style={{ ...softText, borderTop: "1px solid #e2e8f2", marginTop: 12, paddingTop: 12 }}>
-                  Tiendanube: producto <strong>{link.tnProductId}</strong> · variante <strong>{link.tnVariantId}</strong>
-                  {" · "}Stock TN: <strong>{stockValue(matchingTn?.stock ?? null)}</strong>
+                  Tiendanube: <strong>{matchedTn.name}</strong> · {matchedTn.description}
+                  {" · "}SKU <strong>{matchedTn.sku}</strong>
+                  {" · "}Stock TN: <strong>{stockValue(matchedTn.stock)}</strong>
                   {difference !== null ? (
                     <strong style={{ color: difference === 0 ? "#287d59" : "#b34d35" }}>
-                      {" · "}{difference === 0 ? "Coinciden" : "Diferencia ML − TN: " + difference}
+                      {" · "}{difference === 0 ? "Stocks coinciden" : "Diferencia ML − TN: " + difference}
                     </strong>
-                  ) : <span>{" · "}Stock TN fuera del lote actual o sin dato</span>}
+                  ) : <span>{" · "}Stock no disponible para comparar</span>}
                 </div>
-              ) : links !== null ? (
-                <form action={saveLink} style={{ borderTop: "1px solid #e2e8f2", paddingTop: 12, marginTop: 12, display: "grid", gap: 8 }}>
+              ) : null}
+
+              {canLink && matchedTn ? (
+                <form action={saveLink} style={{ borderTop: "1px solid #e2e8f2", paddingTop: 12, marginTop: 12, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12 }}>
                   <input type="hidden" name="mlItemId" value={item.itemId} />
                   <input type="hidden" name="mlVariationId" value={item.variationId ?? ""} />
-                  {suggested ? <span style={{ color: "#2b7557", fontSize: 12, fontWeight: 700 }}>Sugerencia: SKU coincidente. Confirmá antes de guardar.</span>
-                    : <span style={softText}>Si el SKU es diferente, elegí manualmente el producto y talle correcto.</span>}
-                  <div style={{ display: "flex", flexWrap: "wrap", alignItems: "end", gap: 10 }}>
-                    <label style={{ display: "grid", flex: "1 1 280px", gap: 6, fontSize: 12, fontWeight: 700 }}>
-                      Variante de Tiendanube
-                      <select name="tnVariant" key={item.key + ":" + tnSearch + ":" + tnPageNumber} defaultValue={suggested} required style={inputStyle}>
-                        <option value="">Seleccioná producto, color y talle</option>
-                        {choices.map((candidate) => (
-                          <option value={candidate.key} key={candidate.key}>
-                            {candidate.name + " · " + candidate.description + " · SKU " + (candidate.sku ?? "—") + " · Stock " + stockValue(candidate.stock)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <button type="submit" disabled={choices.length === 0} style={{ ...primaryButton, opacity: choices.length === 0 ? .5 : 1 }}>
-                      Vincular variantes
-                    </button>
-                  </div>
+                  <input type="hidden" name="tnVariant" value={matchedTn.key} />
+                  <span style={{ ...softText, flex: 1 }}>SKU idéntico en ambos canales. Confirmá para guardar la relación.</span>
+                  <button type="submit" style={primaryButton}>Vincular por SKU</button>
                 </form>
+              ) : !hasValidSavedLink ? (
+                <p style={{ ...softText, borderTop: "1px solid #e2e8f2", margin: "12px 0 0", paddingTop: 12 }}>
+                  {hasIncompatibleLink
+                    ? "Existe una vinculación anterior con otro SKU. No se utiliza; requiere revisión."
+                    : savedLink
+                      ? "Existe un vínculo guardado, pero su SKU no se puede verificar en los lotes cargados."
+                      : isDuplicate
+                        ? "SKU duplicado: corregí las referencias para identificar una sola variante por canal."
+                        : !sku
+                          ? "Asigná un SKU a esta variante y el mismo SKU en Tiendanube."
+                          : matchedTn
+                            ? "Esta variante de Tiendanube ya está vinculada a otra publicación."
+                            : "No hay SKU idéntico en las páginas cargadas. Revisá los SKU o buscá otro lote."}
+                </p>
               ) : null}
             </article>
           );
@@ -412,12 +428,19 @@ export default async function StockUnificadoPage({
 
       <section style={{ ...surface, display: "grid", gap: 12 }}>
         <h2 style={{ margin: 0, color: "#23375e", fontSize: 19 }}>Variantes de Tiendanube</h2>
-        <p style={{ ...softText, margin: 0 }}>Identificá las variantes que todavía no tienen una vinculación guardada con Mercado Libre.</p>
+        <p style={{ ...softText, margin: 0 }}>Revisá qué variantes tienen el mismo SKU que Mercado Libre y cuáles todavía no coinciden.</p>
         {tn === null ? <p role="alert">No se pudieron cargar los productos de Tiendanube.</p> : null}
         {tn && tnVariants.length === 0 ? <p style={softText}>No hay variantes en esta página.</p> : null}
         <div style={{ display: "grid", gap: 8 }}>
           {tnVariants.map((item) => {
             const linked = linkByTn.get(item.key);
+            const ml = linked ? rows.find((row) =>
+              row.itemId === linked.mlItemId && row.variationId === linked.mlVariationId) : null;
+            const verified = Boolean(ml && uniqueTnBySku(ml.sku)?.key === item.key);
+            const matchedMl = rows.filter((row) => uniqueTnBySku(row.sku)?.key === item.key);
+            const label = verified ? "Vinculada por SKU" :
+              linked ? "Vínculo guardado sin verificar" :
+              matchedMl.length === 1 ? "SKU coincidente" : "Sin coincidencia";
             return (
               <div key={item.key} style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "space-between", padding: "11px 12px", border: "1px solid #e5eaf3", borderRadius: 11 }}>
                 <div style={{ minWidth: 160, display: "grid", gap: 3 }}>
@@ -427,13 +450,12 @@ export default async function StockUnificadoPage({
                 </div>
                 <div style={{ textAlign: "right", display: "grid", gap: 3 }}>
                   <strong style={{ color: "#263b64" }}>Stock: {stockValue(item.stock)}</strong>
-                  <span style={{ fontSize: 12, color: linked ? "#287d59" : "#8b651f" }}>
-                    {linked ? "Vinculada a " + linked.mlItemId : "Sin vincular"}
-                  </span>
+                  <span style={{ fontSize: 12, color: verified || matchedMl.length === 1 ? "#287d59" : "#8b651f" }}>{label}</span>
                 </div>
               </div>
             );
           })}
+
         </div>
         <nav aria-label="Páginas de Tiendanube" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
           {tnPageNumber > 1 ? <Link style={softText} href={pageHref({ cursor: cursor ?? undefined, tnPage: tnPageNumber - 1 })}>← Anterior TN</Link> : <span />}
@@ -443,7 +465,7 @@ export default async function StockUnificadoPage({
       </section>
 
       <p style={{ ...softText, margin: "0 0 16px", textAlign: "center" }}>
-        Esta primera versión sólo guarda vínculos entre variantes y compara los stocks informados por cada plataforma. No modifica existencias ni activa sincronización automática.
+        Sólo se vinculan SKU idénticos y únicos. No se modifica el stock ni se activa la sincronización automática.
       </p>
     </main>
   );
