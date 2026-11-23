@@ -1,0 +1,127 @@
+.page {
+  display: grid;
+  gap: 22px;
+  width: 100%;
+  min-width: 0;
+  padding-bottom: 32px;
+}
+
+.calculatorCard {
+  display: flex;
+  align-items: center;
+  gap: clamp(13px, 2vw, 22px);
+  min-height: 110px;
+  padding: clamp(18px, 2vw, 25px);
+  background: linear-gradient(115deg, #fff 5%, #f8f6ff 65%, #f1f4ff);
+  border: 1px solid #e2def3;
+  border-radius: 20px;
+  color: inherit;
+  text-decoration: none;
+  box-shadow: 0 10px 30px rgb(66 53 117 / 6%);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.calculatorCard:hover,
+.calculatorCard:focus-visible {
+  color: inherit;
+  border-color: #c9c5f3;
+  box-shadow: 0 13px 34px rgb(66 53 117 / 11%);
+}
+
+.calculatorIcon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: #ebe7fd;
+  color: #6552c4;
+  place-items: center;
+  font-size: 24px;
+}
+
+.calculatorText {
+  display: grid;
+  flex: 1;
+  gap: 6px;
+  min-width: 0;
+}
+
+.calculatorText strong {
+  color: #25335b;
+  font-size: clamp(16px, 1.65vw, 19px);
+  letter-spacing: -.025em;
+}
+
+.calculatorText > span {
+  color: #6b718a;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.calculatorArrow {
+  flex: 0 0 auto;
+  color: #6b61bd;
+  font-size: 18px;
+}
+
+.lowerGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 620px) minmax(0, 1fr);
+  align-items: start;
+  gap: 22px;
+  min-width: 0;
+}
+
+.backendColumn {
+  min-width: 0;
+}
+
+.backendPanel {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 20px;
+  background: #fff;
+  border: 1px solid #e2e8f1;
+  border-radius: 20px;
+  box-shadow: 0 9px 28px rgb(32 57 111 / 5%);
+}
+
+.systemEyebrow {
+  color: #8a94a7;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .1em;
+}
+
+@media (max-width: 1050px) {
+  .lowerGrid {
+    grid-template-columns: minmax(0, 1.4fr) minmax(200px, 0.7fr);
+    gap: 16px;
+  }
+}
+
+@media (max-width: 820px) {
+  .lowerGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .backendColumn {
+    max-width: 430px;
+  }
+}
+
+@media (max-width: 540px) {
+  .page { gap: 16px; }
+  .calculatorCard { min-height: 100px; padding: 16px; border-radius: 17px; }
+  .calculatorIcon { width: 43px; height: 43px; border-radius: 13px; font-size: 19px; }
+  .calculatorText strong { font-size: 15px; }
+  .calculatorText > span { font-size: 12px; }
+  .backendPanel { padding: 15px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .calculatorCard { transition: none; }
+}

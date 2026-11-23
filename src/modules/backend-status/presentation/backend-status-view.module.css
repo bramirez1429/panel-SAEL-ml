@@ -38,3 +38,28 @@
   color: var(--ant-color-text-secondary, #526079);
   font-size: 13px;
 }
+
+
+/* Compact dashboard-only presentation inside the system status panel. */
+.compactCard {
+  width: 100%;
+  margin-top: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.compactCard .statusIndicator {
+  flex: 0 0 auto;
+}
+
+.compactCard .title {
+  font-size: 12px;
+}
+
+.compactCard .description {
+  font-size: 13px;
+  font-weight: 650;
+}

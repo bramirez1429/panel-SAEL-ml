@@ -3,14 +3,15 @@ import styles from "./backend-status-view.module.css";
 
 type BackendStatusViewProps = Readonly<{
   status: BackendStatus | null;
+  compact?: boolean;
 }>;
 
-export function BackendStatusView({ status }: BackendStatusViewProps) {
+export function BackendStatusView({ status, compact = false }: BackendStatusViewProps) {
   const state = status?.state ?? "unavailable";
 
   return (
     <section
-      className={styles.statusCard}
+      className={`${styles.statusCard} ${compact ? styles.compactCard : ""}`}
       aria-labelledby="backend-status-title"
       data-state={state}
     >
