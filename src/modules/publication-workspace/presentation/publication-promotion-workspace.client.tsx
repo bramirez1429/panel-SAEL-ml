@@ -241,6 +241,11 @@ export function PublicationPromotionWorkspace({
             Encontrá cualquier publicación y gestioná sus datos, variantes y promociones desde un solo lugar.
           </Typography.Paragraph>
         </div> : null}
+        {!isLanding ? (
+          <div className={styles.searchContext} aria-live="polite">
+            {criteria ? searchTypeLabel(criteria.type) : "Búsqueda de publicaciones"}
+          </div>
+        ) : null}
         <div className={styles.searchBox}>
           <Input
             ref={searchInputRef}
@@ -277,6 +282,7 @@ export function PublicationPromotionWorkspace({
             value={query}
           />
         </div>
+        {viewState !== "selected" ? (
         <div className={styles.searchFooter}>
           <div className={styles.searchModes} aria-label="Tipos de búsqueda compatibles">
             <span className={styles.modesLabel}>BUSCÁ POR</span>
@@ -292,6 +298,7 @@ export function PublicationPromotionWorkspace({
             <span className={styles.keyboardShortcut}>Ctrl / ⌘ K</span>
           </div>
         </div>
+        ) : null}
       </section>
       {viewState === "selected" && selection && (
         <WorkspaceTabs
@@ -800,7 +807,10 @@ function FamilyWorkspace({ family, visualOrder, onChanged, onSave, onStatusChang
   return (
     <section className={styles.familyWorkspace}>
       {contextHolder}
-      <Card>
+      <Typography.Title level={4} className={styles.familySectionTitle}>
+        Publicaciones de la familia
+      </Typography.Title>
+      <Card className={styles.familySummaryCard}>
         <div className={styles.familyHeader}>
           {family.imageUrl
             ? <Image alt={family.familyName ?? family.familyId} className={styles.familyImage} preview={false} src={family.imageUrl} />
@@ -835,7 +845,6 @@ function FamilyWorkspace({ family, visualOrder, onChanged, onSave, onStatusChang
         <Input type="number" min={0.01} value={globalPrice ?? ""} onChange={(event) => setGlobalPrice(event.target.value ? Number(event.target.value) : null)} placeholder="Nuevo precio" />
         {globalProgress ? <><Typography.Paragraph>Actualizando precios: {globalProgress.completed} de {globalProgress.total}</Typography.Paragraph><Progress percent={Math.round(globalProgress.completed / globalProgress.total * 100)} /><Typography.Text type="danger">{globalProgress.failures.length ? `MLA con error: ${globalProgress.failures.join(", ")}` : ""}</Typography.Text></> : null}
       </Modal>
-      <Typography.Title level={4}>Publicaciones de la familia</Typography.Title>
       {variantGroups.map((group) => {
         const representative = group.publications.find(
           (child) => child.imageUrl || child.thumbnailUrl,

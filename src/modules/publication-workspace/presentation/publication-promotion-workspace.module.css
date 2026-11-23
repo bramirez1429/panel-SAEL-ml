@@ -1258,82 +1258,137 @@
 }
 
 
-/* Unified search + publication/promotion tabs: one outer border, one shared surface.
- * Keep the landing state and search-results listing unchanged. */
+/* Three cohesive modules with identical outer borders, radii and padding.
+ * 1. Search box; 2. Tabs + replication action; 3. Family publications/content.
+ * Keep the centered landing page outside this selected-results design. */
 .searchOnlyContainer {
   display: contents;
 }
 
 .unifiedWorkspace {
+  --workspace-module-padding: clamp(18px, 2.5vw, 28px);
+  --workspace-module-radius: 22px;
+  --workspace-module-gap: 20px;
+  --workspace-module-border: 1px solid #e3e8f4;
+  --workspace-module-shadow: 0 6px 23px rgb(23 45 105 / 7%);
   display: grid;
   box-sizing: border-box;
-  gap: 0;
+  gap: var(--workspace-module-gap);
   width: 100%;
   min-width: 0;
   margin: 0;
-  border: 1px solid #e3e8f4;
-  border-radius: 22px;
-  background: rgb(255 255 255 / 97%);
-  box-shadow: 0 6px 23px rgb(23 45 105 / 7%);
+  background: transparent;
+}
+
+.searchContext {
+  color: #5c6b89;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.4;
 }
 
 .unifiedWorkspace .searchSectionResults {
   position: relative;
   top: auto;
   z-index: 1;
+  display: grid;
+  gap: 12px;
   width: 100%;
+  min-width: 0;
   margin: 0;
-  padding: 20px clamp(16px, 2.5vw, 30px) 14px;
-  border: 0;
-  border-radius: 22px 22px 0 0;
-  background: transparent;
-  box-shadow: none;
+  padding: var(--workspace-module-padding);
+  background: #fff;
+  border: var(--workspace-module-border);
+  border-radius: var(--workspace-module-radius);
+  box-shadow: var(--workspace-module-shadow);
   backdrop-filter: none;
+  overflow: visible;
+}
+
+/* The family/MLA search mode is above the input, not repeated below it. */
+.unifiedWorkspace .searchSectionResults .searchFooter {
+  display: none;
 }
 
 .unifiedWorkspace .workspaceTabs {
+  display: block;
   width: 100%;
   min-width: 0;
 }
 
+/* Ant Design renders tab navigation and tab content independently; make each
+   one a standalone module without introducing any extra wrapper around the data. */
 .unifiedWorkspace .workspaceTabs :global(.ant-tabs-nav) {
   min-height: 68px;
+  margin: 0 0 var(--workspace-module-gap) !important;
+  padding: var(--workspace-module-padding);
+  background: #fff;
+  border: var(--workspace-module-border);
+  border-radius: var(--workspace-module-radius);
+  box-shadow: var(--workspace-module-shadow);
+}
+
+.unifiedWorkspace .workspaceTabs :global(.ant-tabs-nav::before) {
+  border-bottom: none;
+}
+
+.unifiedWorkspace .workspaceTabs :global(.ant-tabs-content-holder) {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: var(--workspace-module-padding);
+  background: #fff;
+  border: var(--workspace-module-border);
+  border-radius: var(--workspace-module-radius);
+  box-shadow: var(--workspace-module-shadow);
+}
+
+.unifiedWorkspace .workspaceTabs :global(.ant-tabs-tabpane) {
+  min-width: 0;
+}
+
+/* The family summary becomes part of the third module, not a nested card. */
+.familySectionTitle:global(.ant-typography) {
   margin: 0 !important;
-  padding: 12px clamp(16px, 2.5vw, 30px);
+  color: #20345b;
+  font-size: 19px;
+  font-weight: 750;
+}
+
+.familySummaryCard:global(.ant-card) {
   background: transparent;
   border: 0;
-  border-top: 1px solid #e7ebf5;
   border-radius: 0;
   box-shadow: none;
 }
 
-.unifiedWorkspace .workspaceTabs :global(.ant-tabs-nav::before) {
-  border-bottom: 0;
-}
-
-.unifiedWorkspace .workspaceTabs :global(.ant-tabs-content-holder) {
-  min-width: 0;
-  padding: 20px clamp(16px, 2.5vw, 30px) 28px;
-  border-top: 1px solid #f1f3f8;
+.familySummaryCard :global(.ant-card-body) {
+  padding: 0;
 }
 
 @media (max-width: 700px) {
   .unifiedWorkspace {
-    border-radius: 18px;
+    --workspace-module-padding: 14px;
+    --workspace-module-radius: 18px;
+    --workspace-module-gap: 14px;
   }
 
   .unifiedWorkspace .searchSectionResults {
-    padding: 16px 12px 10px;
-    border-radius: 18px 18px 0 0;
+    padding: var(--workspace-module-padding);
+    border-radius: var(--workspace-module-radius);
   }
 
   .unifiedWorkspace .workspaceTabs :global(.ant-tabs-nav) {
     min-height: 58px;
-    padding: 8px 12px;
+    padding: var(--workspace-module-padding);
     gap: 8px;
   }
 
   .unifiedWorkspace .workspaceTabs :global(.ant-tabs-content-holder) {
-    padding: 14px 12px 22px;
+    padding: var(--workspace-module-padding);
+  }
+
+  .familySectionTitle:global(.ant-typography) {
+    font-size: 17px;
   }
 }

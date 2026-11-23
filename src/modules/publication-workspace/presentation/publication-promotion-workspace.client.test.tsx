@@ -184,7 +184,21 @@ describe("PublicationPromotionWorkspace", () => {
     await search(user, "456");
 
     expect(onSelect).toHaveBeenCalledWith({ familyId: "456", itemIds: ["MLA1", "MLA2"] });
-    expect(await screen.findByText("Publicaciones de la familia")).toBeInTheDocument();
+    const familyHeading = await screen.findByRole("heading", { name: "Publicaciones de la familia" });
+    expect(familyHeading).toBeInTheDocument();
+    expect(screen.getByText("Búsqueda por familia")).toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: "Buscar publicación" })).toHaveValue("456");
+
+    // Three sections are separate: search, tabs/replication, and family content.
+    const unifiedLayout = screen.getByTestId("publication-search-and-tabs");
+    const searchModule = screen.getByRole("region", { name: "Búsqueda de publicaciones y promociones" });
+    const tabModule = screen.getByRole("tablist").closest(".ant-tabs-nav");
+    const contentModule = familyHeading.closest(".ant-tabs-content-holder");
+    expect(searchModule.parentElement).toBe(unifiedLayout);
+    expect(tabModule).not.toBeNull();
+    expect(contentModule).not.toBeNull();
+    expect(tabModule).not.toContainElement(familyHeading);
+    expect(contentModule).toContainElement(familyHeading);
     expect(screen.getByRole("button", { name: "Abrir Negro" }))
       .toHaveAttribute("aria-expanded", "false");
     expect(screen.getByRole("img", { name: "Imagen de Negro" })).toBeInTheDocument();
