@@ -238,15 +238,12 @@ export function PublicationPromotionWorkspace({
           </Typography.Paragraph>
         </div>
         <div className={styles.searchBox}>
-          <SearchOutlined className={styles.searchLeadingIcon} aria-hidden="true" />
-          <Input.Search
+          <Input
             ref={searchInputRef}
             className={styles.searchInput}
             allowClear
             aria-label="Buscar publicación"
             autoComplete="off"
-            enterButton="Buscar"
-            loading={viewState === "searching"}
             onChange={(event) => {
               const nextQuery = event.target.value;
               setQuery(nextQuery);
@@ -255,9 +252,23 @@ export function PublicationPromotionWorkspace({
                 replaceSearchQuery(null);
               }
             }}
-            onSearch={handleSearch}
+            onPressEnter={() => {
+              if (viewState !== "searching") void handleSearch(query);
+            }}
             placeholder="Buscar por MLA, MLAU, Family ID o nombre"
             size="large"
+            suffix={
+              <Button
+                aria-label="Buscar"
+                title="Buscar"
+                className={styles.searchIconButton}
+                icon={<SearchOutlined />}
+                loading={viewState === "searching"}
+                onClick={() => void handleSearch(query)}
+                shape="circle"
+                type="primary"
+              />
+            }
             type="search"
             value={query}
           />

@@ -97,109 +97,73 @@
 }
 
 .searchBox {
-  position: relative;
   width: 100%;
   min-width: 0;
 }
 
-.searchLeadingIcon {
-  position: absolute;
-  top: 50%;
-  left: 24px;
-  z-index: 2;
-  color: #5168bc;
-  font-size: 25px;
-  transform: translateY(-50%);
-  pointer-events: none;
-}
-
-.searchInput {
-  display: block;
-  width: 100%;
-}
-
-.searchInput :global(.ant-input-group) {
+.searchInput:global(.ant-input-affix-wrapper) {
   display: flex;
+  align-items: center;
   width: 100%;
-  gap: 9px;
-  padding: 8px;
-  padding-left: 64px;
-  border: 1px solid #cbd6ed;
-  border-radius: 21px;
+  min-width: 0;
+  height: 86px;
+  padding: 9px 12px 9px 30px;
   background: #fff;
-  box-shadow: 0 12px 32px rgb(26 50 117 / 12%);
+  border: 1px solid #cbd6ed;
+  border-radius: 999px;
+  box-shadow: 0 10px 34px rgb(26 50 117 / 11%);
   transition: border-color 180ms ease, box-shadow 180ms ease;
 }
 
-.searchInput :global(.ant-input-group):hover {
+.searchInput:global(.ant-input-affix-wrapper):hover {
   border-color: #aab9e9;
 }
 
-.searchInput :global(.ant-input-group):focus-within {
+.searchInput:global(.ant-input-affix-wrapper):focus-within {
   border-color: #6974ec;
-  box-shadow: 0 0 0 4px rgb(106 114 239 / 12%), 0 16px 38px rgb(26 50 117 / 14%);
+  box-shadow: 0 0 0 4px rgb(106 114 239 / 11%), 0 14px 38px rgb(26 50 117 / 13%);
 }
 
-.searchInput :global(.ant-input-group > .ant-input-affix-wrapper) {
-  flex: 1 1 auto;
-  width: 100%;
+.searchInput :global(.ant-input) {
   min-width: 0;
-  height: 64px;
-  padding: 10px 15px 10px 0;
-  border: none !important;
-  border-radius: 12px !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-.searchInput :global(.ant-input-group > .ant-input) {
-  flex: 1 1 auto;
-  min-width: 0;
-  height: 64px;
-  padding: 10px 15px 10px 0;
-  border: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-.searchInput :global(.ant-input-group .ant-input) {
-  min-width: 0;
-  color: #172750;
+  height: 100%;
+  padding: 0;
   background: transparent;
-  font-size: clamp(15px, 1.3vw, 18px);
+  color: #172750;
+  font-size: clamp(16px, 1.5vw, 19px);
   font-weight: 500;
 }
 
-.searchInput :global(.ant-input-group .ant-input)::placeholder {
+.searchInput :global(.ant-input)::placeholder {
   color: #8895b0;
 }
 
-.searchInput :global(.ant-input-group-addon) {
+.searchInput :global(.ant-input-suffix) {
+  margin-inline-start: 10px;
+}
+
+.searchIconButton:global(.ant-btn) {
   display: flex;
-  flex: 0 0 auto;
-  width: auto;
   align-items: center;
-  background: transparent;
-}
-
-.searchInput :global(.ant-input-search-button.ant-btn) {
+  justify-content: center;
+  width: 64px;
+  min-width: 64px;
   height: 64px;
-  min-width: 164px;
-  padding-inline: 26px;
+  padding: 0;
   border: 0;
-  border-radius: 14px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3169f5, #6053e5);
+  box-shadow: 0 5px 16px rgb(59 77 209 / 20%);
   color: #fff;
-  background: linear-gradient(125deg, #3169f5, #6053e5);
-  font-size: 16px;
-  font-weight: 750;
-  box-shadow: 0 7px 20px rgb(59 77 209 / 24%);
+  font-size: 27px;
+  transition: background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 
-.searchInput :global(.ant-input-search-button.ant-btn):hover,
-.searchInput :global(.ant-input-search-button.ant-btn):focus-visible {
+.searchIconButton:global(.ant-btn):hover,
+.searchIconButton:global(.ant-btn):focus-visible {
+  background: linear-gradient(135deg, #245be7, #5043d4) !important;
+  box-shadow: 0 7px 19px rgb(59 77 209 / 29%);
   color: #fff !important;
-  background: linear-gradient(125deg, #245be7, #5043d4) !important;
-  box-shadow: 0 9px 24px rgb(59 77 209 / 32%) !important;
 }
 
 .searchFooter {
@@ -467,34 +431,25 @@
     font-size: 13px;
   }
 
-  .searchLeadingIcon {
-    left: 15px;
-    font-size: 19px;
+  .searchInput:global(.ant-input-affix-wrapper) {
+    height: 66px;
+    padding: 7px 8px 7px 18px;
+    border-radius: 20px;
   }
 
-  .searchInput :global(.ant-input-group) {
-    gap: 4px;
-    padding: 5px;
-    padding-left: 44px;
-    border-radius: 15px;
+  .searchInput :global(.ant-input) {
+    font-size: 14px;
   }
 
-  .searchInput :global(.ant-input-group > .ant-input-affix-wrapper),
-  .searchInput :global(.ant-input-group > .ant-input) {
-    height: 52px;
-    padding-inline: 0;
+  .searchInput :global(.ant-input-suffix) {
+    margin-inline-start: 4px;
   }
 
-  .searchInput :global(.ant-input-group .ant-input) {
-    font-size: 13px;
-  }
-
-  .searchInput :global(.ant-input-search-button.ant-btn) {
-    min-width: 87px;
-    height: 52px;
-    padding-inline: 10px;
-    border-radius: 11px;
-    font-size: 12px;
+  .searchIconButton:global(.ant-btn) {
+    min-width: 50px;
+    width: 50px;
+    height: 50px;
+    font-size: 22px;
   }
 
   .keyboardShortcut {
@@ -522,7 +477,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .searchInput :global(.ant-input-group),
+  .searchInput:global(.ant-input-affix-wrapper),
+  .searchIconButton:global(.ant-btn),
   .matchButton:global(.ant-btn) {
     transition: none;
   }
@@ -978,7 +934,7 @@
 }
 
 .searchSectionLanding {
-  width: min(100%, 960px);
+  width: min(100%, 1080px);
   margin: 0 auto;
   padding: 24px 16px;
   text-align: center;
@@ -1025,13 +981,9 @@
   gap: 14px;
 }
 
-.searchSectionLanding .searchInput :global(.ant-input-group) {
+.searchSectionLanding .searchInput:global(.ant-input-affix-wrapper) {
   border-radius: 999px;
-  box-shadow: 0 7px 30px rgb(23 48 110 / 10%);
-}
-
-.searchSectionLanding .searchInput :global(.ant-input-search-button.ant-btn) {
-  border-radius: 999px;
+  box-shadow: 0 9px 34px rgb(23 48 110 / 10%);
 }
 
 .pageLanding .statePanel {
@@ -1108,30 +1060,22 @@
   grid-row: 1;
 }
 
-.searchSectionResults .searchLeadingIcon {
-  left: 20px;
-  font-size: 20px;
-}
-
-.searchSectionResults .searchInput :global(.ant-input-group) {
-  gap: 6px;
-  padding: 5px;
-  padding-left: 53px;
+.searchSectionResults .searchInput:global(.ant-input-affix-wrapper) {
+  height: 70px;
+  padding: 6px 9px 6px 22px;
   border-radius: 999px;
   box-shadow: 0 5px 18px rgb(23 48 110 / 8%);
 }
 
-.searchSectionResults .searchInput :global(.ant-input-group > .ant-input-affix-wrapper),
-.searchSectionResults .searchInput :global(.ant-input-group > .ant-input) {
-  height: 50px;
+.searchSectionResults .searchInput :global(.ant-input) {
+  font-size: 16px;
 }
 
-.searchSectionResults .searchInput :global(.ant-input-search-button.ant-btn) {
-  height: 50px;
-  min-width: 115px;
-  padding-inline: 20px;
-  border-radius: 999px;
-  font-size: 14px;
+.searchSectionResults .searchIconButton:global(.ant-btn) {
+  width: 55px;
+  min-width: 55px;
+  height: 55px;
+  font-size: 22px;
 }
 
 .searchSectionResults .searchFooter {
@@ -1213,12 +1157,8 @@
     display: none;
   }
 
-  .searchSectionLanding .searchInput :global(.ant-input-group) {
-    border-radius: 18px;
-  }
-
-  .searchSectionLanding .searchInput :global(.ant-input-search-button.ant-btn) {
-    border-radius: 13px;
+  .searchSectionLanding .searchInput:global(.ant-input-affix-wrapper) {
+    border-radius: 21px;
   }
 
   .searchSectionLanding .searchFooter {
@@ -1250,24 +1190,21 @@
     margin-top: 0;
   }
 
-  .searchSectionResults .searchLeadingIcon {
-    left: 13px;
-    font-size: 17px;
+  .searchSectionResults .searchInput:global(.ant-input-affix-wrapper) {
+    height: 62px;
+    padding: 6px 8px 6px 16px;
+    border-radius: 19px;
   }
 
-  .searchSectionResults .searchInput :global(.ant-input-group) {
-    padding-left: 40px;
+  .searchSectionResults .searchInput :global(.ant-input) {
+    font-size: 14px;
   }
 
-  .searchSectionResults .searchInput :global(.ant-input-group > .ant-input-affix-wrapper),
-  .searchSectionResults .searchInput :global(.ant-input-group > .ant-input) {
-    height: 48px;
-  }
-
-  .searchSectionResults .searchInput :global(.ant-input-search-button.ant-btn) {
-    height: 48px;
-    min-width: 88px;
-    padding-inline: 11px;
+  .searchSectionResults .searchIconButton:global(.ant-btn) {
+    width: 47px;
+    min-width: 47px;
+    height: 47px;
+    font-size: 19px;
   }
 
   .matchesSection .matchTitle {
@@ -1276,8 +1213,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .searchSectionLanding .searchInput :global(.ant-input-group),
-  .searchSectionResults .searchInput :global(.ant-input-group) {
+  .searchSectionLanding .searchInput:global(.ant-input-affix-wrapper),
+  .searchSectionResults .searchInput:global(.ant-input-affix-wrapper) {
     transition: none;
   }
 }
