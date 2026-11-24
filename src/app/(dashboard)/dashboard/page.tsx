@@ -6,6 +6,7 @@ import { BackendStatusView } from "@/modules/backend-status/presentation/backend
 import { DashboardTasks } from "@/modules/dashboard-tasks/presentation/dashboard-tasks.client";
 import { AppError } from "@/shared/errors/app-error";
 import styles from "./dashboard.module.css";
+import { SalesHomeSummary } from "@/modules/sales/operations/sales-operations-view.client";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,7 @@ export default async function DashboardPage() {
 
   return (
     <div className={styles.page}>
+      <SalesHomeSummary />
       <Link href="/calculadora-precios" className={styles.calculatorCard}>
         <span className={styles.calculatorIcon} aria-hidden="true">
           ▦
