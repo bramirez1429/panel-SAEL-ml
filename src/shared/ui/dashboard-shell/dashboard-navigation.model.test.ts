@@ -49,14 +49,14 @@ describe("menús desplegables Tienda Nube y Sincronización", () => {
     expect(entries[0]?.kind).toBe("link");
   });
 
-  it("oculta Ranking productos, Ventas 24 hs y Replicar sin borrar las rutas originales", () => {
+  it("muestra Ventas y oculta Ranking productos y Replicar sin borrar las rutas originales", () => {
     const paths = createDashboardNavigationEntries().flatMap((entry) =>
       entry.kind === "link"
         ? [entry.section.href]
         : entry.sections.map((section) => section.href),
     );
     expect(paths).not.toContain("/ranking-productos");
-    expect(paths).not.toContain("/ventas");
+    expect(paths).toContain("/ventas");
     expect(paths).not.toContain("/replicar");
     expect(dashboardSections.some((section) => section.href === "/ranking-productos")).toBe(true);
     expect(dashboardSections.some((section) => section.href === "/ventas")).toBe(true);
