@@ -8,6 +8,8 @@ import {
   DashboardMobileNavigation,
 } from "./dashboard-navigation.client";
 import { DashboardHeaderTitle } from "./dashboard-header-title.client";
+import { SalesOperationsProvider } from "@/modules/sales/operations/sales-operations-provider.client";
+import { SalesNotifications } from "@/modules/sales/operations/sales-operations-view.client";
 import styles from "./dashboard-shell.module.css";
 
 type DashboardShellProps = Readonly<{
@@ -37,6 +39,7 @@ function Brand() {
 
 export function DashboardShell({ children, logoutAction, currentUser }: DashboardShellProps) {
   return (
+    <SalesOperationsProvider enabled={Boolean(currentUser)}>
     <div className={styles.shell}>
       <aside className={styles.sidebar}>
         <Link
@@ -73,6 +76,7 @@ export function DashboardShell({ children, logoutAction, currentUser }: Dashboar
         <DashboardHeaderTitle />
         {currentUser ? (
           <div className={styles.currentUser} aria-label={`Usuario autenticado: ${getCurrentUserLabel(currentUser)}`}>
+            <SalesNotifications />
             <span className={styles.currentUserAvatar} aria-hidden="true">{getCurrentUserInitial(currentUser)}</span>
             <span className={styles.currentUserName}>{getCurrentUserLabel(currentUser)}</span>
           </div>
@@ -84,5 +88,6 @@ export function DashboardShell({ children, logoutAction, currentUser }: Dashboar
         <PageContainer className={styles.main}>{children}</PageContainer>
       </div>
     </div>
+    </SalesOperationsProvider>
   );
 }

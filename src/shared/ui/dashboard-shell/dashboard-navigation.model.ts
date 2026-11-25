@@ -7,7 +7,6 @@ export const SYNC_GROUP_KEY = "group:sincronizacion";
 // Hide legacy screens from the sidebar without deleting routes or page titles.
 export const HIDDEN_NAVIGATION_ROUTES = [
   "/ranking-productos",
-  "/ventas",
   "/replicar",
 ] as const;
 const hiddenRoutes = new Set<string>(HIDDEN_NAVIGATION_ROUTES);

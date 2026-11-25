@@ -370,3 +370,12 @@
     scroll-behavior: auto;
   }
 }
+
+/* La campana también es accesible desde la cabecera móvil. */
+.currentUser { gap: 11px; }
+@media (max-width: 767px) {
+  .header { grid-template-columns: 34px minmax(0,1fr) 40px 68px; gap: 7px; }
+  .currentUser { display: flex; justify-self: end; margin-inline-start: 0; }
+  .currentUserAvatar, .currentUserName { display: none; }
+  .headerTitle { text-align: left; }
+}

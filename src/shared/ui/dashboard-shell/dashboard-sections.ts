@@ -2,7 +2,6 @@
 import { createElement, type ReactNode } from "react";
 import {
   ApiOutlined,
-  ClockCircleOutlined,
   CalculatorOutlined,
   CloudUploadOutlined,
   SwapOutlined,
@@ -16,6 +15,7 @@ import {
   TagsOutlined,
   TeamOutlined,
   TrophyOutlined,
+  TruckOutlined,
 } from "@ant-design/icons";
 
 export type DashboardSection = Readonly<{
@@ -26,6 +26,8 @@ export type DashboardSection = Readonly<{
 
 export const dashboardSections = [
   { href: "/dashboard", title: "Dashboard", icon: createElement(DashboardOutlined) },
+  { href: "/ventas", title: "Ventas", icon: createElement(ShoppingCartOutlined) },
+  { href: "/envios", title: "Envíos", icon: createElement(TruckOutlined) },
   { href: "/calculadora-precios", title: "Calculadora ML y Tiendanube", icon: createElement(CalculatorOutlined) },
   { href: "/tiendanube/productos", title: "Tiendanube", icon: createElement(ShopOutlined) },
   { href: "/tienda-negocio/sincronizacion", title: "Sincronización Tienda Negocio", icon: createElement(SyncOutlined) },
@@ -39,7 +41,6 @@ export const dashboardSections = [
   { href: "/publicacion-promocion", title: "Publicación y promoción", icon: createElement(TagsOutlined) },
   { href: "/ranking-productos", title: "Ranking productos", icon: createElement(TrophyOutlined) },
   { href: "/promociones", title: "Promociones", icon: createElement(PercentageOutlined) },
-  { href: "/ventas", title: "Ventas 24 hs", icon: createElement(ClockCircleOutlined) },
   { href: "/pedidos", title: "Pedidos", icon: createElement(ShoppingCartOutlined) },
   { href: "/usuarios", title: "Usuarios", icon: createElement(TeamOutlined) },
   { href: "/integraciones", title: "Integraciones", icon: createElement(ApiOutlined) },

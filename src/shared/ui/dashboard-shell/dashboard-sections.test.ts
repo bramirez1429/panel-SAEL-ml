@@ -5,6 +5,8 @@ import { findDashboardSection } from "./dashboard-sections";
 describe("findDashboardSection", () => {
   it("finds sections for exact and nested paths", () => {
     expect(findDashboardSection("/pedidos")?.title).toBe("Pedidos");
+    expect(findDashboardSection("/ventas")?.title).toBe("Ventas");
+    expect(findDashboardSection("/envios")?.title).toBe("Envíos");
     expect(findDashboardSection("/publicaciones/123")?.title).toBe(
       "Publicaciones",
     );
