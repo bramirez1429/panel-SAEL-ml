@@ -6,6 +6,7 @@ import { BellOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutl
 import Image from "next/image";
 import Link from "next/link";
 import { useSalesOperations } from "./sales-operations-provider.client";
+import { syncMercadoLibreSalesAction } from "./sales-operations.actions";
 import { argentinaDate, channelLabel, money, type SaleOrder } from "./sales-operations.model";
 import { SaleVariants } from "../presentation/sale-variants.client";
 import styles from "./sales-operations.module.css";
@@ -176,6 +177,32 @@ export function SalesWorkspace({ focusOrder }: Readonly<{ focusOrder?: string }>
   const [channel, setChannel] = useState("ALL");
   const [period, setPeriod] = useState<Period>(focusOrder ? "month" : "today");
   const [search, setSearch] = useState("");
+  const [syncing, setSyncing] = useState(false);
+  const [syncNotice, setSyncNotice] = useState<{ type: "success" | "warning" | "error"; message: string } | null>(null);
+  const syncMercadoLibre = async () => {
+    if (syncing) return;
+    setSyncing(true);
+    setSyncNotice(null);
+    try {
+      const result = await syncMercadoLibreSalesAction();
+      if (!result.ok) {
+        setSyncNotice({ type: "error", message: "No se pudo consultar la API de Mercado Libre. Revisá la conexión." });
+        return;
+      }
+      const refreshed = await refresh();
+      setSyncNotice({
+        type: result.failed || !refreshed ? "warning" : "success",
+        message: "Mercado Libre (48 h): " + result.found + " órdenes encontradas, " +
+          result.processed + " consultas procesadas y " + result.failed + " errores." +
+          (!refreshed ? " No se pudo actualizar el listado guardado." : ""),
+      });
+    } catch {
+      setSyncNotice({ type: "error", message: "No se pudo completar la sincronización." });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const focused = focusOrder && data?.orders.find((order) => orderKey(order) === focusOrder);
   const filtered = useMemo(() => {
     const orders = data?.orders ?? [];
@@ -197,8 +224,13 @@ export function SalesWorkspace({ focusOrder }: Readonly<{ focusOrder?: string }>
       <div className={styles.heading}>
         <div><span className={styles.eyebrow}>GESTIÓN DE PEDIDOS</span><h2>Todas tus ventas</h2>
           <p>Marcá una venta cuando ya esté preparada. El estado de envío no cambia en las plataformas.</p></div>
-        <Button icon={<ReloadOutlined />} onClick={() => void refresh()}>Actualizar</Button>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          <Button icon={<ReloadOutlined />} onClick={() => void refresh()}>Actualizar listado</Button>
+          <Button type="primary" icon={<ReloadOutlined />} loading={syncing}
+            onClick={() => void syncMercadoLibre()}>Sincronizar Mercado Libre</Button>
+        </div>
       </div>
+      {syncNotice ? <Alert showIcon type={syncNotice.type} title={syncNotice.message} /> : null}
       <div className={styles.filters}>
         <Segmented<Filter> value={filter} onChange={setFilter} options={[
           { label: "Todas", value: "ALL" }, { label: "Pendientes", value: "PENDING" },
