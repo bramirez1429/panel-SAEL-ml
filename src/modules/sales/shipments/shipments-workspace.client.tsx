@@ -5,7 +5,7 @@ import { Alert, Button, Checkbox, Empty, Input, Segmented, Skeleton, Tag } from 
 import { ClockCircleOutlined, InboxOutlined, PictureOutlined, ReloadOutlined, TruckOutlined } from "@ant-design/icons";
 import Image from "next/image";
 import { argentinaDate, money } from "../operations/sales-operations.model";
-import { filterShipments, logisticsLabel, shipmentsSchema, shippingStatus, stages, preparationFilters, preparationStatus, type PreparationFilter, type Shipment, type ShipmentsData, type ShipmentStageFilter } from "./shipments.model";
+import { filterShipments, logisticsLabel, shipmentsSchema, shippingStatus, stages, dailyShipmentFilters, selectDailyShipments, preparationStatus, type DailyShipmentFilter, type Shipment, type ShipmentsData, type ShipmentStageFilter } from "./shipments.model";
 import styles from "../operations/sales-operations.module.css";
 import local from "./shipments.module.css";
 
@@ -21,6 +21,7 @@ function ShipmentCard({ shipment, busy, disabled, onComplete }: Readonly<{
   const pending = !cancelled && (["TODAY","UPCOMING","OVERDUE"].includes(shipment.stage) ||
     (shipment.stage === "REVIEW" && ["pending","handling","ready_to_ship"].includes(shipment.status ?? "")));
   const prepared = prep === "COMPLETED";
+  const finalized = !cancelled && shipment.stage === "FINISHED";
   const late = shipment.stage === "OVERDUE" || (pending && shipment.deadline && Date.parse(shipment.deadline) < Date.now());
   return <article className={styles.orderCard}>
     <div className={styles.orderTop}>
@@ -29,12 +30,12 @@ function ShipmentCard({ shipment, busy, disabled, onComplete }: Readonly<{
         <strong>{shipment.shipmentId ? "Envío #" + shipment.shipmentId : "Pedido sin envío asociado"}</strong>
         <small>{shipment.orders.length} pedido(s)</small>
       </div>
-      <Tag color={cancelled ? "error" : prepared ? "success" : "gold"}>{cancelled ? "Cancelada" : prepared ? "Preparación completada" : "Preparación pendiente"}</Tag>
+      <Tag color={cancelled ? "error" : finalized || prepared ? "success" : "gold"}>{cancelled ? "Cancelada" : finalized ? shippingStatus(shipment) : prepared ? "Preparación completada" : "Preparación pendiente"}</Tag>
     </div>
     <div className={local.deadline} data-late={Boolean(late)}>
       <ClockCircleOutlined />
       <div><strong>{shippingStatus(shipment)}</strong>
-        <div>{shipment.deadline ? "Despachar hasta: " + argentinaDate(shipment.deadline) + " hs" : "Sin plazo de despacho informado"}</div>
+        <div>{shipment.terminalAt ? (cancelled ? "Cancelada: " : "Finalizada: ") + argentinaDate(shipment.terminalAt) : shipment.deadline ? "Despachar hasta: " + argentinaDate(shipment.deadline) + " hs" : "Sin plazo de despacho informado"}</div>
         {late ? <small>Plazo vencido</small> : null}
         {shipment.issue ? <small>{shipment.issue}</small> : null}
       </div>
@@ -53,7 +54,7 @@ function ShipmentCard({ shipment, busy, disabled, onComplete }: Readonly<{
           <small>{line.quantity} unidad(es) · {money(line.unitPrice, line.currency)} por unidad</small>
         </div>
       </div>)}
-      {!cancelled && !order.cancelled && (pending || prepared || shipment.stage === "TRANSIT" || shipment.stage === "FINISHED") ? <Checkbox checked={Boolean(order.completedAt)} disabled={disabled || busy.has(order.orderId)}
+      {!cancelled && !finalized && !order.cancelled && (pending || prepared || shipment.stage === "TRANSIT") ? <Checkbox checked={Boolean(order.completedAt)} disabled={disabled || busy.has(order.orderId)}
         onChange={event => onComplete(order.orderId, event.target.checked)}>{busy.has(order.orderId) ? "Guardando..." : order.completedAt ? "Preparación completada" : "Marcar pedido preparado"}</Checkbox> : null}
     </div>)}
   </article>;
@@ -62,7 +63,7 @@ function ShipmentCard({ shipment, busy, disabled, onComplete }: Readonly<{
 export function ShipmentsWorkspace() {
   const [data, setData] = useState<ShipmentsData | null>(null);
   const [stage, setStage] = useState<ShipmentStageFilter>("TODAY");
-  const [preparation, setPreparation] = useState<PreparationFilter>("ALL");
+  const [preparation, setPreparation] = useState<DailyShipmentFilter>("ALL");
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -100,18 +101,15 @@ export function ShipmentsWorkspace() {
     finally { setBusy(current => { const next = new Set(current); next.delete(orderId); return next; }); }
   };
 
-  // Preparation is a daily operational filter, not a historical logistics filter.
-  const effectivePreparation = stage === "ALL" || stage === "TODAY" ? preparation : "ALL";
-  const counts = useMemo(() => Object.fromEntries(stages.map(s => [s.value, data?.shipments.filter(p =>
-    (s.value === "ALL" || p.stage === s.value) &&
-    (s.value !== "TODAY" || preparation === "ALL" || preparationStatus(p) === preparation)
-  ).length ?? 0])), [data, preparation]);
-  const prepCounts = useMemo(() => Object.fromEntries(preparationFilters.map(f => [f.value, data?.shipments.filter(s =>
-    s.stage === "TODAY" && (f.value === "ALL" || preparationStatus(s) === f.value)
-  ).length ?? 0])), [data]);
-  const results = useMemo(() => filterShipments(data?.shipments ?? [],
-    stage === "ALL" && effectivePreparation !== "ALL" ? "TODAY" : stage, query, effectivePreparation
-  ), [data, stage, query, effectivePreparation]);
+  const daily = useMemo(() => data ? selectDailyShipments(data.shipments, data.today) : [], [data]);
+  const counts = useMemo(() => Object.fromEntries(stages.map(s => [s.value, s.value === "TODAY" ? daily.length :
+    data?.shipments.filter(p => s.value === "ALL" || p.stage === s.value).length ?? 0])), [data, daily]);
+  const prepCounts = useMemo(() => Object.fromEntries(dailyShipmentFilters.map(f => [f.value,
+    data ? selectDailyShipments(daily, data.today, f.value).length : 0])), [data, daily]);
+  const results = useMemo(() => stage === "TODAY"
+    ? filterShipments(data ? selectDailyShipments(daily, data.today, preparation) : [], "ALL", query)
+    : filterShipments(data?.shipments ?? [], stage, query),
+  [data, daily, stage, query, preparation]);
   const groups = useMemo(() => {
     const map = new Map<string, Shipment[]>();
     for (const shipment of results) {
@@ -133,17 +131,17 @@ export function ShipmentsWorkspace() {
       {data?.preparationUnavailable ? <Alert showIcon type="warning" title="No se pudo leer la preparación guardada. Los cambios están deshabilitados." /> : null}
       {data?.cancellationUnavailable ? <Alert showIcon type="warning" title="No se pudieron recuperar todas las cancelaciones registradas." /> : null}
       <div className={local.tabs}>
-        <Segmented<ShipmentStageFilter> value={stage} onChange={value => { setStage(value); if (value !== "ALL" && value !== "TODAY") setPreparation("ALL"); }} options={stages.map(s => ({
+        <Segmented<ShipmentStageFilter> value={stage} onChange={value => { setStage(value); setPreparation("ALL"); }} options={stages.map(s => ({
           value: s.value, label: <span className={local.tab}>{s.label}<b>{data ? counts[s.value] : "—"}</b></span>
         }))}/>
       </div>
-      {stage === "ALL" ? <div>
-        <small className={styles.muted}>Preparación de los envíos de hoy</small>
-      <div className={local.tabs}>
-        <Segmented<PreparationFilter> value={preparation} onChange={setPreparation} options={preparationFilters.map(f => ({ value: f.value, disabled: Boolean(data?.preparationUnavailable) && (f.value === "PENDING" || f.value === "COMPLETED"), label: <span className={local.tab}>{f.label}<b>{data && !(data.preparationUnavailable && (f.value === "PENDING" || f.value === "COMPLETED")) ? prepCounts[f.value] : "—"}</b></span> }))}/>
-      </div>
+      {stage === "TODAY" ? <div className={local.tabs}>
+        <Segmented<DailyShipmentFilter> value={preparation} onChange={setPreparation} options={dailyShipmentFilters.map(f => ({
+          value: f.value,
+          disabled: Boolean(data?.preparationUnavailable) && (f.value === "PENDING" || f.value === "COMPLETED"),
+          label: <span className={local.tab}>{f.label}<b>{data && !(data.preparationUnavailable && (f.value === "PENDING" || f.value === "COMPLETED")) ? prepCounts[f.value] : "—"}</b></span>
+        }))}/>
       </div> : null}
-      {stage === "TODAY" && preparation !== "ALL" ? <div className={styles.resultHeader}><span>Filtro: {preparationFilters.find(f => f.value === preparation)?.label}</span><Button size="small" type="link" onClick={() => setPreparation("ALL")}>Quitar filtro</Button></div> : null}
       {loading && !data ? <Skeleton active paragraph={{ rows: 3 }} /> : <div className={local.cards}>
         {groups.map(([name, shipments]) => {
           const deadlines = shipments.flatMap(s => s.deadline ? [s.deadline] : []).sort();
