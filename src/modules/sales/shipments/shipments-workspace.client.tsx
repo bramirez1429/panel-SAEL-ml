@@ -135,13 +135,6 @@ export function ShipmentsWorkspace() {
           value: s.value, label: <span className={local.tab}>{s.label}<b>{data ? counts[s.value] : "—"}</b></span>
         }))}/>
       </div>
-      {stage === "TODAY" ? <div className={local.tabs}>
-        <Segmented<DailyShipmentFilter> value={preparation} onChange={setPreparation} options={dailyShipmentFilters.map(f => ({
-          value: f.value,
-          disabled: Boolean(data?.preparationUnavailable) && (f.value === "PENDING" || f.value === "COMPLETED"),
-          label: <span className={local.tab}>{f.label}<b>{data && !(data.preparationUnavailable && (f.value === "PENDING" || f.value === "COMPLETED")) ? prepCounts[f.value] : "—"}</b></span>
-        }))}/>
-      </div> : null}
       {loading && !data ? <Skeleton active paragraph={{ rows: 3 }} /> : <div className={local.cards}>
         {groups.map(([name, shipments]) => {
           const deadlines = shipments.flatMap(s => s.deadline ? [s.deadline] : []).sort();
@@ -165,6 +158,13 @@ export function ShipmentsWorkspace() {
     <section className={styles.panel}>
       <div className={styles.heading}><div><span className={styles.eyebrow}>PREPARACIÓN Y DESPACHO</span><h2>{stages.find(s => s.value === stage)?.label}</h2></div>
         <Input.Search className={local.search} placeholder="Buscar pedido, envío, SKU o producto" value={query} onChange={e => setQuery(e.target.value)} allowClear /></div>
+      {stage === "TODAY" ? <div className={local.tabs}>
+        <Segmented<DailyShipmentFilter> value={preparation} onChange={setPreparation} options={dailyShipmentFilters.map(f => ({
+          value: f.value,
+          disabled: Boolean(data?.preparationUnavailable) && (f.value === "PENDING" || f.value === "COMPLETED"),
+          label: <span className={local.tab}>{f.label}<b>{data && !(data.preparationUnavailable && (f.value === "PENDING" || f.value === "COMPLETED")) ? prepCounts[f.value] : "—"}</b></span>
+        }))}/>
+      </div> : null}
       <div className={styles.resultHeader}><span>{data ? results.length + " envío(s) / grupo(s)" : "Envíos"}</span><small>Ordenados por plazo de despacho</small></div>
       {saveError ? <Alert showIcon type="error" title={saveError} /> : null}
       {loading && !data ? <Skeleton active paragraph={{ rows: 6 }} /> :
