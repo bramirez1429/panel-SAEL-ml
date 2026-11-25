@@ -12,7 +12,7 @@ const orderSchema = z.object({
 const shipmentSchema = z.object({
   key: z.string(), shipmentId: z.string().nullable(), stage: stageSchema,
   status: z.string().nullable(), substatus: z.string().nullable(), logistic: z.string().nullable(),
-  deadline: z.string().nullable(), slaStatus: z.string().nullable(), issue: z.string().nullable(), orders: z.array(orderSchema),
+  deadline: z.string().nullable(), terminalAt: z.string().nullable().optional(), slaStatus: z.string().nullable(), issue: z.string().nullable(), orders: z.array(orderSchema),
 });
 export const shipmentsSchema = z.object({
   today: z.string(), fetchedAt: z.string(), days: z.number(), truncated: z.boolean(), unparsed: z.number(),
@@ -75,4 +75,33 @@ export function filterShipments(shipments: readonly Shipment[], stage: ShipmentS
     ...s.orders.flatMap(o => [o.orderId, ...o.lines.flatMap(l => [l.title, l.sku, l.color, l.size])])]
     .some(v => v?.toLocaleLowerCase("es").includes(q))))
     .sort((a,b) => (a.deadline ?? "9999").localeCompare(b.deadline ?? "9999") || (b.orders[0]?.soldAt ?? "").localeCompare(a.orders[0]?.soldAt ?? ""));
+}
+
+
+export type DailyShipmentFilter = "ALL" | "PENDING" | "COMPLETED" | "CANCELLED" | "FINISHED";
+export const dailyShipmentFilters: ReadonlyArray<{ value: DailyShipmentFilter; label: string }> = [
+  { value: "ALL", label: "Todas" },
+  { value: "PENDING", label: "En preparación" },
+  { value: "COMPLETED", label: "Completadas" },
+  { value: "CANCELLED", label: "Canceladas" },
+  { value: "FINISHED", label: "Finalizadas" },
+];
+function localDay(value: string): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Argentina/Buenos_Aires", year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(new Date(value));
+  return ["year","month","day"].map(k => parts.find(p => p.type === k)?.value ?? "").join("-");
+}
+export function dailyShipmentStatus(shipment: Shipment, today: string): Exclude<DailyShipmentFilter, "ALL"> | null {
+  const prep = preparationStatus(shipment);
+  if (prep === "CANCELLED") return shipment.terminalAt && localDay(shipment.terminalAt) === today ? "CANCELLED" : null;
+  if (shipment.stage === "FINISHED") return shipment.terminalAt && localDay(shipment.terminalAt) === today ? "FINISHED" : null;
+  if (shipment.stage !== "TODAY") return null;
+  return prep === "COMPLETED" ? "COMPLETED" : "PENDING";
+}
+export function selectDailyShipments(shipments: readonly Shipment[], today: string, filter: DailyShipmentFilter = "ALL") {
+  return shipments.filter(s => {
+    const status = dailyShipmentStatus(s, today);
+    return status !== null && (filter === "ALL" || status === filter);
+  });
 }
