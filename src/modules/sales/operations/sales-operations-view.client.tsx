@@ -7,18 +7,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { useSalesOperations } from "./sales-operations-provider.client";
 import { syncMercadoLibreSalesAction } from "./sales-operations.actions";
-import { argentinaDate, channelLabel, money, type SaleOrder } from "./sales-operations.model";
+import { argentinaDate, argentinaOrderDay, channelLabel, money, selectSalesOrders, summarizeSalesOrders, salesPeriodLabels, type SaleOrder, type SalesOperations, type SalesPeriod, type SalesChannelFilter } from "./sales-operations.model";
 import { SaleVariants } from "../presentation/sale-variants.client";
 import styles from "./sales-operations.module.css";
 
 const orderKey = (order: SaleOrder) => order.channel + ":" + order.orderId;
-const orderDate = (value: string) => {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Argentina/Buenos_Aires", year: "numeric", month: "2-digit", day: "2-digit",
-  }).formatToParts(new Date(value));
-  const part = (type: string) => parts.find((entry) => entry.type === type)?.value ?? "";
-  return [part("year"), part("month"), part("day")].join("-");
-};
 
 const statusLabels: Record<SaleOrder["status"], string> = {
   PENDING: "Pendiente", COMPLETED: "Completada", CANCELLED: "Cancelada",
@@ -60,11 +53,9 @@ export function SalesNotifications() {
   );
 }
 
-function Metrics() {
-  const { data, loading } = useSalesOperations();
-  const summary = data?.summary;
+function Metrics({ summary, loading, salesLabel }: Readonly<{ summary?: SalesOperations["summary"]; loading: boolean; salesLabel: string }>) {
   const metrics = [
-    { label: "Ventas de hoy", value: summary?.sales, icon: <ShoppingCartOutlined />, tone: "blue" },
+    { label: salesLabel, value: summary?.sales, icon: <ShoppingCartOutlined />, tone: "blue" },
     { label: "Pendientes", value: summary?.pending, icon: <ClockCircleOutlined />, tone: "amber" },
     { label: "Completadas", value: summary?.completed, icon: <CheckCircleOutlined />, tone: "green" },
     { label: "Canceladas", value: summary?.cancelled, icon: <CloseCircleOutlined />, tone: "rose" },
@@ -73,25 +64,27 @@ function Metrics() {
     {metrics.map((metric) => <div className={styles.metric} key={metric.label}>
       <span className={styles.metricIcon} data-tone={metric.tone}>{metric.icon}</span>
       <div><span className={styles.metricLabel}>{metric.label}</span>
-        {loading && !data ? <Skeleton.Input active size="small" style={{ width: 60 }} /> :
+        {loading && !summary ? <Skeleton.Input active size="small" style={{ width: 60 }} /> :
           <strong className={styles.metricValue}>{metric.value ?? "—"}</strong>}
       </div>
     </div>)}
   </div>;
 }
 
-export function SalesHomeSummary() {
+export function SalesHomeSummary({ period = "today", scopedSummary, inWorkspace = false }: Readonly<{ period?: SalesPeriod; scopedSummary?: SalesOperations["summary"]; inWorkspace?: boolean }> = {}) {
   const { data, error, loading, refresh } = useSalesOperations();
-  return <section className={styles.panel} aria-label="Ventas de hoy">
+  const summary = inWorkspace ? scopedSummary : data?.summary;
+  const heading = period === "today" ? "Ventas de hoy" : period === "yesterday" ? "Ventas de ayer" : `Ventas · ${salesPeriodLabels[period].toLowerCase()}`;
+  return <section className={styles.panel} aria-label={heading}>
     <div className={styles.heading}>
-      <div><span className={styles.eyebrow}>CENTRO DE VENTAS</span><h2>Ventas de hoy</h2>
+      <div><span className={styles.eyebrow}>CENTRO DE VENTAS</span><h2>{heading}</h2>
         <p>Controlá los pedidos de tus dos canales en un solo lugar.</p></div>
-      <Link className={styles.primaryLink} href="/ventas">Ver ventas <ArrowRightOutlined /></Link>
+      {inWorkspace ? <Tag>{salesPeriodLabels[period]}</Tag> : <Link className={styles.primaryLink} href="/ventas">Ver ventas <ArrowRightOutlined /></Link>}
     </div>
-    <Metrics />
+    <Metrics summary={summary} loading={loading} salesLabel={period === "today" ? "Ventas de hoy" : "Total de ventas"} />
     <div className={styles.channelSummary}>
-      <span><i className={styles.mlDot}/> Mercado Libre <strong>{data?.summary.ml ?? "—"}</strong></span>
-      <span><i className={styles.tnDot}/> Tienda Nube <strong>{data?.summary.tn ?? "—"}</strong></span>
+      <span><i className={styles.mlDot}/> Mercado Libre <strong>{summary?.ml ?? "—"}</strong></span>
+      <span><i className={styles.tnDot}/> Tienda Nube <strong>{summary?.tn ?? "—"}</strong></span>
       <small>Hora argentina · {loading ? "Cargando..." : "Actualización cada 30 s"}</small>
     </div>
     {error ? <Alert type="warning" showIcon title={error} action={<Button size="small" onClick={() => void refresh()}>Reintentar</Button>} /> : null}
@@ -170,12 +163,11 @@ function OrderCard({ order, initialOpen = false }: Readonly<{ order: SaleOrder; 
 }
 
 type Filter = "ALL" | SaleOrder["status"];
-type Period = "today" | "week" | "month";
 export function SalesWorkspace({ focusOrder }: Readonly<{ focusOrder?: string }>) {
   const { data, error, loading, refresh } = useSalesOperations();
   const [filter, setFilter] = useState<Filter>("ALL");
-  const [channel, setChannel] = useState("ALL");
-  const [period, setPeriod] = useState<Period>(focusOrder ? "month" : "week");
+  const [channel, setChannel] = useState<SalesChannelFilter>("ALL");
+  const [period, setPeriod] = useState<SalesPeriod>(focusOrder ? "month" : "week");
   const [search, setSearch] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [syncNotice, setSyncNotice] = useState<{ type: "success" | "warning" | "error"; message: string } | null>(null);
@@ -203,23 +195,12 @@ export function SalesWorkspace({ focusOrder }: Readonly<{ focusOrder?: string }>
     }
   };
 
-  const focused = focusOrder && data?.orders.find((order) => orderKey(order) === focusOrder);
-  const filtered = useMemo(() => {
-    const orders = data?.orders ?? [];
-    const now = data?.today ?? orderDate(new Date().toISOString());
-    const since = new Date(now + "T00:00:00-03:00");
-    since.setUTCDate(since.getUTCDate() - (period === "today" ? 0 : period === "week" ? 6 : 30));
-    const cutoff = orderDate(since.toISOString());
-    const q = search.trim().toLocaleLowerCase("es");
-    return orders.filter((order) => orderDate(order.soldAt) >= cutoff &&
-      (channel === "ALL" || order.channel === channel) &&
-      (filter === "ALL" || order.status === filter) &&
-      (!q || [order.orderId, order.buyer, ...order.lines.flatMap((line) => [line.productName, line.sku])].some((value) => value?.toLocaleLowerCase("es").includes(q))));
-  }, [data, period, channel, filter, search]);
-  const results = focused && !filtered.some((order) => orderKey(order) === focusOrder) ? [focused, ...filtered] : filtered;
+  const scoped = useMemo(() => data ? selectSalesOrders(data.orders, data.today || argentinaOrderDay(new Date().toISOString()), period, channel, search) : [], [data, period, channel, search]);
+  const summary = useMemo(() => data ? summarizeSalesOrders(scoped) : undefined, [data, scoped]);
+  const results = useMemo(() => scoped.filter((order) => filter === "ALL" || order.status === filter), [scoped, filter]);
 
   return <main className={styles.workspace} data-dashboard-full-width="true">
-    <SalesHomeSummary />
+    <SalesHomeSummary period={period} scopedSummary={summary} inWorkspace />
     <section className={styles.panel}>
       <div className={styles.heading}>
         <div><span className={styles.eyebrow}>GESTIÓN DE PEDIDOS</span><h2>Todas tus ventas</h2>
@@ -237,16 +218,16 @@ export function SalesWorkspace({ focusOrder }: Readonly<{ focusOrder?: string }>
           { label: "Completadas", value: "COMPLETED" }, { label: "Canceladas", value: "CANCELLED" },
         ]}/>
         <div className={styles.filterControls}>
-          <Select value={period} onChange={setPeriod} options={[
-            { value: "today", label: "Hoy" }, { value: "week", label: "Últimos 7 días" }, { value: "month", label: "Últimos 31 días" },
+          <Select<SalesPeriod> value={period} onChange={setPeriod} options={[
+            { value: "today", label: "Hoy" }, { value: "yesterday", label: "Ayer" }, { value: "week", label: "Últimos 7 días" }, { value: "month", label: "Últimos 31 días" },
           ]} aria-label="Período" />
-          <Select value={channel} onChange={setChannel} options={[
+          <Select<SalesChannelFilter> value={channel} onChange={setChannel} options={[
             { value: "ALL", label: "Todos los canales" }, { value: "MERCADOLIBRE", label: "Mercado Libre" }, { value: "TIENDANUBE", label: "Tienda Nube" },
           ]} aria-label="Canal" />
           <Input allowClear value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar pedido, producto o SKU" aria-label="Buscar ventas" />
         </div>
       </div>
-      <div className={styles.resultHeader}><span>{data ? results.length + " pedido(s)" : "Pedidos"}</span><small>{data ? `${data.orders.length} pedidos disponibles en los últimos ${data.days} días · ` : ""}Ordenados por fecha de venta</small></div>
+      <div className={styles.resultHeader}><span>{data ? results.length + " pedido(s)" : "Pedidos"}</span><small>{data ? `${scoped.length} pedidos en el período · ${data.orders.length} disponibles en ${data.days} días · ` : ""}Ordenados por fecha de venta</small></div>
       {loading && !data ? <Skeleton active paragraph={{ rows: 5 }} /> :
         !data && error ? <Alert type="error" showIcon title={error} /> :
         !results.length ? <Empty image={<InboxOutlined style={{ fontSize: 42 }} />} description={period === "today" ? "No hay pedidos registrados hoy. Seleccioná Últimos 7 días para ver las ventas anteriores." : "No hay pedidos para estos filtros."} /> :
