@@ -175,7 +175,7 @@ export function SalesWorkspace({ focusOrder }: Readonly<{ focusOrder?: string }>
   const { data, error, loading, refresh } = useSalesOperations();
   const [filter, setFilter] = useState<Filter>("ALL");
   const [channel, setChannel] = useState("ALL");
-  const [period, setPeriod] = useState<Period>(focusOrder ? "month" : "today");
+  const [period, setPeriod] = useState<Period>(focusOrder ? "month" : "week");
   const [search, setSearch] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [syncNotice, setSyncNotice] = useState<{ type: "success" | "warning" | "error"; message: string } | null>(null);
@@ -246,10 +246,10 @@ export function SalesWorkspace({ focusOrder }: Readonly<{ focusOrder?: string }>
           <Input allowClear value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar pedido, producto o SKU" aria-label="Buscar ventas" />
         </div>
       </div>
-      <div className={styles.resultHeader}><span>{data ? results.length + " pedido(s)" : "Pedidos"}</span><small>Ordenados por fecha de venta</small></div>
+      <div className={styles.resultHeader}><span>{data ? results.length + " pedido(s)" : "Pedidos"}</span><small>{data ? `${data.orders.length} pedidos disponibles en los últimos ${data.days} días · ` : ""}Ordenados por fecha de venta</small></div>
       {loading && !data ? <Skeleton active paragraph={{ rows: 5 }} /> :
-        !data && error ? <Alert type="error" showIcon title="No se pudieron consultar las ventas. Revisá la conexión o la migración." /> :
-        !results.length ? <Empty image={<InboxOutlined style={{ fontSize: 42 }} />} description="No hay pedidos para estos filtros." /> :
+        !data && error ? <Alert type="error" showIcon title={error} /> :
+        !results.length ? <Empty image={<InboxOutlined style={{ fontSize: 42 }} />} description={period === "today" ? "No hay pedidos registrados hoy. Seleccioná Últimos 7 días para ver las ventas anteriores." : "No hay pedidos para estos filtros."} /> :
         <div className={styles.orderList}>{results.map((order) => <OrderCard key={orderKey(order)} order={order} initialOpen={orderKey(order) === focusOrder} />)}</div>}
     </section>
   </main>;
