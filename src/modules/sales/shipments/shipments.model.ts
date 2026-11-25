@@ -39,6 +39,8 @@ export function logisticsLabel(type: string | null) {
   }
 }
 export function shippingStatus(shipment: Shipment) {
+  if (shipment.substatus === "buyer_rescheduled") return "Reprogramado por el comprador";
+  if (shipment.stage === "TRANSIT") return "En tránsito";
   if (shipment.substatus === "ready_to_print") return "Etiqueta lista para imprimir";
   if (shipment.substatus === "printed") return "Etiqueta impresa";
   if (shipment.substatus === "buffered") return "Etiqueta aún no habilitada";
