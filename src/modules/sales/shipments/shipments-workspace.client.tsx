@@ -122,7 +122,7 @@ export function ShipmentsWorkspace() {
   return <main className={styles.workspace} data-dashboard-full-width="true">
     <section className={styles.panel}>
       <div className={styles.heading}>
-        <div><span className={styles.eyebrow}>OPERACIONES · MERCADO LIBRE</span><h2>Gestión de envíos</h2>
+        <div><span className={styles.eyebrow}>OPERACIONES · MERCADO LIBRE</span>
           <p>Prepará y despachá tus pedidos según el plazo real del envío, no la fecha de venta.</p></div>
         <Button type="primary" icon={<ReloadOutlined />} loading={loading} disabled={busy.size > 0} onClick={() => void refresh()}>Actualizar envíos</Button>
       </div>
