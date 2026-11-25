@@ -21,3 +21,23 @@ export async function readSaleAction(value: unknown) {
     return { ok: true } as const;
   } catch (error) { unstable_rethrow(error); return { ok: false } as const; }
 }
+
+const syncResultSchema = z.object({
+  mercadoLibre: z.object({
+    found: z.number().int().nonnegative(),
+    processed: z.number().int().nonnegative(),
+    failed: z.number().int().nonnegative(),
+  }),
+});
+
+export async function syncMercadoLibreSalesAction() {
+  try {
+    const result = syncResultSchema.parse(
+      await salesOperationsClient().post("/sales/sync?hours=48", undefined, { timeoutMs: 60000 }),
+    );
+    return { ok: true, ...result.mercadoLibre } as const;
+  } catch (error) {
+    unstable_rethrow(error);
+    return { ok: false } as const;
+  }
+}
