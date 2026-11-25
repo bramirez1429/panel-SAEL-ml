@@ -7,7 +7,7 @@ const lineSchema = z.object({
   unitPrice: z.number().nullable(), currency: z.string().nullable(), imageUrl: z.string().nullable(),
 });
 const orderSchema = z.object({
-  orderId: z.string(), soldAt: z.string(), shipmentId: z.string().nullable(), completedAt: z.string().nullable(), lines: z.array(lineSchema),
+  orderId: z.string(), soldAt: z.string(), shipmentId: z.string().nullable(), completedAt: z.string().nullable(), cancelled: z.boolean().default(false), lines: z.array(lineSchema),
 });
 const shipmentSchema = z.object({
   key: z.string(), shipmentId: z.string().nullable(), stage: stageSchema,
@@ -16,12 +16,19 @@ const shipmentSchema = z.object({
 });
 export const shipmentsSchema = z.object({
   today: z.string(), fetchedAt: z.string(), days: z.number(), truncated: z.boolean(), unparsed: z.number(),
-  preparationUnavailable: z.boolean(), shipments: z.array(shipmentSchema),
+  preparationUnavailable: z.boolean(), cancellationUnavailable: z.boolean().default(false), shipments: z.array(shipmentSchema),
 });
 export type Shipment = z.infer<typeof shipmentSchema>;
 export type ShipmentStage = z.infer<typeof stageSchema>;
 export type ShipmentsData = z.infer<typeof shipmentsSchema>;
-export const stages: ReadonlyArray<{ value: ShipmentStage; label: string }> = [
+export type ShipmentStageFilter = ShipmentStage | "ALL";
+export type PreparationFilter = "ALL" | "PENDING" | "COMPLETED" | "CANCELLED";
+export const preparationFilters: ReadonlyArray<{ value: PreparationFilter; label: string }> = [
+  { value: "ALL", label: "Todas" }, { value: "PENDING", label: "Pendientes" },
+  { value: "COMPLETED", label: "Completadas" }, { value: "CANCELLED", label: "Canceladas" },
+];
+export const stages: ReadonlyArray<{ value: ShipmentStageFilter; label: string }> = [
+  { value: "ALL", label: "Todos los envíos" },
   { value: "TODAY", label: "Envíos de hoy" }, { value: "UPCOMING", label: "Próximos días" },
   { value: "OVERDUE", label: "Atrasados" }, { value: "TRANSIT", label: "En tránsito" },
   { value: "FINISHED", label: "Finalizados" }, { value: "REVIEW", label: "Por revisar" },
@@ -38,7 +45,12 @@ export function logisticsLabel(type: string | null) {
     default: return "Otra modalidad (" + type + ")";
   }
 }
+export function preparationStatus(shipment: Shipment): Exclude<PreparationFilter, "ALL"> {
+  if (shipment.status === "cancelled" || (shipment.orders.length > 0 && shipment.orders.every(o => o.cancelled))) return "CANCELLED";
+  return shipment.orders.length > 0 && shipment.orders.every(o => o.completedAt) ? "COMPLETED" : "PENDING";
+}
 export function shippingStatus(shipment: Shipment) {
+  if (preparationStatus(shipment) === "CANCELLED") return "Cancelado";
   if (shipment.substatus === "buyer_rescheduled") return "Reprogramado por el comprador";
   if (shipment.stage === "TRANSIT") return "En tránsito";
   if (shipment.substatus === "ready_to_print") return "Etiqueta lista para imprimir";
@@ -57,9 +69,9 @@ export function shippingStatus(shipment: Shipment) {
     default: return shipment.status ?? "Estado sin informar";
   }
 }
-export function filterShipments(shipments: readonly Shipment[], stage: ShipmentStage, query: string) {
+export function filterShipments(shipments: readonly Shipment[], stage: ShipmentStageFilter, query: string, preparation: PreparationFilter = "ALL") {
   const q = query.trim().toLocaleLowerCase("es");
-  return shipments.filter(s => s.stage === stage && (!q || [s.shipmentId, logisticsLabel(s.logistic),
+  return shipments.filter(s => (stage === "ALL" || s.stage === stage) && (preparation === "ALL" || preparationStatus(s) === preparation) && (!q || [s.shipmentId, logisticsLabel(s.logistic),
     ...s.orders.flatMap(o => [o.orderId, ...o.lines.flatMap(l => [l.title, l.sku, l.color, l.size])])]
     .some(v => v?.toLocaleLowerCase("es").includes(q))))
     .sort((a,b) => (a.deadline ?? "9999").localeCompare(b.deadline ?? "9999") || (b.orders[0]?.soldAt ?? "").localeCompare(a.orders[0]?.soldAt ?? ""));
