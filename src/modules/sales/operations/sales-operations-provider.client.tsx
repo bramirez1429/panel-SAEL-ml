@@ -28,14 +28,22 @@ export function SalesOperationsProvider({ children, enabled }: Readonly<{ childr
     activeRequest.current = controller;
     try {
       const response = await fetch("/api/sales/operations", { cache: "no-store", signal: controller.signal });
-      if (!response.ok) throw new Error("Sales unavailable");
-      const next = operationsSchema.parse(await response.json());
+      if (response.redirected) throw new Error("La sesión requiere volver a iniciar sesión.");
+      if (!response.ok) {
+        const payload: unknown = await response.json().catch(() => null);
+        const diagnostic = typeof payload === "object" && payload !== null && "diagnostic" in payload ? payload.diagnostic : null;
+        const code = typeof diagnostic === "object" && diagnostic !== null && "code" in diagnostic && typeof diagnostic.code === "string" ? diagnostic.code : `HTTP ${response.status}`;
+        throw new Error(`No se pudieron consultar las ventas (${code}).`);
+      }
+      const parsed = operationsSchema.safeParse(await response.json());
+      if (!parsed.success) throw new Error("La respuesta de ventas no coincide con el formato esperado (INVALID_SALES_RESPONSE).");
+      const next = parsed.data;
       if (controller.signal.aborted) return false;
       setData(next);
       setError(null);
       return true;
-    } catch {
-      if (!controller.signal.aborted) setError("No se pudieron actualizar las ventas. Volvé a intentar.");
+    } catch (error) {
+      if (!controller.signal.aborted) setError(error instanceof Error && (error.message.startsWith("No se pudieron consultar") || error.message.startsWith("La respuesta de ventas") || error.message.startsWith("La sesión")) ? error.message : "No se pudieron actualizar las ventas. Volvé a intentar.");
       return false;
     } finally {
       if (activeRequest.current === controller) {
