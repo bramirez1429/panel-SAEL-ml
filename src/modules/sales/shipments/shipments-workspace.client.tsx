@@ -100,9 +100,18 @@ export function ShipmentsWorkspace() {
     finally { setBusy(current => { const next = new Set(current); next.delete(orderId); return next; }); }
   };
 
-  const counts = useMemo(() => Object.fromEntries(stages.map(s => [s.value, data?.shipments.filter(p => (s.value === "ALL" || p.stage === s.value) && (preparation === "ALL" || preparationStatus(p) === preparation)).length ?? 0])), [data, preparation]);
-  const prepCounts = useMemo(() => Object.fromEntries(preparationFilters.map(f => [f.value, data?.shipments.filter(s => f.value === "ALL" || preparationStatus(s) === f.value).length ?? 0])), [data]);
-  const results = useMemo(() => filterShipments(data?.shipments ?? [], stage, query, preparation), [data, stage, query, preparation]);
+  // Preparation is a daily operational filter, not a historical logistics filter.
+  const effectivePreparation = stage === "ALL" || stage === "TODAY" ? preparation : "ALL";
+  const counts = useMemo(() => Object.fromEntries(stages.map(s => [s.value, data?.shipments.filter(p =>
+    (s.value === "ALL" || p.stage === s.value) &&
+    (s.value !== "TODAY" || preparation === "ALL" || preparationStatus(p) === preparation)
+  ).length ?? 0])), [data, preparation]);
+  const prepCounts = useMemo(() => Object.fromEntries(preparationFilters.map(f => [f.value, data?.shipments.filter(s =>
+    s.stage === "TODAY" && (f.value === "ALL" || preparationStatus(s) === f.value)
+  ).length ?? 0])), [data]);
+  const results = useMemo(() => filterShipments(data?.shipments ?? [],
+    stage === "ALL" && effectivePreparation !== "ALL" ? "TODAY" : stage, query, effectivePreparation
+  ), [data, stage, query, effectivePreparation]);
   const groups = useMemo(() => {
     const map = new Map<string, Shipment[]>();
     for (const shipment of results) {
@@ -124,13 +133,17 @@ export function ShipmentsWorkspace() {
       {data?.preparationUnavailable ? <Alert showIcon type="warning" title="No se pudo leer la preparación guardada. Los cambios están deshabilitados." /> : null}
       {data?.cancellationUnavailable ? <Alert showIcon type="warning" title="No se pudieron recuperar todas las cancelaciones registradas." /> : null}
       <div className={local.tabs}>
-        <Segmented<PreparationFilter> value={preparation} onChange={value => { setPreparation(value); setStage("ALL"); }} options={preparationFilters.map(f => ({ value: f.value, disabled: Boolean(data?.preparationUnavailable) && (f.value === "PENDING" || f.value === "COMPLETED"), label: <span className={local.tab}>{f.label}<b>{data && !(data.preparationUnavailable && (f.value === "PENDING" || f.value === "COMPLETED")) ? prepCounts[f.value] : "—"}</b></span> }))}/>
-      </div>
-      <div className={local.tabs}>
-        <Segmented<ShipmentStageFilter> value={stage} onChange={setStage} options={stages.map(s => ({
+        <Segmented<ShipmentStageFilter> value={stage} onChange={value => { setStage(value); if (value !== "ALL" && value !== "TODAY") setPreparation("ALL"); }} options={stages.map(s => ({
           value: s.value, label: <span className={local.tab}>{s.label}<b>{data ? counts[s.value] : "—"}</b></span>
         }))}/>
       </div>
+      {stage === "ALL" ? <div>
+        <small className={styles.muted}>Preparación de los envíos de hoy</small>
+      <div className={local.tabs}>
+        <Segmented<PreparationFilter> value={preparation} onChange={setPreparation} options={preparationFilters.map(f => ({ value: f.value, disabled: Boolean(data?.preparationUnavailable) && (f.value === "PENDING" || f.value === "COMPLETED"), label: <span className={local.tab}>{f.label}<b>{data && !(data.preparationUnavailable && (f.value === "PENDING" || f.value === "COMPLETED")) ? prepCounts[f.value] : "—"}</b></span> }))}/>
+      </div>
+      </div> : null}
+      {stage === "TODAY" && preparation !== "ALL" ? <div className={styles.resultHeader}><span>Filtro: {preparationFilters.find(f => f.value === preparation)?.label}</span><Button size="small" type="link" onClick={() => setPreparation("ALL")}>Quitar filtro</Button></div> : null}
       {loading && !data ? <Skeleton active paragraph={{ rows: 3 }} /> : <div className={local.cards}>
         {groups.map(([name, shipments]) => {
           const deadlines = shipments.flatMap(s => s.deadline ? [s.deadline] : []).sort();
@@ -152,7 +165,7 @@ export function ShipmentsWorkspace() {
       <small className={styles.muted}>{data ? "Consultado " + argentinaDate(data.fetchedAt) + " · Hora argentina · Órdenes de los últimos " + data.days + " días" : "Consultando Mercado Libre"}</small>
     </section>
     <section className={styles.panel}>
-      <div className={styles.heading}><div><span className={styles.eyebrow}>PREPARACIÓN Y DESPACHO</span><h2>{preparationFilters.find(f => f.value === preparation)?.label} · {stages.find(s => s.value === stage)?.label}</h2></div>
+      <div className={styles.heading}><div><span className={styles.eyebrow}>PREPARACIÓN Y DESPACHO</span><h2>{stages.find(s => s.value === stage)?.label}</h2></div>
         <Input.Search className={local.search} placeholder="Buscar pedido, envío, SKU o producto" value={query} onChange={e => setQuery(e.target.value)} allowClear /></div>
       <div className={styles.resultHeader}><span>{data ? results.length + " envío(s) / grupo(s)" : "Envíos"}</span><small>Ordenados por plazo de despacho</small></div>
       {saveError ? <Alert showIcon type="error" title={saveError} /> : null}
