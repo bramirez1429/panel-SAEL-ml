@@ -136,6 +136,7 @@ export function ShipmentsWorkspace() {
             <p>{earliest ? stage === "TODAY" ? "Hasta " + time(earliest) + (latest && time(latest) !== time(earliest) ? "–" + time(latest) : "") + " hs" : "Primer plazo: " + argentinaDate(earliest) : "Sin plazo informado"}</p>
             <div className={local.tileDetail}><span>Etiquetas por imprimir</span><b>{printable}</b></div>
             <div className={local.tileDetail}><span>Preparados</span><b>{prepared}</b></div>
+            {shipments.some(s => s.substatus === "buyer_rescheduled") ? <div className={local.tileDetail}><span>Reprogramados por comprador</span><b>{shipments.filter(s => s.substatus === "buyer_rescheduled").length}</b></div> : null}
           </div>;
         })}
         {!groups.length && data ? <div className={local.logistics}><InboxOutlined /> No hay envíos en esta categoría.</div> : null}
