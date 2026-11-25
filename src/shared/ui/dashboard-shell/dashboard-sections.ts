@@ -15,6 +15,7 @@ import {
   TagsOutlined,
   TeamOutlined,
   TrophyOutlined,
+  TruckOutlined,
 } from "@ant-design/icons";
 
 export type DashboardSection = Readonly<{
@@ -26,6 +27,7 @@ export type DashboardSection = Readonly<{
 export const dashboardSections = [
   { href: "/dashboard", title: "Dashboard", icon: createElement(DashboardOutlined) },
   { href: "/ventas", title: "Ventas", icon: createElement(ShoppingCartOutlined) },
+  { href: "/envios", title: "Envíos", icon: createElement(TruckOutlined) },
   { href: "/calculadora-precios", title: "Calculadora ML y Tiendanube", icon: createElement(CalculatorOutlined) },
   { href: "/tiendanube/productos", title: "Tiendanube", icon: createElement(ShopOutlined) },
   { href: "/tienda-negocio/sincronizacion", title: "Sincronización Tienda Negocio", icon: createElement(SyncOutlined) },
